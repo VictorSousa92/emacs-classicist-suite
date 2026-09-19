@@ -56,7 +56,6 @@
 ;; it was before books were known of.
 (require 'diogenes-books nil t)
 (require 'diogenes-org)           ; --passage-parts, --same-work-p, --levels
-(require 'diogenes-books)         ; diogenes-books-declared, --known
 
 ;; ORG-ROAM IS OPTIONAL and these are its own.  The sibling file declares
 ;; org-roam-directory too; a declaration is per file.

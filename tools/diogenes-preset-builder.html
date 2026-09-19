@@ -604,14 +604,6 @@
       <em><code>diogenes-org-note-key</code></em></span>
     <input type="text" id="c-orgnote">
   </div>
-
-  <h2>The books you have</h2>
-  <div class="field">
-    <span>Where the list is cached
-      <em><code>diogenes-books-cache-file</code> &mdash; reading every author's works takes a while; this keeps the answer.</em></span>
-    <input type="text" id="c-bookscache" data-drop="1">
-  </div>
-
   <h2>Passage notes filed by author and work</h2>
   <div class="field">
     <span>The subdirectory inside your roam
@@ -2379,8 +2371,6 @@ function configText() {
     block.push(`  (setq diogenes-org-notes-key ${JSON.stringify(el('c-orgnotes').value.trim())})`);
   if (el('c-orgnote').value.trim())
     block.push(`  (setq diogenes-org-note-key ${JSON.stringify(el('c-orgnote').value.trim())})`);
-  if (normalisePath(el('c-bookscache').value))
-    block.push(`  (setq diogenes-books-cache-file ${JSON.stringify(normalisePath(el('c-bookscache').value))})`);
   if (el('c-roamsub').value.trim())
     block.push(`  (setq diogenes-roam-subdirectory ${JSON.stringify(el('c-roamsub').value.trim())})`);
   if (el('c-roamtag').value.trim())
