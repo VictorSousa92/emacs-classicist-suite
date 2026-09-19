@@ -289,15 +289,49 @@
   }
   .frame.fresh { box-shadow: 0 0 0 3px rgba(122,59,46,.22); }
 
-  /* MORE THAN ONE FRAME IS MORE THAN ONE OS WINDOW.  Offset rather than
-     stacked flush, so the drawing does not read as one frame split in two --
-     which is the distinction the `frames' behaviour exists to make. */
-  .frames.many .frame { margin-left: 0; transition: margin-left .12s; }
-  .frames.many .frame:nth-child(2) { margin-left: 1.1rem; }
-  .frames.many .frame:nth-child(3) { margin-left: 2.2rem; }
-  .frames.many .frame:nth-child(n+4) { margin-left: 3.3rem; }
-  .framecount { font-size: .82rem; color: var(--quiet); margin: 0 0 .4rem;
-                text-align: center; }
+  /* A DESKTOP, once there is more than one frame.  Emacs asked for a frame and
+     got one; what the desktop does with it is the manager's business, and the
+     three classes below are the three things managers do. */
+  .frames.many {
+    width: 100%; padding: .55rem; border: 1px solid var(--rule);
+    border-radius: 4px; background: #efece5;
+  }
+  .frames.many .frame { border-width: 1px; }
+  .frames.many .frame .bar { font-size: .6rem; }
+
+  /* FLOATING: the newest on top, offset.  What a stacking manager does, and
+     what most desktops do untouched. */
+  .frames.wm-float {
+    display: block; position: relative; aspect-ratio: 1.6;
+    flex-direction: row;
+  }
+  .frames.wm-float .frame {
+    position: absolute; width: 66%; left: 2%; top: 3%;
+  }
+  .frames.wm-float .frame:nth-child(2) { left: 14%; top: 15%; z-index: 2; }
+  .frames.wm-float .frame:nth-child(3) { left: 26%; top: 27%; z-index: 3; }
+  .frames.wm-float .frame:nth-child(n+4) { left: 32%; top: 36%; z-index: 4; }
+
+  /* TILING: the screen divided, nothing over anything. */
+  .frames.wm-tile { flex-direction: row; gap: .4rem; align-items: stretch; }
+  .frames.wm-tile .frame { flex: 1 1 0; min-width: 0; }
+
+  /* SCROLLING: a strip wider than the screen, moved to show the newest. */
+  .frames.wm-scroll {
+    flex-direction: row; gap: .4rem; overflow-x: auto;
+    scroll-behavior: smooth; padding-bottom: .8rem;
+  }
+  .frames.wm-scroll .frame { flex: 0 0 62%; }
+
+  .wmpick { display: flex; gap: .3rem; flex-wrap: wrap; margin: 0 0 .5rem;
+            justify-content: center; }
+  .wmpick label {
+    border: 1px solid var(--rule); border-radius: 3px; background: #fff;
+    padding: .2rem .5rem; font-size: .8rem; cursor: pointer;
+  }
+  .wmpick label.on { border-color: var(--accent);
+                     box-shadow: inset 2px 0 0 var(--accent); }
+  .wmpick input { display: none; }
   .wmnote {
     font-size: .8rem; color: var(--quiet); margin: .7rem 0 0;
     padding: .5rem .65rem; border-left: 2px solid var(--rule);
@@ -753,6 +787,86 @@
     <input type="text" id="c-orgnote">
   </div>  <div class="warnline" id="c-mergedwarn"></div>
 
+  <div class="row">
+    <input type="checkbox" id="c-useroam">
+    <label for="c-useroam">Passage notes filed by author and work
+      <em><code>diogenes-roam</code> &mdash; a package of its own, branch <code>classicist-roam</code>. The suite’s own org commands work without it; this files a note under its author and its work, and keeps an index of them.</em></label>
+  </div>
+  <div id="c-roamopts" hidden>
+    <div class="field">
+      <span>The subdirectory in your roam
+        <em><code>diogenes-roam-subdirectory</code> &mdash; ref by default, so a note lands under ref/author/work/</em></span>
+      <input type="text" id="r-sub" placeholder="ref">
+    </div>
+    <div class="field">
+      <span>The tag every passage note gets
+        <em><code>diogenes-roam-tag</code> &mdash; passage by default</em></span>
+      <input type="text" id="r-tag" placeholder="passage">
+    </div>
+    <div class="field">
+      <span>What a note's file is called
+        <em><code>diogenes-roam-file-name</code> &mdash; the author and work are in the path already, so the name need not repeat them</em></span>
+      <select id="r-name">
+        <option value="citation">the citation — 1048a-27.org, sorting in the text's order</option>
+        <option value="slug">the slug — what org-roam would have chosen</option>
+        <option value="timestamped">the citation, timestamped — cannot collide</option>
+      </select>
+    </div>
+    <div class="row">
+      <input type="checkbox" id="r-template" checked>
+      <label for="r-template">Let the mode set the capture template
+        <em><code>diogenes-roam-install-capture-template</code> &mdash; on by default; off to write your own and keep the directory naming</em></label>
+    </div>
+    <div class="field">
+      <span>The index file
+        <em><code>diogenes-roam-index-name</code> &mdash; index.org by default</em></span>
+      <input type="text" id="r-idxname" placeholder="index.org">
+    </div>
+    <div class="field">
+      <span>How wide a snippet in the index
+        <em><code>diogenes-roam-index-snippet-width</code> &mdash; 88 by default</em></span>
+      <input type="number" id="r-idxwidth" placeholder="88">
+    </div>
+    <div class="row">
+      <input type="checkbox" id="r-idxbook" checked>
+      <label for="r-idxbook">Divide the index into books
+        <em><code>diogenes-roam-index-by-book</code> &mdash; on by default</em></label>
+    </div>
+    <div class="row">
+      <input type="checkbox" id="r-idxbar" checked>
+      <label for="r-idxbar">The index opens beside the text
+        <em><code>diogenes-roam-index-sidebar</code> &mdash; on by default; off for an ordinary window</em></label>
+    </div>
+    <div class="field">
+      <span>Which edge it sits on
+        <em><code>diogenes-roam-index-side</code> &mdash; right by default</em></span>
+      <select id="r-idxside">
+        <option value="right">right</option>
+        <option value="left">left</option>
+        <option value="top">top</option>
+        <option value="bottom">bottom</option>
+      </select>
+    </div>
+    <div class="field">
+      <span>How much room it takes
+        <em><code>diogenes-roam-index-size</code> &mdash; 0.35 by default — a fraction of the width at the right or left, of the height otherwise. A whole number is columns or lines instead</em></span>
+      <input type="number" id="r-idxsize" placeholder="0.35" step="0.05">
+    </div>
+    <div class="row">
+      <input type="checkbox" id="r-idxselect" checked>
+      <label for="r-idxselect">Opening the index puts the cursor in it
+        <em><code>diogenes-roam-index-select</code> &mdash; on by default, to follow a link straight away; off to keep reading and glance over</em></label>
+    </div>
+    <div class="field">
+      <span>Where a note opens when followed
+        <em><code>diogenes-roam-index-open-in</code> &mdash; default leaves it to pop-up-frames; never in the index's own window, whichever this is</em></span>
+      <select id="r-idxopen">
+        <option value="default">default — as pop-up-frames says</option>
+        <option value="window">always a window</option>
+        <option value="frame">always a frame</option>
+      </select>
+    </div>
+  </div>
   <h2 data-feature="windows">A preset at startup</h2>
   <p class="note">Optional. The four below need nothing else set; for one of
      your own, name it and say where the presets live. Make one on the
@@ -957,6 +1071,28 @@
   </div>
   <p class="note" id="p-openreport"></p>
 
+  <h2>Kept apart</h2>
+  <p class="note">Every text shares one role and every list of places shares
+     another, which is what you want until you are reading two corpora at
+     once. Tick one to give it a place of its own, and it gets a row below.</p>
+  <div class="features" id="p-separate">
+    <label class="featurerow" data-sep="tei">
+      <input type="checkbox" id="sep-tei" data-sep="tei">
+      <div><b>TEI editions apart from the corpora</b><span>a Perseus or
+        First1KGreek text beside a TLG one rather than replacing it</span></div>
+    </label>
+    <label class="featurerow" data-sep="diorisis-text">
+      <input type="checkbox" id="sep-diorisis-text" data-sep="diorisis-text">
+      <div><b>Diorisis texts apart from the corpora</b><span>the sentences as
+        Diorisis tokenised them, kept out of the reading window</span></div>
+    </label>
+    <label class="featurerow" data-sep="diorisis-hits">
+      <input type="checkbox" id="sep-diorisis-hits" data-sep="diorisis-hits">
+      <div><b>Diorisis hits apart from the searches</b><span>a lemma search
+        beside a Diogenes word search rather than over it</span></div>
+    </label>
+  </div>
+
   <h2>Where things go <i id="mixedhint"></i></h2>
   <div class="kinds" id="kinds"></div>
   <p class="note" id="mixednote"></p>
@@ -1118,11 +1254,18 @@
     </div>
     <div class="board" id="board">
     <p class="framecount" id="framecount" hidden></p>
+    <div class="wmpick" id="wmpick" hidden>
+      <label class="on" data-wm="float"><input type="radio" name="wm" value="float" checked>Floating</label>
+      <label data-wm="tile"><input type="radio" name="wm" value="tile">Tiling</label>
+      <label data-wm="scroll"><input type="radio" name="wm" value="scroll">Scrolling</label>
+    </div>
     <div class="frames" id="frames"></div>
-  <p class="wmnote" id="wmnote" hidden>Where a new window actually
-     appears is your window manager's decision, not Emacs's &mdash; on top,
-     tiled beside the others, on another workspace, or behind everything.
-     Emacs asks for a frame; what happens to it is outside this drawing.</p>
+  <p class="wmnote" id="wmnote" hidden>Two Emacs frames are two windows
+     on your desktop, and what happens to them is your window manager's
+     doing, not Emacs's. Most desktops float them; i3, sway and Hyprland tile
+     them; PaperWM and niri put them in a strip you scroll. The frames and
+     their contents are the same in all three &mdash; only the desktop
+     differs.</p>
     <div class="sidepanel">
     <div class="steps">
       <button data-step="browse">Browse a text<kbd>b l</kbd></button>
@@ -1273,24 +1416,26 @@ const BEHAVIOURS = {
   frames: 'a frame of its own, later ones gathered',
 };
 const KINDS = [
-  ['browser', 'Texts', 'passages from the corpora'],
+  ['browser', 'Texts', 'passages from the corpora \u2014 Diogenes\u2019, the TEI editions, Diorisis'],
   ['lookup', 'Entries', 'dictionary entries'],
   ['dictionary', 'Scans', 'pages of the printed dictionaries'],
   ['morphology', 'Analyses', 'what ml and mg produce \u2014 an analysis, or a list of forms'],
+  ['search', 'Searches', 'Diogenes\u2019 search results, and Diorisis hit lists'],
+  ['treebank', 'Trees', 'a sentence annotated as a dependency tree'],
 ];
 
 let kind = { lookup: 'defer', browser: 'defer', dictionary: 'defer',
-             morphology: 'defer' };
+             morphology: 'defer', search: 'defer', treebank: 'defer' };
 let scene = [], fresh = null;
 
 const el = id => document.getElementById(id);
 
-el('kinds').innerHTML = KINDS.map(([k, name, blurb]) => `
+const KIND_ROW = (k, name, blurb) => `
   <label for="k-${k}"><b>${name}</b></label>
   <select id="k-${k}" data-kind="${k}">
     ${Object.entries(BEHAVIOURS).map(([v, d]) =>
       `<option value="${v}">${v} \u2014 ${d}</option>`).join('')}
-  </select>`).join('');
+  </select>`;
 
 document.addEventListener('change', e => {
   if (e.target.id === 'scanplace') reset();
@@ -1754,6 +1899,51 @@ function reset() {
       'Press the buttons in order.');
 }
 
+// ---------- three things that share a role ----------
+// `browser' HOLDS EVERY TEXT and `search' every list of places in them, which
+// is right until a reader is working in two corpora at once.  Ticking one of
+// these gives it a role of its own, and the row for it appears below.
+const SEPARABLE = [
+  ['tei', 'TEI editions', 'browser',
+   "(add-to-list 'classicist-role-modes '(tei-mode . tei))"],
+  ['diorisis-text', 'Diorisis texts', 'browser',
+   "(add-to-list 'classicist-role-regexps '(\"\\\\`\\\\*Diorisis: \" . diorisis-text))"],
+  ['diorisis-hits', 'Diorisis hits', 'search',
+   "(add-to-list 'classicist-role-regexps '(\"\\\\`\\\\*Diorisis\\\\*\\\\'\" . diorisis-hits))"]
+];
+function separated() {
+  return SEPARABLE.filter(([k]) => {
+    const box = document.getElementById('sep-' + k);
+    return box && box.checked;
+  });
+}
+// SIX PLUS WHATEVER IS SEPARATED.  KINDS was four, then six; a list that
+// changes wants a function rather than a constant everything reads directly.
+function kindsNow() {
+  return KINDS.concat(separated().map(([k, name, from]) =>
+    [k, name, 'kept apart from ' + (from === 'browser' ? 'the texts'
+                                                       : 'the searches')]));
+}
+function drawKinds() {
+  el('kinds').innerHTML = kindsNow().map(([k, name, blurb]) => KIND_ROW(k, name, blurb)).join('');
+  kindsNow().forEach(([k]) => {
+    if (!(k in kind)) kind[k] = 'defer';
+    const box = el('k-' + k);
+    if (box) box.value = kind[k];
+  });
+}
+document.addEventListener('change', e => {
+  const k = e.target.dataset && e.target.dataset.sep;
+  if (!k) return;
+  document.querySelectorAll('#p-separate .featurerow').forEach(r => {
+    const b = document.getElementById('sep-' + r.dataset.sep);
+    r.classList.toggle('on', !!(b && b.checked));
+  });
+  if (!e.target.checked) delete kind[k];
+  drawKinds();
+  render();
+});
+
 // ---------- where a preset starts from ----------
 // THE FOUR BUILTINS EACH SET ALL FOUR KINDS TO ONE WORD, which is what
 // `classicist-window-behaviour' means when given a symbol rather than an
@@ -1761,7 +1951,7 @@ function reset() {
 // thing with `defer'.
 function presetStartFrom(which) {
   const word = which === 'blank' ? 'defer' : which;
-  KINDS.forEach(([k]) => {
+  kindsNow().forEach(([k]) => {
     kind[k] = word;
     const box = el('k-' + k);
     if (box) box.value = word;
@@ -1797,7 +1987,7 @@ function readPresetFile(text) {
       took.push('every kind set to ' + word[1]);
     } else {
       let n = 0;
-      KINDS.forEach(([k]) => {
+      kindsNow().forEach(([k]) => {
         const m = v.match(new RegExp('\\(' + k
           + '\\s*\\.\\s*(defer|reuse|split|frames)\\)'));
         if (m) {
@@ -1807,7 +1997,7 @@ function readPresetFile(text) {
           n++;
         }
       });
-      if (n) { took.push(n + ' of the four kinds'); render(); }
+      if (n) { took.push(n + ' of the ' + kindsNow().length + ' kinds'); render(); }
       else left.push('classicist-window-behaviour, in a form this cannot read');
     }
   }
@@ -1866,12 +2056,29 @@ function shares(count) {
   return out;
 }
 
+// WHICH MANAGER TO DRAW, which is a choice because it is not knowable from
+// here.  The frames and their contents are identical in all three; only the
+// desktop's arrangement differs, and that is entirely its own doing.
+let wmKind = 'float';
+document.addEventListener('change', e => {
+  if (e.target.name !== 'wm') return;
+  wmKind = e.target.value;
+  document.querySelectorAll('.wmpick label').forEach(l =>
+    l.classList.toggle('on', l.dataset.wm === wmKind));
+  render();
+});
+
 function render() {
   // THE COUNT AND THE DISCLAIMER, shown only where there is more than one
   // frame -- the distinction the `frames' behaviour exists to make, and the
   // one the drawing cannot make on its own.
   const many = scene.length > 1;
-  el('frames').classList.toggle('many', many);
+  const box = el('frames');
+  box.classList.toggle('many', many);
+  ['float', 'tile', 'scroll'].forEach(w =>
+    box.classList.toggle('wm-' + w, many && wmKind === w));
+  const pick = el('wmpick');
+  if (pick) pick.hidden = !many;
   const count = el('framecount');
   if (count) {
     count.hidden = !many;
@@ -1975,7 +2182,7 @@ function preset() {
   const desc = el('presetdesc').value.trim() || 'my personal reading configurations';
   const u = uniform();
   const out = [];
-  out.push(`;;; ${name}.el --- Diogenes preset  -*- lexical-binding: t -*-`);
+  out.push(`;;; ${name}.el --- a classicist suite preset  -*- lexical-binding: t -*-`);
   out.push(`;; Description: ${desc}`);
   if (el('shadow').checked)
     out.push(`;; Named after a builtin, so this file is what that name means.`);
@@ -1983,11 +2190,25 @@ function preset() {
   out.push(';; Where the buffers go.');
   if (u) out.push(`(setq classicist-window-behaviour '${u})`);
   else {
+    // FROM kindsNow() AND NOT FOUR BY HAND.  This listed lookup, browser,
+    // dictionary and morphology, so when the kinds became six -- and then six
+    // plus whatever a reader separates -- the rest were silently dropped and
+    // the preset did not set what had been chosen.
+    const rows = kindsNow().map(([k]) => k);
+    const pad = Math.max(...rows.map(k => k.length));
     out.push("(setq classicist-window-behaviour");
-    out.push("      '((lookup     . " + kind.lookup + ")");
-    out.push("        (browser    . " + kind.browser + ")");
-    out.push("        (dictionary . " + kind.dictionary + ")");
-    out.push("        (morphology . " + kind.morphology + ")))");
+    rows.forEach((k, i) => {
+      out.push("      " + (i === 0 ? "'((" : "  (") + k
+               + ' '.repeat(pad - k.length) + ' . ' + kind[k] + ')'
+               + (i === rows.length - 1 ? '))' : ''));
+    });
+    // AND THE ROLES A SEPARATED KIND NEEDS, before anything places them: a
+    // role has to exist to be placed.
+    separated().forEach(([, , , line]) => {
+      out.push('');
+      out.push(';; A role of its own, so the line above can place it.');
+      out.push(line);
+    });
     if (kind.morphology === 'split') {
       const beside = el('companion').value;
       const dir = el('companiondir').value;
@@ -2668,6 +2889,52 @@ function configText() {
     out.push('');
     out.push('  ;; What is awake.  Everything else is loaded and asleep.');
     out.push(`  (setq classicist-features '(${chosenFeatures.join(' ')}))`);
+  }
+
+  // THE PASSAGE-NOTES PACKAGE, which is not part of this suite: the box
+  // reveals its options and the block says how to install it, because a
+  // reader who wants notes filed by author and work will not find it here.
+  const roam = el('c-useroam') && el('c-useroam').checked;
+  const ropts = el('c-roamopts');
+  if (ropts) ropts.hidden = !roam;
+  if (roam) {
+    const rblock = [];
+    if (el('r-sub').value.trim()
+        && el('r-sub').value.trim() !== 'ref')
+      rblock.push(`  (setq diogenes-roam-subdirectory ${JSON.stringify(el('r-sub').value.trim())})`);
+    if (el('r-tag').value.trim()
+        && el('r-tag').value.trim() !== 'passage')
+      rblock.push(`  (setq diogenes-roam-tag ${JSON.stringify(el('r-tag').value.trim())})`);
+    if (el('r-name').value !== 'citation')
+      rblock.push(`  (setq diogenes-roam-file-name '${el('r-name').value})`);
+    if (!el('r-template').checked)
+      rblock.push('  (setq diogenes-roam-install-capture-template nil)');
+    if (el('r-idxname').value.trim()
+        && el('r-idxname').value.trim() !== 'index.org')
+      rblock.push(`  (setq diogenes-roam-index-name ${JSON.stringify(el('r-idxname').value.trim())})`);
+    if (el('r-idxwidth').value.trim()
+        && el('r-idxwidth').value.trim() !== '88')
+      rblock.push(`  (setq diogenes-roam-index-snippet-width ${el('r-idxwidth').value.trim()})`);
+    if (!el('r-idxbook').checked)
+      rblock.push('  (setq diogenes-roam-index-by-book nil)');
+    if (!el('r-idxbar').checked)
+      rblock.push('  (setq diogenes-roam-index-sidebar nil)');
+    if (el('r-idxside').value !== 'right')
+      rblock.push(`  (setq diogenes-roam-index-side '${el('r-idxside').value})`);
+    if (el('r-idxsize').value.trim()
+        && el('r-idxsize').value.trim() !== '0.35')
+      rblock.push(`  (setq diogenes-roam-index-size ${el('r-idxsize').value.trim()})`);
+    if (!el('r-idxselect').checked)
+      rblock.push('  (setq diogenes-roam-index-select nil)');
+    if (el('r-idxopen').value !== 'default')
+      rblock.push(`  (setq diogenes-roam-index-open-in '${el('r-idxopen').value})`);
+    out.push('');
+    out.push(';; PASSAGE NOTES FILED BY AUTHOR AND WORK are their own package.');
+    out.push(';; Install VictorSousa92/diogenes-roam, branch classicist-roam,');
+    out.push(';; the same way you installed the two above.');
+    out.push('  (with-eval-after-load \'diogenes-roam');
+    out.push('    (diogenes-roam-mode 1))');
+    if (rblock.length) out.push(...rblock);
   }
 
   out.push('');
@@ -3735,6 +4002,7 @@ document.addEventListener('click', e => {
 
 showSections();
 syncFeatureRows();
+drawKinds();
 renderConfig();
 reset();
 render();

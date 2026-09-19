@@ -73,7 +73,16 @@
     (diogenes-search-mode . search)
     (pdf-view-mode . dictionary)
     (doc-view-mode . dictionary)
-    (reader-mode . dictionary))
+    (reader-mode . dictionary)
+    ;; A TEI TEXT IS A TEXT, and only the mode route reaches it: its buffer is
+    ;; named `Author, Work (version)' with no leading star, so no name regexp
+    ;; can tell it from an ordinary file.  `tei-mode' is set the line after the
+    ;; buffer is made.
+    (tei-mode . browser)
+    ;; A TREE IS NEITHER A TEXT NOR A LIST, and had no role at all -- three
+    ;; plain `display-buffer' calls, which `classicist-window-behaviour' never
+    ;; saw.  It wants width, and a place of its own to be given one.
+    (treebank-tree-mode . treebank))
   "Major modes and the role each belongs to.
 Consulted after `classicist-role-regexps\=', for a buffer already in its mode
 -- which a document buffer is, `find-file\=' having set it before display.
@@ -200,7 +209,14 @@ cannot have leaves part of its tile empty."
   '(("\\`\\*diogenes-lookup" . lookup)
     ("\\`\\*Diogenes \\(?:Analysis\\|Forms\\)" . morphology)
     ("\\`\\*diogenes-browser" . browser)
-    ("\\`\\*diogenes-search" . search))
+    ("\\`\\*diogenes-search" . search)
+    ;; THE SPECIFIC BEFORE THE GENERAL, this list being matched in order.  Five
+    ;; buffers begin `*Diorisis' and they are different things: a text, a hit
+    ;; list, and three asides.  The text is anchored on the colon and the hit
+    ;; list on its closing star, so neither catches the other.
+    ("\\`\\*Diorisis: " . browser)
+    ("\\`\\*Diorisis\\*\\'" . search)
+    ("\\`\\*Treebank " . treebank))
   "Buffer names and the kind of frame each belongs in.
 Matched before major modes, and that order matters: a buffer's NAME is
 settled when it is created, where `diogenes--search-dict\=' sets the major

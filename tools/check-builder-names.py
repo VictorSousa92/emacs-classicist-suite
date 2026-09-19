@@ -68,6 +68,8 @@ def main():
     ap.add_argument("--dir", default=".")
     ap.add_argument("--builder",
                     default="tools/classicist-builder.html")
+    ap.add_argument("--roam", default=os.environ.get("DIOGENES_ROAM", ""),
+                    help="where diogenes-roam is; $DIOGENES_ROAM by default")
     ap.add_argument("--base", default=os.environ.get("DIOGENES", ""),
                     help="where the installed base is; $DIOGENES by default")
     ap.add_argument("--quiet", action="store_true")
@@ -100,7 +102,21 @@ def main():
             t = open(os.path.join(args.base, f), encoding="utf-8",
                      errors="replace").read()
             inbase |= {m.group(1) for m in DEFINER.finditer(t)}
+    # AND THE PASSAGE-NOTES PACKAGE, which the builder configures and the
+    # suite does not carry: thirteen of its names are emitted here, and
+    # excusing them by hand would have meant thirteen entries that stop being
+    # checked.  A second directory is the honest answer.
+    if args.roam and os.path.isdir(args.roam):
+        for f in sorted(x for x in os.listdir(args.roam)
+                        if x.endswith(".el")):
+            t = open(os.path.join(args.roam, f), encoding="utf-8",
+                     errors="replace").read()
+            inbase |= {m.group(1) for m in DEFINER.finditer(t)}
     elif not args.quiet:
+        print("   NO ROAM PACKAGE TO CHECK AGAINST.  Pass --roam or set")
+        print("   DIOGENES_ROAM, or its thirteen names read as undefined.")
+
+    if not (args.base and os.path.isdir(args.base)) and not args.quiet:
         print("   NO BASE TO CHECK AGAINST.  Pass --base or set DIOGENES, or\n"
               "   every unrecognised diogenes- name is taken on trust.")
 

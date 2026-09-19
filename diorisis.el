@@ -1562,7 +1562,7 @@ not `3.806-3.807\='.  The reversible form is what a LINK wants and is
                 (mapconcat #'identity from ".")
                 (mapconcat #'identity (nthcdr shared to) "."))))))
 
-(defcustom diorisis-display-kind 'diorisis
+(defcustom diorisis-display-kind 'search
   "Which kind of Diogenes buffer the hits count as, for display.
 
 A category of its own by default, so that `diogenes-window-behaviour' can

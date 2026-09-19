@@ -7,6 +7,12 @@ PYTHON  ?= python3
 ## classicist-base, or ~/.emacs.d/elpa/diogenes-* once they are merged.
 ## `M-x classicist-check-base' says whether a given installation will do.
 DIOGENES ?= $(HOME)/diogenes-folder/diogenes-prs
+
+## AND THE PASSAGE-NOTES PACKAGE, which the builder configures and this suite
+## does not carry -- thirteen of its names are emitted there, and without this
+## they read as undefined.  Excusing them by hand would have meant thirteen
+## names nothing checks.
+DIOGENES_ROAM ?= $(HOME)/diogenes-folder/diogenes-roam
 EMACSL    = -L . -L $(DIOGENES)
 ELS = $(wildcard *.el)
 BASELINE = per-file-baseline.txt
@@ -45,7 +51,8 @@ duplicates:
 ## reader just got deprecated names.  A generator should generate the real
 ## ones; the aliases are for configuration that already exists.
 builder:
-	@DIOGENES=$(DIOGENES) $(PYTHON) tools/check-builder-names.py
+	@DIOGENES=$(DIOGENES) DIOGENES_ROAM=$(DIOGENES_ROAM) \
+	   $(PYTHON) tools/check-builder-names.py
 
 ## THE SQL, READ OUT OF THE ELISP.  check-diorisis-sql.py extracts the
 ## queries diorisis.el builds -- the two defconsts whole, the clause templates,
