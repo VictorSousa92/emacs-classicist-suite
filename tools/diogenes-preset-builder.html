@@ -369,16 +369,6 @@
 
 <main id="panel-config" class="half">
 <section class="pane">
-  <h2>Where to start</h2>
-  <p class="note">Two starting points, and everything below stays yours to
-     change. Neither installs less than the other: the whole suite is there
-     either way, and these decide what it does out of the box.</p>
-  <div class="distro" id="c-start">
-    <label data-start="fixes"><button type="button" data-start="fixes">Fixes only</button></label>
-    <label data-start="rec"><button type="button" data-start="rec">Recommended</button></label>
-  </div>
-  <p class="note" id="c-startnote">&nbsp;</p>
-
   <h2>What you run</h2>
   <p class="note">So that the key boxes below can warn you about a key your
      configuration already uses.</p>
@@ -391,6 +381,16 @@
       page stays in normal state, where evil's own keys apply.</em></label>
   </div>
   <p class="note" id="c-evilnote"></p>
+
+  <h2>Where to start</h2>
+  <p class="note">Two starting points, and everything below stays yours to
+     change. Neither installs less than the other: the whole suite is there
+     either way, and these decide what it does out of the box.</p>
+  <div class="distro" id="c-start">
+    <label data-start="fixes"><button type="button" data-start="fixes">Fixes only</button></label>
+    <label data-start="rec"><button type="button" data-start="rec">Recommended</button></label>
+  </div>
+  <p class="note" id="c-startnote">&nbsp;</p>
 
   <h2>Your own keys</h2>
   <p class="note">Optional, and it makes the warnings below far better: add the
@@ -411,6 +411,16 @@
     <span><code>classicist-morpheus-directory</code> &mdash; for forms the wordlists never saw. Optional.</span>
     <input type="text" id="c-morpheus" placeholder="~/morpheus/morpheus" data-drop="1">
   </div>
+
+  <p class="note" id="c-needs"><b>What needs something else.</b>
+     A scanned dictionary wants <code>pdf-tools</code>, and its page cannot be
+     shown without it. A dictionary wants its path, and until it has one its
+     key says what to set rather than doing nothing. The note commands want
+     <code>org-roam</code>, the frame keys want nothing, and the evil key
+     wants evil. All of it wants the base, and
+     <code>M-x classicist-check-base</code> says whether yours will do.
+     Nothing here depends on anything else <em>here</em>: no setting below
+     turns another one off.</p>
 
   <h2>Dictionaries</h2>
   <p class="note">A dictionary appears when its path is set and the file is
@@ -503,6 +513,25 @@
       <em><code>classicist-browser-goto-by-level</code> &mdash; on by default; off takes the whole citation at once.</em></label>
   </div>
 
+  <h2>A preset at startup</h2>
+  <p class="note">Optional. The four below need nothing else set; for one of
+     your own, name it and say where the presets live. Make one on the
+     <b>Presets</b> tab.</p>
+  <div id="c-presets"></div>
+  <div id="c-preset-other" hidden>
+    <div class="field">
+      <span>Its name &mdash; the file without <code>.el</code></span>
+      <input type="text" id="c-preset-name" placeholder="my-preset">
+    </div>
+    <div class="field">
+      <span><code>diogenes-preset-directory</code> &mdash; where your presets live</span>
+      <input type="text" id="c-preset-dir" placeholder="~/.emacs.d/diogenes-presets/"
+             data-drop="1">
+    </div>
+  </div>
+</section>
+
+<section class="pane watch">
   <h2>Keys</h2>
   <p class="note">Blank keeps the default. <code>-</code> binds nothing, and the
      keyboard button records the keys you press.</p>
@@ -643,25 +672,6 @@
       Harmless otherwise, and needed only if you use frames.</em></label>
   </div>
 
-  <h2>A preset at startup</h2>
-  <p class="note">Optional. The four below need nothing else set; for one of
-     your own, name it and say where the presets live. Make one on the
-     <b>Presets</b> tab.</p>
-  <div id="c-presets"></div>
-  <div id="c-preset-other" hidden>
-    <div class="field">
-      <span>Its name &mdash; the file without <code>.el</code></span>
-      <input type="text" id="c-preset-name" placeholder="my-preset">
-    </div>
-    <div class="field">
-      <span><code>diogenes-preset-directory</code> &mdash; where your presets live</span>
-      <input type="text" id="c-preset-dir" placeholder="~/.emacs.d/diogenes-presets/"
-             data-drop="1">
-    </div>
-  </div>
-</section>
-
-<section class="pane watch">
   <h2>Your configuration</h2>
   <pre id="c-out"></pre>
   <div class="actions">
