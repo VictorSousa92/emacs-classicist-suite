@@ -2,9 +2,9 @@
 r"""Every symbol the builder emits, checked against what the suite defines.
 
     python3 check-builder-names.py
-    python3 check-builder-names.py --dir . --builder tools/diogenes-preset-builder.html
+    python3 check-builder-names.py --dir . --builder tools/classicist-builder.html
 
-WHY THIS EXISTS.  `tools/diogenes-preset-builder.html' is 2,969 lines that
+WHY THIS EXISTS.  `tools/classicist-builder.html' is 2,969 lines that
 generate a reader's configuration, and NOTHING CHECKED IT.  Every other
 change in this package is caught by a gate -- the compile ratchet,
 `check-declare', the duplicate check -- and a mistake in the builder is
@@ -67,7 +67,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--dir", default=".")
     ap.add_argument("--builder",
-                    default="tools/diogenes-preset-builder.html")
+                    default="tools/classicist-builder.html")
     ap.add_argument("--base", default=os.environ.get("DIOGENES", ""),
                     help="where the installed base is; $DIOGENES by default")
     ap.add_argument("--quiet", action="store_true")
