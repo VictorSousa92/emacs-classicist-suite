@@ -839,9 +839,10 @@
     </div>
     <div class="field">
       <span>Which edge it sits on
-        <em><code>diogenes-roam-index-side</code> &mdash; right by default</em></span>
+        <em><code>diogenes-roam-index-side</code> &mdash; right by default. <b>defer</b> hands the placing to the suite, where a preset can make it &mdash; the index otherwise puts itself in a side window, which no preset reaches, so <code>split</code> and <code>frames</code> say nothing about it</em></span>
       <select id="r-idxside">
         <option value="right">right</option>
+        <option value="defer">defer &mdash; let a preset decide</option>
         <option value="left">left</option>
         <option value="top">top</option>
         <option value="bottom">bottom</option>
@@ -1209,6 +1210,30 @@
   <div class="field">
     <span>Key that leaves Emacs state &mdash; <code>diogenes-evil-normal-state-key</code></span>
     <input type="text" id="escapekey" value="&lt;escape&gt;">
+  </div>
+
+  <h2>The index of passage notes</h2>
+  <p class="note">Where it sits and how much room it takes &mdash; which is
+     what a preset is for. Shown because you have ticked the package on the
+     Configuration tab; a preset setting options of a package you have not
+     installed would be noise in a file you read.</p>
+  <div class="field">
+    <span>Which edge, in this preset
+      <em><code>diogenes-roam-index-side</code> &mdash; as the Configuration
+      tab says, unless you change it here</em></span>
+    <select id="p-idxside">
+      <option value="">As configured &mdash; say nothing about it</option>
+      <option value="right">right</option>
+      <option value="left">left</option>
+      <option value="top">top</option>
+      <option value="bottom">bottom</option>
+    </select>
+  </div>
+  <div class="field">
+    <span>How much room, in this preset
+      <em><code>diogenes-roam-index-size</code> &mdash; a fraction of the
+      frame, or a whole number of columns or lines. Empty to leave it</em></span>
+    <input type="number" id="p-idxsize" step="0.05" placeholder="0.35">
   </div>
 
   <h2>The file</h2>
@@ -2273,6 +2298,21 @@ function preset() {
   if (evilBits.length) { out.push(''); out.push(';; Under evil.'); out.push(...evilBits); }
   out.push('');
   out.push(`;;; ${name}.el ends here`);
+  // THE INDEX, where a preset says so.  A preset may set anything the package
+  // defines -- `diogenes-preset''s own docstring makes that the point of the
+  // mechanism -- so this needs no role: the file sets the two options and
+  // loading it moves the index.
+  if (el('c-useroam') && el('c-useroam').checked) {
+    const iside = el('p-idxside').value;
+    const isize = el('p-idxsize').value.trim();
+    if (iside || isize) {
+      out.push('');
+      out.push(';; The index of passage notes.');
+      if (iside) out.push(`(setq diogenes-roam-index-side '${iside})`);
+      if (isize) out.push(`(setq diogenes-roam-index-size ${isize})`);
+    }
+  }
+
   return out.join('\n');
 }
 
@@ -2857,39 +2897,46 @@ function configText() {
   // The paths and the few settings without a working default.
   // Eighty-two options across these five modules; the rest have
   // defaults, and offering them all would bury these.
+  // A SLEEPING FEATURE WRITES NOTHING.  Unticking one hides its section and
+  // left its boxes full, so the paths went on being written for a feature the
+  // same block declared asleep.  The value stays in the form, so ticking it
+  // again brings the lines back -- what is emitted follows what is awake, not
+  // what was typed.
+  const awake = f => !document.querySelector('[data-feature="' + f + '"]')
+                     || featureOn(f);
   const block = [];
-  if (normalisePath(el('c-teidir').value))
+  if (awake('tei-corpora') && normalisePath(el('c-teidir').value))
     block.push(`  (setq tei-directory ${JSON.stringify(normalisePath(el('c-teidir').value))})`);
-  if (normalisePath(el('c-diodb').value))
+  if (awake('diorisis') && normalisePath(el('c-diodb').value))
     block.push(`  (setq diorisis-database ${JSON.stringify(normalisePath(el('c-diodb').value))})`);
-  if (normalisePath(el('c-diomerged').value))
+  if (awake('diorisis') && normalisePath(el('c-diomerged').value))
     block.push(`  (setq diorisis-merged-database ${JSON.stringify(normalisePath(el('c-diomerged').value))})`);
-  if (el('c-diousemerged').checked)
+  if (awake('diorisis') && el('c-diousemerged').checked)
     block.push('  (setq diorisis-use-merged t)');
-  if (el('c-diocorpus').value.trim()
+  if (awake('diorisis') && el('c-diocorpus').value.trim()
       && el('c-diocorpus').value.trim() !== 'tlg')
     block.push(`  (setq diorisis-corpus ${JSON.stringify(el('c-diocorpus').value.trim())})`);
-  if (normalisePath(el('c-diosaved').value))
+  if (awake('diorisis') && normalisePath(el('c-diosaved').value))
     block.push(`  (setq diorisis-saved-directory ${JSON.stringify(normalisePath(el('c-diosaved').value))})`);
-  if (normalisePath(el('c-tbdir').value))
+  if (awake('treebank') && normalisePath(el('c-tbdir').value))
     block.push(`  (setq treebank-directory ${JSON.stringify(normalisePath(el('c-tbdir').value))})`);
-  if (normalisePath(el('c-tbwork').value))
+  if (awake('treebank') && normalisePath(el('c-tbwork').value))
     block.push(`  (setq treebank-workbook-directory ${JSON.stringify(normalisePath(el('c-tbwork').value))})`);
-  if (normalisePath(el('c-tbviewdir').value))
+  if (awake('treebank') && normalisePath(el('c-tbviewdir').value))
     block.push(`  (setq treebank-viewer-directory ${JSON.stringify(normalisePath(el('c-tbviewdir').value))})`);
-  if (normalisePath(el('c-tbarethusa').value))
+  if (awake('treebank') && normalisePath(el('c-tbarethusa').value))
     block.push(`  (setq treebank-arethusa-directory ${JSON.stringify(normalisePath(el('c-tbarethusa').value))})`);
-  if (el('c-tbport').value.trim() && el('c-tbport').value.trim() !== '8087')
+  if (awake('treebank') && el('c-tbport').value.trim() && el('c-tbport').value.trim() !== '8087')
     block.push(`  (setq treebank-viewer-port ${el('c-tbport').value.trim()})`);
-  if (!el('c-tbserve').checked)
+  if (awake('treebank') && !el('c-tbserve').checked)
     block.push('  (setq treebank-serve-viewer nil)');
-  if (el('c-orglink').value.trim())
+  if (awake('notes') && el('c-orglink').value.trim())
     block.push(`  (setq diogenes-org-link-type ${JSON.stringify(el('c-orglink').value.trim())})`);
-  if (el('c-orggoto').value.trim())
+  if (awake('notes') && el('c-orggoto').value.trim())
     block.push(`  (setq diogenes-org-goto-key ${JSON.stringify(el('c-orggoto').value.trim())})`);
-  if (el('c-orgnotes').value.trim())
+  if (awake('notes') && el('c-orgnotes').value.trim())
     block.push(`  (setq diogenes-org-notes-key ${JSON.stringify(el('c-orgnotes').value.trim())})`);
-  if (el('c-orgnote').value.trim())
+  if (awake('notes') && el('c-orgnote').value.trim())
     block.push(`  (setq diogenes-org-note-key ${JSON.stringify(el('c-orgnote').value.trim())})`);
   if (block.length) {
     out.push('');
@@ -2923,6 +2970,12 @@ function configText() {
   // reveals its options and the block says how to install it, because a
   // reader who wants notes filed by author and work will not find it here.
   const roam = el('c-useroam') && el('c-useroam').checked;
+  // AND THE PRESET TAB'S TWO ROWS WITH IT.
+  const pidx = document.querySelector('#panel-preset h2');
+  document.querySelectorAll('#panel-preset [id^="p-idx"]').forEach(box => {
+    const field = box.closest('.field');
+    if (field) field.hidden = !roam;
+  });
   const ropts = el('c-roamopts');
   if (ropts) ropts.hidden = !roam;
   if (roam) {
@@ -3860,6 +3913,16 @@ function showSections() {
 document.addEventListener('change', e => {
   const f = e.target.dataset && e.target.dataset.feature;
   if (!f) return;
+  // NOTES BRINGS THE PACKAGE THAT FILES THEM.  The roam box is a box and not
+  // a feature, so setFeatures never touched it: a reader who ticked notes got
+  // the suite own org commands and no recipe for the package that files them
+  // by author and work.  It follows notes both ways: leaving it ticked when
+  // notes went off wrote a recipe and twelve settings for a feature the same
+  // block declared asleep, which is the fault this whole pass is about.
+  if (f === 'notes') {
+    const rb = el('c-useroam');
+    if (rb) rb.checked = e.target.checked;
+  }
   if (e.target.checked && WANTS[f] && !WANTS[f].some(featureOn)) {
     const first = document.getElementById('f-' + WANTS[f][0]);
     if (first) { first.checked = true; }
@@ -3973,6 +4036,7 @@ el('c-download').addEventListener('click', () => {
 const START = {
   fixes: {
     features: ['texts', 'lexica'],
+    'c-useroam': false,
     // Nothing that changes how Diogenes looks.  Not the base -- the base
     // without its rough edges.
     'c-headerline': false, 'c-citations': false, 'c-analysis': false,
@@ -3983,6 +4047,7 @@ const START = {
   all: {
     features: ['texts', 'lexica', 'dictionaries', 'diorisis', 'treebank',
                'tei-corpora', 'notes', 'windows'],
+    'c-useroam': true,
     // The above, plus what the package is for.
     'c-headerline': true, 'c-citations': true, 'c-analysis': true,
     'c-joinwords': true, 'c-completelemmata': true, 'c-allentries': true,
