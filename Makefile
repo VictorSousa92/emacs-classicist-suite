@@ -16,7 +16,9 @@ BASELINE = per-file-baseline.txt
 all: check
 
 help:
-	@echo "make check      compile, declare, balance -- the whole gate"
+	@echo "make check      compile, declare, duplicates, builder"
+	@echo "make duplicates anything defined in more than one file"
+	@echo "make builder    the names the preset builder emits"
 	@echo "make compile    per-file warnings, against $(BASELINE)"
 	@echo "make declare    every declare-function, against the definition"
 	@echo "make balance    parens, per file"
@@ -48,7 +50,7 @@ builder:
 check: compile declare duplicates builder
 
 ## THE RATCHET, AND NOT A ZERO.  tei-browser fails on a single warning
-## because that file is at zero and can stay there.  This package is at 154
+## because that file is at zero and can stay there.  This package is at 59
 ## across forty files, most of it inherited, and a gate demanding zero would
 ## be switched off within a day.  So the gate is per file and against the
 ## recorded count: a file may get better and may not get worse.
@@ -128,9 +130,14 @@ declare:
 	else echo "every declare-function names what it says it names"; fi
 
 balance:
-	@if [ -f tools/check-elisp-balance.py ]; then \
-	  for f in $(ELS); do $(PYTHON) tools/check-elisp-balance.py $$f; done; \
-	else echo "tools/check-elisp-balance.py is in the tei-browser tree"; fi
+	@for f in $(ELS); do $(PYTHON) tools/check-elisp-balance.py $$f; done
+
+## THE FORMS, per file: defcustom shapes, forward references, and whether
+## a file defines everything it calls.  Not in \`check\`, because the last
+## of those is advisory -- a file that declares honestly looks incomplete
+## to it.  It found both forward references this work fixed.
+forms:
+	@for f in $(ELS); do $(PYTHON) tools/check-elisp-forms.py $$f; done
 
 baseline:
 	@rm -f *.elc
