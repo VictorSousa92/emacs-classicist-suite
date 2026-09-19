@@ -9,10 +9,15 @@
     --ink: #1c1a17; --paper: #f7f4ee; --rule: #d8d2c6; --quiet: #6f6a61;
     --entry: #b8543f; --browser: #3f6b8a; --dict: #6d6136; --accent: #7a3b2e;
   }
+  /* THE WHOLE SCALE HANGS OFF THIS.  Every size below is in rem, which is
+     relative to the root and not to body -- so the body's own absolute 15px
+     was a second origin nobody could see. Change this one number and
+     everything moves together. */
+  html { font-size: 17px; }
   * { box-sizing: border-box; }
   body {
     margin: 0; background: var(--paper); color: var(--ink);
-    font: 15px/1.55 "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    font: 1rem/1.58 "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
   }
   header { padding: 1.5rem 2rem 1rem; border-bottom: 1px solid var(--rule); }
   h1 { margin: 0; font-size: 1.4rem; font-weight: 600; letter-spacing: -0.01em; }
@@ -283,6 +288,20 @@
     background: #fdfcfa; overflow: hidden;
   }
   .frame.fresh { box-shadow: 0 0 0 3px rgba(122,59,46,.22); }
+
+  /* MORE THAN ONE FRAME IS MORE THAN ONE OS WINDOW.  Offset rather than
+     stacked flush, so the drawing does not read as one frame split in two --
+     which is the distinction the `frames' behaviour exists to make. */
+  .frames.many .frame { margin-left: 0; transition: margin-left .12s; }
+  .frames.many .frame:nth-child(2) { margin-left: 1.1rem; }
+  .frames.many .frame:nth-child(3) { margin-left: 2.2rem; }
+  .frames.many .frame:nth-child(n+4) { margin-left: 3.3rem; }
+  .framecount { font-size: .82rem; color: var(--quiet); margin: 0 0 .4rem;
+                text-align: center; }
+  .wmnote {
+    font-size: .8rem; color: var(--quiet); margin: .7rem 0 0;
+    padding: .5rem .65rem; border-left: 2px solid var(--rule);
+  }
   .frame .bar {
     font: 600 .66rem/1.8 ui-monospace, Menlo, monospace; text-align: center;
     background: var(--ink); color: var(--paper); letter-spacing: .04em;
@@ -510,7 +529,7 @@
     </label>
     <label class="featurerow" data-feature="tei-corpora">
       <input type="checkbox" id="f-tei-corpora" data-feature="tei-corpora">
-      <div><b>Editions as TEI</b><span>CSEL, the Patrologia Latina, Corpus Corporum. Wants no Diogenes data</span></div>
+      <div><b>Editions as TEI</b><span>Perseus canonical Greek and Latin, the First Thousand Years of Greek, the CSEL and anything else published as TEI XML with a CTS URN. Wants no Diogenes data</span></div>
     </label>
     <label class="featurerow" data-feature="notes" data-wants="texts tei-corpora">
       <input type="checkbox" id="f-notes" data-feature="notes">
@@ -649,7 +668,7 @@
   <h2 data-feature="tei-corpora">The corpora published as TEI</h2>
   <div class="field">
     <span>Where the editions are
-      <em><code>tei-directory</code> &mdash; the directory tei-index.py wrote its index into, and where the editions themselves are. CSEL, the Patrologia Latina, the Corpus Corporum and anything else published as TEI XML with a citation scheme this can read.</em></span>
+      <em><code>tei-directory</code> &mdash; the directory holding canonical-greekLit, canonical-latinLit, First1KGreek or the like, and the index tei-index.py wrote there.</em></span>
     <input type="text" id="c-teidir" placeholder="/path/to/TEI" data-drop="1">
   </div>
 
@@ -913,6 +932,31 @@
 
 <main id="panel-preset" hidden>
 <section class="pane">
+  <h2>Where to start</h2>
+  <p class="note">A preset is a file of settings you load when you want them.
+     Start from nothing, from one of the four the package ships, or from a
+     preset you already have.</p>
+  <div class="starts" id="p-start">
+    <button type="button" class="startcard" data-from="blank">
+      <b>Blank</b><span>every kind deferring, as with no preset at all</span>
+    </button>
+    <button type="button" class="startcard" data-from="reuse">
+      <b>reuse</b><span>one window for entries, each replacing the last</span>
+    </button>
+    <button type="button" class="startcard" data-from="split">
+      <b>split</b><span>an entry beside the text, later ones sharing it</span>
+    </button>
+    <button type="button" class="startcard" data-from="frames">
+      <b>frames</b><span>each kind in a frame of its own</span>
+    </button>
+  </div>
+  <div class="uploadrow">
+    <input type="file" id="p-openfile" accept=".el,text/plain">
+    <span class="note" id="p-openstatus">Or open a preset you have. Nothing is
+      uploaded &mdash; the page reads it in your browser.</span>
+  </div>
+  <p class="note" id="p-openreport"></p>
+
   <h2>Where things go <i id="mixedhint"></i></h2>
   <div class="kinds" id="kinds"></div>
   <p class="note" id="mixednote"></p>
@@ -1073,7 +1117,12 @@
       <span class="note">Drawn to shape, so a split looks as it will look.</span>
     </div>
     <div class="board" id="board">
+    <p class="framecount" id="framecount" hidden></p>
     <div class="frames" id="frames"></div>
+  <p class="wmnote" id="wmnote" hidden>Where a new window actually
+     appears is your window manager's decision, not Emacs's &mdash; on top,
+     tiled beside the others, on another workspace, or behind everything.
+     Emacs asks for a frame; what happens to it is outside this drawing.</p>
     <div class="sidepanel">
     <div class="steps">
       <button data-step="browse">Browse a text<kbd>b l</kbd></button>
@@ -1705,6 +1754,95 @@ function reset() {
       'Press the buttons in order.');
 }
 
+// ---------- where a preset starts from ----------
+// THE FOUR BUILTINS EACH SET ALL FOUR KINDS TO ONE WORD, which is what
+// `classicist-window-behaviour' means when given a symbol rather than an
+// alist.  So starting from one is four assignments, and `blank' is the same
+// thing with `defer'.
+function presetStartFrom(which) {
+  const word = which === 'blank' ? 'defer' : which;
+  KINDS.forEach(([k]) => {
+    kind[k] = word;
+    const box = el('k-' + k);
+    if (box) box.value = word;
+  });
+  document.querySelectorAll('#p-start .startcard').forEach(b =>
+    b.classList.toggle('on', b.dataset.from === which));
+  el('p-openreport').textContent = '';
+  render();
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('#p-start .startcard');
+  if (b) { e.preventDefault(); presetStartFrom(b.dataset.from); }
+});
+
+// AND A FILE, read in the browser.  What it can take it takes; what it cannot
+// it NAMES, because a preset may set anything the package defines and half of
+// one silently dropped is worse than a list of what was left.
+const PRESET_SIMPLE = {
+  'classicist-split-direction': 'splitdir',
+  'classicist-split-size': 'splitsize',
+  'classicist-lookup-show-analysis': null,
+  'classicist-companion-direction': 'compdir'
+};
+function readPresetFile(text) {
+  const took = [], left = [];
+  const behaviour = text.match(
+    /\(setq\s+classicist-window-behaviour\s+'([^)]*\)?[^)]*)\)/);
+  if (behaviour) {
+    const v = behaviour[1].trim();
+    const word = v.match(/^(defer|reuse|split|frames)$/);
+    if (word) {
+      presetStartFrom(word[1]);
+      took.push('every kind set to ' + word[1]);
+    } else {
+      let n = 0;
+      KINDS.forEach(([k]) => {
+        const m = v.match(new RegExp('\\(' + k
+          + '\\s*\\.\\s*(defer|reuse|split|frames)\\)'));
+        if (m) {
+          kind[k] = m[1];
+          const box = el('k-' + k);
+          if (box) box.value = m[1];
+          n++;
+        }
+      });
+      if (n) { took.push(n + ' of the four kinds'); render(); }
+      else left.push('classicist-window-behaviour, in a form this cannot read');
+    }
+  }
+  // every other setq in the file, named whether or not it was taken
+  const seen = new Set();
+  let m;
+  const re = /\(setq\s+([a-z][a-z0-9-]*)/g;
+  while ((m = re.exec(text))) seen.add(m[1]);
+  seen.forEach(name => {
+    if (name === 'classicist-window-behaviour') return;
+    if (!(name in PRESET_SIMPLE)) left.push(name);
+  });
+  const parts = [];
+  if (took.length) parts.push('Took ' + took.join(', ') + '.');
+  if (left.length)
+    parts.push('Did not read: ' + left.sort().join(', ')
+               + ' \u2014 set those by hand, or keep your file and edit it.');
+  el('p-openreport').textContent =
+    parts.length ? parts.join(' ') : 'Nothing in that file this page sets.';
+}
+el('p-openfile').addEventListener('change', ev => {
+  const file = ev.target.files && ev.target.files[0];
+  if (!file) return;
+  el('p-openstatus').textContent = 'Reading ' + file.name + '\u2026';
+  const fr = new FileReader();
+  fr.onload = () => {
+    el('p-openstatus').textContent = file.name;
+    readPresetFile(String(fr.result || ''));
+  };
+  fr.onerror = () => {
+    el('p-openstatus').textContent = 'Could not read ' + file.name;
+  };
+  fr.readAsText(file);
+});
+
 // The share of the frame each drawn window gets, in order.  Emacs's own
 // arithmetic: the first split gives the entry window its fraction OF THE
 // FRAME, and a second split divides THAT window -- so a dictionary at 0.5 of
@@ -1729,6 +1867,20 @@ function shares(count) {
 }
 
 function render() {
+  // THE COUNT AND THE DISCLAIMER, shown only where there is more than one
+  // frame -- the distinction the `frames' behaviour exists to make, and the
+  // one the drawing cannot make on its own.
+  const many = scene.length > 1;
+  el('frames').classList.toggle('many', many);
+  const count = el('framecount');
+  if (count) {
+    count.hidden = !many;
+    count.textContent = many
+      ? scene.length + ' Emacs windows, not one window divided'
+      : '';
+  }
+  const wm = el('wmnote');
+  if (wm) wm.hidden = !many;
   el('frames').innerHTML = scene.map(frame => `
     <div class="frame${frame.isFresh ? ' fresh' : ''}">
       <div class="bar">${frame.name}</div>

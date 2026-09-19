@@ -164,7 +164,7 @@ habit."
       (user-error
        (concat "No TEI index.  Set tei-directory, clone a corpus "
                "into it, and run: python3 tei-index.py DIRECTORY")))
-    (with-current-buffer (get-buffer-create "*Diogenes TEI corpora*")
+    (with-current-buffer (get-buffer-create "*Classicist TEI corpora*")
       (let ((inhibit-read-only t))
         (erase-buffer)
         (insert (propertize "TEI corpora\n\n" 'face 'bold))
