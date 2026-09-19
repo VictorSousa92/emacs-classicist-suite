@@ -549,6 +549,7 @@ otherwise, prompt the user for input."
 This is the main dispatcher function that starts the transient
 user interface."
   [["SEARCH"
+    :if (lambda () (classicist-feature-p 'texts))
     ("sg" "Search the Greek TLG"
      (lambda () (interactive) (transient-setup 'diogenes--search--select-mode nil nil
 					  :scope (list :type "tlg")))
@@ -574,6 +575,7 @@ user interface."
 					  :scope (list :type "misc")))
      :transient transient--do-recurse)]
    ["BROWSE"
+    :if (lambda () (classicist-feature-p 'texts))
     ("bg" "Browse the Greek TLG" diogenes-browse-tlg)
     ("bl" "Browse the Latin PHI" diogenes-browse-phi)
     ("bd" "Browse the Duke Documentary Papyri" diogenes-browse-ddp)
@@ -581,6 +583,7 @@ user interface."
     ("bc" "Browse the Christian Inscriptions" diogenes-browse-chr)
     ("bm" "Browse the Miscellaneous PHI Texts" diogenes-browse-misc)]]
   [["MORPHOLOGY & DICTIONARY LOOKUP"
+    :if (lambda () (classicist-feature-p 'lexica))
     ("lg" "Look up Greek word (LSJ; C-u to choose)" diogenes-lookup-greek)
     ("ll" "Look up Latin word (Lewis & Short; C-u to choose)"
      diogenes-lookup-latin)
@@ -591,6 +594,7 @@ user interface."
     ("mg" "Greek morphology tools" diogenes-morphology-greek)
     ("ml" "Latin morphology tools" diogenes-morphology-latin)]
    ["DUMP AN ENTIRE WORK AS PLAIN TEXT"
+    :if (lambda () (classicist-feature-p 'texts))
     ("dg" "Dump from the Greek TLG" diogenes-dump-tlg)
     ("dl" "Dump from the Latin PHI" diogenes-dump-phi)
     ("dd" "Dump from the Duke Documentary Papyri" diogenes-dump-ddp)
@@ -603,15 +607,19 @@ user interface."
   ;; `C-c C-l', `C-c C-a' and `C-c C-e' are to hand there.  The cheatsheet lists
   ;; them under `Going between the windows and frames'.
   ["CUSTOM CORPORA"
+    :if (lambda () (classicist-feature-p 'texts))
    ("c" "Manage custom search corpora" diogenes-manage-user-corpora)])
 
 
 ;; And the mouse gestures a reader has asked for, which is nothing by default.
 (with-eval-after-load 'classicist-browser
+  ;; THE GESTURES A READER ASKED FOR, and only where the
+  ;; browser is awake at all.
+  (when (classicist-feature-p 'texts)
   (when (fboundp 'classicist-browser-install-mouse-keys)
     (classicist-browser-install-mouse-keys))
   (when (fboundp 'classicist-browser-install-turn-keys)
-    (classicist-browser-install-turn-keys)))
+    (classicist-browser-install-turn-keys))))
 
 (provide 'classicist)
 

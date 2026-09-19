@@ -24,6 +24,12 @@
 
 (require 'seq)
 
+;; THE SUITE FEATURE LIST, if this file is part of a suite at all.
+;; Declared and not required: this file stands alone -- absent the suite the
+;; guards fall back to what they did before, which is why the one in the
+;; autoloaded form asks fboundp first.
+(declare-function classicist-feature-p "classicist-groups" (feature))
+
 (defgroup tei nil
   "Corpora published as TEI XML."
   :group 'tools
@@ -649,7 +655,8 @@ of this one, and this one adds itself."
 
 (defun tei--add-to-diogenes-menu ()
   "Put our entry in Diogenes' menu.  Idempotent."
-  (when (and tei-add-to-diogenes-menu
+  (when (and (classicist-feature-p 'tei-corpora)
+             tei-add-to-diogenes-menu
              (fboundp 'transient-append-suffix))
     (ignore-errors
       (transient-append-suffix 'diogenes "bm"

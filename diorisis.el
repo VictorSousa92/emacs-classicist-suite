@@ -42,6 +42,12 @@
 
 (require 'text-property-search)
 
+;; THE SUITE FEATURE LIST, if this file is part of a suite at all.
+;; Declared and not required: this file stands alone -- absent the suite the
+;; guards fall back to what they did before, which is why the one in the
+;; autoloaded form asks fboundp first.
+(declare-function classicist-feature-p "classicist-groups" (feature))
+
 (declare-function diogenes--beta-to-utf8 "diogenes-utils" (str))
 
 (declare-function diogenes--utf8-to-beta "diogenes-utils" (str))
@@ -4398,7 +4404,8 @@ The entry appears only where both packages are present."
 can name; `sa\=' under SEARCH finds an annotated tree, by work and then by
 passage, which is a search and not a place.  Idempotent, each being added only
 where it is not there already."
-  (when (and diorisis-add-to-diogenes-menu
+  (when (and (classicist-feature-p 'diorisis)
+             diorisis-add-to-diogenes-menu
              (fboundp 'transient-append-suffix))
     (ignore-errors
       (unless (ignore-errors (transient-get-suffix 'diogenes "bD"))
@@ -4425,7 +4432,8 @@ IDEMPOTENT IN EARNEST, by asking whether the entry is there.  It can now be
 appended from two places -- the autoloads, and here once this file is loaded
 -- and `transient-append-suffix\=' asked twice appends twice, which showed as
 two identical lines under SEARCH."
-  (when (and diorisis-add-to-diogenes-menu
+  (when (and (classicist-feature-p 'diorisis)
+             diorisis-add-to-diogenes-menu
              (fboundp 'transient-append-suffix))
     (ignore-errors
       (unless (ignore-errors (transient-get-suffix 'diogenes "sD"))
@@ -4440,7 +4448,9 @@ two identical lines under SEARCH."
 (with-eval-after-load 'diogenes
   (if (fboundp 'diorisis--add-to-diogenes-menu)
       (diorisis--add-to-diogenes-menu)
-    (when (and (if (boundp 'diorisis-add-to-diogenes-menu)
+    (when (and (or (not (fboundp 'classicist-feature-p))
+                   (classicist-feature-p 'diorisis))
+               (if (boundp 'diorisis-add-to-diogenes-menu)
                    diorisis-add-to-diogenes-menu
                  t)
                (fboundp 'transient-append-suffix))

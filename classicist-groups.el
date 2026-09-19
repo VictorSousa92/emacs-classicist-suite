@@ -42,6 +42,53 @@ not an option of Diogenes\\=', and a reader browsing one should not have to
 read the other."
   :group 'tools)
 
+(defcustom classicist-features '(texts lexica)
+  "Which of the suite's features are awake.
+Everything is loaded; a feature not named here installs no keys, adds no menu
+entry and offers nothing.  So a reader who wants the corrections this package
+makes and nothing else leaves this alone, and the suite behaves as Diogenes
+does.
+
+  `texts\='         browsing and searching Diogenes\=' own corpora
+  `lexica\='        the LSJ and Lewis & Short, the parse, every attested form
+  `dictionaries\='  the printed ones.  WHICH of them is
+                  `classicist-declared-dictionaries\='; without this that list
+                  is not consulted at all
+  `diorisis\='      searching the Diorisis corpus of lemmatised Greek
+  `treebank\='      annotating one of its sentences as a dependency tree
+  `tei-corpora\='   CSEL, the Patrologia Latina, Corpus Corporum, and anything
+                  else published as TEI XML
+  `notes\='         the org commands: a note on a passage, and what has been
+                  said about the lines in front of you
+  `windows\='       the suite placing buffers, rather than leaving that to
+                  whatever you have arranged
+
+TEXTS AND LEXICA BY DEFAULT, because that is what Diogenes itself does: a
+reader who installs this and reads no further gets a browser and a dictionary,
+and nothing they did not ask for.  The four that are new to this suite are
+opted into.
+
+AND THE CORPORA ARE NOT ALL DIOGENES\='.  `tei-corpora\=' reads editions from
+disk and wants nothing of the CD-ROMs; `diorisis\=' reads its own index, and
+will open a hit in its own reader where the browser cannot.  So
+`(diorisis tei-corpora)\=', with no Diogenes data at all, is a working
+answer."
+  :type '(set (const :tag "Diogenes' corpora" texts)
+              (const :tag "The LSJ and Lewis & Short" lexica)
+              (const :tag "The printed dictionaries" dictionaries)
+              (const :tag "The Diorisis corpus" diorisis)
+              (const :tag "Treebank annotation" treebank)
+              (const :tag "Editions as TEI" tei-corpora)
+              (const :tag "Notes in org" notes)
+              (const :tag "Where the buffers go" windows))
+  :group 'classicist)
+
+(defun classicist-feature-p (feature)
+  "Whether FEATURE is awake, by `classicist-features\='.
+A function rather than a `memq\=' at every site, so that a transient\='s `:if\='
+reads as a question and the answer can change without editing eleven places."
+  (and (memq feature classicist-features) t))
+
 (provide 'classicist-groups)
 
 ;;; classicist-groups.el ends here
