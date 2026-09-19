@@ -517,64 +517,61 @@
   <h2>The corpora published as TEI</h2>
   <div class="field">
     <span>Where the editions are
-      <em><code>tei-directory</code> &mdash; the directory tei-index.py wrote its index into. CSEL, the Patrologia and the rest are read from here.</em></span>
-    <input type="text" id="c-teidir" data-drop="1">
+      <em><code>tei-directory</code> &mdash; the directory tei-index.py wrote its index into, and where the editions themselves are. CSEL, the Patrologia Latina, the Corpus Corporum and anything else published as TEI XML with a citation scheme this can read.</em></span>
+    <input type="text" id="c-teidir" placeholder="/path/to/TEI" data-drop="1">
   </div>
 
   <h2>The Diorisis corpus</h2>
   <div class="field">
     <span>The database
-      <em><code>diorisis-database</code> &mdash; diorisis.db, made by diorisis-index.py from the corpus's XML.</em></span>
-    <input type="text" id="c-diodb" data-drop="1">
+      <em><code>diorisis-database</code> &mdash; diorisis.db, made by diorisis-index.py from the corpus's own XML. Ten million lemmatised words of Greek literary prose and verse.</em></span>
+    <input type="text" id="c-diodb" placeholder="/path/to/diorisis.db" data-drop="1">
   </div>
   <div class="field">
     <span>A merged database, if you have one
-      <em><code>diorisis-merged-database</code> &mdash; one corpus's morphology attached to another's citations. Needs the box below as well, or it is named and not used.</em></span>
-    <input type="text" id="c-diomerged" data-drop="1">
+      <em><code>diorisis-merged-database</code> &mdash; the same corpus with more columns on it. Bilby's DuckDB compilation carries what Diorisis does not expose -- the morphology decomposed into a column per category, the dialect, the prosody -- and tools/diorisis-merge-duckdb.py writes those onto a copy. Ours is the spine, theirs is carried across: theirs has no citation, and a hit must stay a passage you can open.</em></span>
+    <input type="text" id="c-diomerged" placeholder="/path/to/diorisis-merged.db" data-drop="1">
   </div>
   <div class="row">
     <input type="checkbox" id="c-diousemerged">
     <label for="c-diousemerged">Work with the merged database
-      <em><code>diorisis-use-merged</code> &mdash; off by default, and the path above does nothing without it.</em></label>
+      <em><code>diorisis-use-merged</code> &mdash; off by default, and the path above does nothing without it. The plain database is what the corpus publishes and what everything here is tested against; the merged one answers what the other cannot.</em></label>
   </div>
   <div class="field">
     <span>Which Diogenes corpus its numbers belong to
-      <em><code>diorisis-corpus</code> &mdash; tlg for Greek, phi for Latin. The citations are looked up there.</em></span>
-    <select id="c-diocorpus">
-      <option value="tlg">the TLG — Greek</option>
-      <option value="phi">PHI — Latin</option>
-    </select>
+      <em><code>diorisis-corpus</code> &mdash; the TLG, and there is no other answer -- Diorisis is Greek filed under the TLG's own author and work numbers, which is what lets a hit be opened in the browser. A box rather than a constant because a reader with a custom corpus of the same texts may want to say so.</em></span>
+    <input type="text" id="c-diocorpus" placeholder="tlg">
   </div>
   <div class="field">
     <span>Where searches are kept
-      <em><code>diorisis-saved-directory</code> &mdash; a saved search is a file here; M-x diorisis-search-saved reads them.</em></span>
-    <input type="text" id="c-diosaved" data-drop="1">
+      <em><code>diorisis-saved-directory</code> &mdash; a saved search is a file here, and M-x diorisis-search-saved reads them back.</em></span>
+    <input type="text" id="c-diosaved" placeholder="~/.emacs.d/diorisis-searches/" data-drop="1">
   </div>
 
   <h2>The treebank</h2>
   <div class="field">
     <span>Where the trees are written
       <em><code>treebank-directory</code> &mdash; one file per sentence, as ALDT or CoNLL-U.</em></span>
-    <input type="text" id="c-tbdir" data-drop="1">
+    <input type="text" id="c-tbdir" placeholder="~/.emacs.d/diorisis-treebank/" data-drop="1">
   </div>
   <div class="field">
     <span>Where workbooks are kept
-      <em><code>treebank-workbook-directory</code> &mdash; a workbook is the sentences collected from a search.</em></span>
-    <input type="text" id="c-tbwork" data-drop="1">
+      <em><code>treebank-workbook-directory</code> &mdash; a workbook is the sentences collected from a search, to annotate together.</em></span>
+    <input type="text" id="c-tbwork" placeholder="~/.emacs.d/diorisis-workbooks/" data-drop="1">
   </div>
   <div class="field">
     <span>The viewer's own page
-      <em><code>treebank-viewer-directory</code> &mdash; where index.html and Arethusa's files are, if you serve them.</em></span>
-    <input type="text" id="c-tbviewdir" data-drop="1">
+      <em><code>treebank-viewer-directory</code> &mdash; where index.html and Arethusa's files are, if Emacs serves them.</em></span>
+    <input type="text" id="c-tbviewdir" placeholder="/path/to/viewer" data-drop="1">
   </div>
   <div class="field">
     <span>Arethusa's source, if you have it
-      <em><code>treebank-arethusa-directory</code> &mdash; its own tree, for the viewer to load from rather than a copy.</em></span>
-    <input type="text" id="c-tbarethusa" data-drop="1">
+      <em><code>treebank-arethusa-directory</code> &mdash; a checkout of github.com/alpheios-project/arethusa, if you have one -- the viewer then loads from your tree rather than from the copy npm fetched into tools/viewer.</em></span>
+    <input type="text" id="c-tbarethusa" placeholder="/path/to/arethusa" data-drop="1">
   </div>
   <div class="field">
     <span>The port the viewer listens on
-      <em><code>treebank-viewer-port</code> &mdash; 8087 by default.</em></span>
+      <em><code>treebank-viewer-port</code> &mdash; 8087 by default, and used either way: where Emacs starts the server, or where it expects to find one already answering. It checks before starting, so a viewer you run yourself is left alone.</em></span>
     <input type="number" id="c-tbport">
   </div>
   <div class="row">
@@ -617,10 +614,11 @@
   </div>
   <div class="field">
     <span>What a note's file is called
-      <em><code>diogenes-roam-file-name</code> &mdash; the slug org-roam makes, or the citation.</em></span>
+      <em><code>diogenes-roam-file-name</code> &mdash; the author and the work are in the path already, so the name need not repeat them. The citation sorts in the text order in dired.</em></span>
     <select id="c-roamname">
-      <option value="slug">org-roam's slug</option>
-      <option value="citation">the citation</option>
+      <option value="citation">the citation &mdash; 1048a-27.org, which sorts in the text's order</option>
+      <option value="slug">the slug &mdash; what org-roam would have chosen</option>
+      <option value="timestamped">the citation, timestamped &mdash; longer, and cannot collide</option>
     </select>
   </div>
   <div class="warnline" id="c-mergedwarn"></div>
@@ -2347,8 +2345,9 @@ function configText() {
     block.push(`  (setq diorisis-merged-database ${JSON.stringify(normalisePath(el('c-diomerged').value))})`);
   if (el('c-diousemerged').checked)
     block.push('  (setq diorisis-use-merged t)');
-  if (el('c-diocorpus').value && el('c-diocorpus').value !== 'tlg')
-    block.push(`  (setq diorisis-corpus '${el('c-diocorpus').value})`);
+  if (el('c-diocorpus').value.trim()
+      && el('c-diocorpus').value.trim() !== 'tlg')
+    block.push(`  (setq diorisis-corpus ${JSON.stringify(el('c-diocorpus').value.trim())})`);
   if (normalisePath(el('c-diosaved').value))
     block.push(`  (setq diorisis-saved-directory ${JSON.stringify(normalisePath(el('c-diosaved').value))})`);
   if (normalisePath(el('c-tbdir').value))
@@ -2375,7 +2374,7 @@ function configText() {
     block.push(`  (setq diogenes-roam-subdirectory ${JSON.stringify(el('c-roamsub').value.trim())})`);
   if (el('c-roamtag').value.trim())
     block.push(`  (setq diogenes-roam-tag ${JSON.stringify(el('c-roamtag').value.trim())})`);
-  if (el('c-roamname').value && el('c-roamname').value !== 'slug')
+  if (el('c-roamname').value && el('c-roamname').value !== 'citation')
     block.push(`  (setq diogenes-roam-file-name '${el('c-roamname').value})`);
   if (block.length) {
     out.push('');

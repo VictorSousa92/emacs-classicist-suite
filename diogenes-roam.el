@@ -105,15 +105,15 @@ Worth setting for the authors one reads often.  `Aristoteles' is what the TLG
 says and defensible; `aristotle' is what one types."
   :type '(alist :key-type (list string string) :value-type string))
 
-(defcustom diogenes-roam-file-name 'slug
+(defcustom diogenes-roam-file-name 'citation
   "What a passage note's file is called.
 
-`slug' is the note's title, slugified, which org-roam would have chosen
-anyway.  `citation' is the passage alone -- `1048a-27.org' -- which sorts in
-the text's order in dired, the author and work being in the path already.
-`timestamped' prefixes the citation with the time, which is longer to read
-and cannot collide."
-  :type '(choice (const slug) (const citation) (const timestamped)))
+`citation' is the passage alone -- 1048a-27.org -- which sorts in the text's
+order in dired, THE AUTHOR AND THE WORK BEING IN THE PATH ALREADY so the name
+need not repeat them.  `slug' is the title slugified, which org-roam would
+have chosen.  `timestamped' prefixes the citation with the time, which is
+longer to read and cannot collide."
+  :type '(choice (const citation) (const slug) (const timestamped)))
 
 (defcustom diogenes-roam-install-capture-template t
   "Whether enabling `diogenes-roam-mode' sets `diogenes-org-capture-template'.
