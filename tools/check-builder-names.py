@@ -55,6 +55,9 @@ NOT_SYMBOLS = {
     "diogenes-presets",         # likewise
     "diogenes-config",          # the builder's own word for a config block
     "classicist",               # the feature
+    "classicist-base",          # a git BRANCH on the fork, not a symbol
+    "classicist-suite",         # part of the repository name
+                                # emacs-classicist-suite, caught by the regexp
 }
 
 

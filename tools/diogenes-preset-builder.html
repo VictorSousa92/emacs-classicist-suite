@@ -1764,7 +1764,41 @@ el('c-distro').innerHTML = `
         <input type="radio" name="distro" value="${v}"${i === 0 ? ' checked' : ''}>
         ${label}
       </label>`).join('')}
-  </div>`;
+  </div>
+  <p class="note">This suite extends Michael Neidhart's <code>diogenes.el</code>,
+  which it needs installed as well.  Nine of the fixes it relies on are not in
+  the original yet, so there are two places to get it from.</p>
+  <div class="distro">
+    ${[['base', 'The patched base'], ['upstream', 'The original']]
+      .map(([v, label], i) => `
+      <label class="${i === 0 ? 'on' : ''}" data-basefrom="${v}">
+        <input type="radio" name="basefrom" value="${v}"${i === 0 ? ' checked' : ''}>
+        ${label}
+      </label>`).join('')}
+  </div>
+  <div class="warnline" id="c-basenote"></div>`;
+
+// WHICH BASE, and why it is asked rather than decided.  Nine of the fifteen
+// patches on `classicist-base' are load-bearing: they touch corpora,
+// user-interface, perl-interface, forms and search, every one of which the
+// suite inherits rather than replaces.  The original will be the right
+// answer the day those merge, and a builder should not need rewriting for
+// that.  `M-x classicist-check-base' says whether an installation will do --
+// it probes the three that fail quietly rather than trusting a version.
+function baseNote() {
+  const from = (document.querySelector('input[name=basefrom]:checked') || {}).value;
+  el('c-basenote').textContent = from === 'upstream'
+    ? 'The original is missing nine fixes the suite needs. M-x classicist-check-base will say which.'
+    : 'Upstream plus the fifteen fixes, nine of them load-bearing.';
+}
+document.addEventListener('change', e => {
+  if (e.target.name === 'basefrom') {
+    document.querySelectorAll('[data-basefrom]').forEach(l =>
+      l.classList.toggle('on', l.dataset.basefrom === e.target.value));
+    baseNote();
+  }
+});
+baseNote();
 
 // DOOM presumes evil and plain Emacs presumes not.  Spacemacs presumes
 // nothing: it asks at first start -- vim, emacs, or hybrid -- so the box is
@@ -1936,29 +1970,57 @@ function configText() {
   // plain Emacs uses `:vc', and only from version 30.
   const distro = (document.querySelector('input[name=distro]:checked') || {}).value
                  || 'vanilla';
+  // TWO PACKAGES: the base, and this suite on top of it.  The base must be
+  // installed for the suite to load at all -- nine of the fifteen fixes on
+  // the `classicist-base' branch touch files the suite inherits rather than
+  // replaces.
+  const baseFrom = (document.querySelector('input[name=basefrom]:checked') || {}).value
+                   || 'base';
+  const baseRepo = baseFrom === 'upstream'
+        ? 'nitardus/diogenes.el' : 'VictorSousa92/diogenes.el';
+  const baseBranch = baseFrom === 'upstream' ? null : 'classicist-base';
+  const SUITE = 'VictorSousa92/emacs-classicist-suite';
+
   if (distro === 'doom') {
     out.push(';; ---- in ~/.config/doom/packages.el ----');
+    out.push(';; The base, which this suite extends and needs installed.');
     out.push('(package! diogenes');
     out.push('  :recipe (:host github');
-    out.push('           :repo "VictorSousa92/diogenes.el"');
-    out.push('           :branch "modular-customizable"))');
+    out.push(`           :repo ${JSON.stringify(baseRepo)}`
+             + (baseBranch ? '' : '))'));
+    if (baseBranch) out.push(`           :branch ${JSON.stringify(baseBranch)}))`);
+    out.push('');
+    out.push('(package! classicist');
+    out.push('  :recipe (:host github');
+    out.push(`           :repo ${JSON.stringify(SUITE)}))`);
     out.push('');
     out.push(';; ---- in ~/.config/doom/config.el ----');
-    out.push('(use-package! diogenes');
+    out.push('(use-package! classicist');
     out.push('  :init');
   } else if (distro === 'spacemacs') {
     out.push(';; ---- in dotspacemacs/layers, under dotspacemacs-additional-packages ----');
+    out.push(';;   ;; The base, which this suite extends and needs installed.');
     out.push(';;   (diogenes :location (recipe :fetcher github');
-    out.push(';;                              :repo "VictorSousa92/diogenes.el"');
-    out.push(';;                              :branch "modular-customizable"))');
+    out.push(`;;                              :repo ${JSON.stringify(baseRepo)}`
+             + (baseBranch ? '' : '))'));
+    if (baseBranch)
+      out.push(`;;                              :branch ${JSON.stringify(baseBranch)}))`);
+    out.push(';;   (classicist :location (recipe :fetcher github');
+    out.push(`;;                                :repo ${JSON.stringify(SUITE)}))`);
     out.push('');
     out.push(';; ---- in dotspacemacs/user-config ----');
-    out.push('(use-package diogenes');
+    out.push('(use-package classicist');
     out.push('  :init');
   } else {
+    out.push(';; The base, which this suite extends and needs installed.');
     out.push('(use-package diogenes');
-    out.push('  :vc (:url "https://github.com/VictorSousa92/diogenes.el"');
-    out.push('       :branch "modular-customizable")   ; Emacs 30 and later');
+    out.push(`  :vc (:url ${JSON.stringify('https://github.com/' + baseRepo)}`
+             + (baseBranch ? '' : '))   ; Emacs 30 and later'));
+    if (baseBranch)
+      out.push(`       :branch ${JSON.stringify(baseBranch)}))   ; Emacs 30 and later`);
+    out.push('');
+    out.push('(use-package classicist');
+    out.push(`  :vc (:url ${JSON.stringify('https://github.com/' + SUITE)})   ; Emacs 30 and later`);
     out.push('  :init');
   }
   out.push(`  (setq diogenes-path ${JSON.stringify(dpath || "/path/to/diogenes")})`);
