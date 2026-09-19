@@ -419,6 +419,8 @@
      <code>org-roam</code>, the frame keys want nothing, and the evil key
      wants evil. All of it wants the base, and
      <code>M-x classicist-check-base</code> says whether yours will do.
+     Passage notes filed by author and work are a package of their own:
+     <code>diogenes-roam</code>, branch <code>classicist-roam</code>.
      Nothing here depends on anything else <em>here</em>: no setting below
      turns another one off.</p>
 
@@ -600,28 +602,7 @@
     <span>Make a note on the passage in hand
       <em><code>diogenes-org-note-key</code></em></span>
     <input type="text" id="c-orgnote">
-  </div>
-  <h2>Passage notes filed by author and work</h2>
-  <div class="field">
-    <span>The subdirectory inside your roam
-      <em><code>diogenes-roam-subdirectory</code> &mdash; ref by default, so a note lands under ref/<author>/<work>/.</em></span>
-    <input type="text" id="c-roamsub">
-  </div>
-  <div class="field">
-    <span>The tag every passage note gets
-      <em><code>diogenes-roam-tag</code> &mdash; passage by default.</em></span>
-    <input type="text" id="c-roamtag">
-  </div>
-  <div class="field">
-    <span>What a note's file is called
-      <em><code>diogenes-roam-file-name</code> &mdash; the author and the work are in the path already, so the name need not repeat them. The citation sorts in the text order in dired.</em></span>
-    <select id="c-roamname">
-      <option value="citation">the citation &mdash; 1048a-27.org, which sorts in the text's order</option>
-      <option value="slug">the slug &mdash; what org-roam would have chosen</option>
-      <option value="timestamped">the citation, timestamped &mdash; longer, and cannot collide</option>
-    </select>
-  </div>
-  <div class="warnline" id="c-mergedwarn"></div>
+  </div>  <div class="warnline" id="c-mergedwarn"></div>
 
   <h2>A preset at startup</h2>
   <p class="note">Optional. The four below need nothing else set; for one of
@@ -2370,12 +2351,6 @@ function configText() {
     block.push(`  (setq diogenes-org-notes-key ${JSON.stringify(el('c-orgnotes').value.trim())})`);
   if (el('c-orgnote').value.trim())
     block.push(`  (setq diogenes-org-note-key ${JSON.stringify(el('c-orgnote').value.trim())})`);
-  if (el('c-roamsub').value.trim())
-    block.push(`  (setq diogenes-roam-subdirectory ${JSON.stringify(el('c-roamsub').value.trim())})`);
-  if (el('c-roamtag').value.trim())
-    block.push(`  (setq diogenes-roam-tag ${JSON.stringify(el('c-roamtag').value.trim())})`);
-  if (el('c-roamname').value && el('c-roamname').value !== 'citation')
-    block.push(`  (setq diogenes-roam-file-name '${el('c-roamname').value})`);
   if (block.length) {
     out.push('');
     out.push('  ;; The corpora, the treebank, and the notes.');
