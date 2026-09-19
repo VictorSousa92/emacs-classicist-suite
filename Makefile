@@ -11,7 +11,7 @@ EMACSL    = -L . -L $(DIOGENES)
 ELS = $(wildcard *.el)
 BASELINE = per-file-baseline.txt
 
-.PHONY: all check compile declare baseline balance duplicates builder forms clean help
+.PHONY: all check compile declare baseline balance duplicates builder sql pairing fixture forms clean help
 
 all: check
 
@@ -47,7 +47,27 @@ duplicates:
 builder:
 	@DIOGENES=$(DIOGENES) $(PYTHON) tools/check-builder-names.py
 
-check: compile declare duplicates builder
+## THE SQL, READ OUT OF THE ELISP.  check-diorisis-sql.py extracts the
+## queries diorisis.el builds -- the two defconsts whole, the clause templates,
+## the literal pieces of each query function -- and runs them against a
+## forty-sentence fixture it makes.  So the queries under test are the
+## elisp's own, not a copy that could drift.  Twenty-four answers checked,
+## and the ALDT postags against the format's own examples.
+sql:
+	@$(PYTHON) tools/check-diorisis-sql.py
+
+## THE PAIRING, without either database.  The merge attaches one corpus's
+## morphology to the other's citations BY POSITION, which is only as good as
+## its check; this exercises the check on cases written for it.
+pairing:
+	@$(PYTHON) tools/diorisis-merge-duckdb.py --self-test
+
+## The fixture on its own, to point diorisis-database at while working on the
+## display.
+fixture:
+	@$(PYTHON) tools/make-diorisis-fixture.py /tmp/diorisis-fixture.db
+
+check: compile declare duplicates builder sql pairing
 
 ## THE RATCHET, AND NOT A ZERO.  tei-browser fails on a single warning
 ## because that file is at zero and can stay there.  This package is at 59
