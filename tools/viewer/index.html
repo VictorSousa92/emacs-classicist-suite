@@ -1,0 +1,1175 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Diorisis treebank viewer</title>
+
+    <!-- ARETHUSA'S OWN PREBUILT FILES.  Nothing here is compiled: the widget
+         ships these, `arethusa.widget.loader.js' puts `Arethusa' on the
+         window, and the script at the foot of this page calls it.  That is
+         why no React and no bundler are needed -- the library's own wrapper
+         is a thin shim over this same global, and this page is that shim. -->
+    <script type="text/javascript" src="./arethusa/arethusa.packages.min.js"></script>
+    <script type="text/javascript" src="./arethusa/arethusa.min.js"></script>
+    <script type="text/javascript" src="./arethusa/arethusa.widget.loader.js"></script>
+
+    <!-- THE PANELS ARE SEPARATE BUNDLES, and this is why the sidepanel came
+         up empty.  `arethusa.widget.loader.js' loads two scripts and two
+         only -- the packages and `arethusa.min.js' -- while the morphology,
+         the relations and the search sit in `dist/' as modules of their own,
+         registered with Angular when they are fetched and absent when they
+         are not.  The layout was rendering a panel with nothing to put in
+         it.
+
+         Plain script tags rather than the loader's own machinery: these
+         block, so every module is registered before the script at the foot
+         of this page starts Arethusa, which is the ordering Angular wants.
+
+         A module this build does not have is a 404 in the console and
+         nothing worse -- the page goes on, with that panel missing. -->
+    <script type="text/javascript" src="./arethusa/dist/arethusa.text.min.js"></script>
+    <script type="text/javascript" src="./arethusa/dist/arethusa.morph.min.js"></script>
+    <script type="text/javascript" src="./arethusa/dist/arethusa.relation.min.js"></script>
+    <script type="text/javascript" src="./arethusa/dist/arethusa.search.min.js"></script>
+    <script type="text/javascript" src="./arethusa/dist/arethusa.history.min.js"></script>
+    <!-- AND THE TABS OF A FULL ARETHUSA, each a module of its own in `dist':
+         Smyth's grammar, artificial tokens, comments, the context menu, the
+         constituents and the exercise.  A build without one of these answers
+         404 and the page goes on without that tab. -->
+    <script type="text/javascript" src="./arethusa/dist/arethusa.sg.min.js"></script>
+    <script type="text/javascript" src="./arethusa/dist/arethusa.artificial_token.min.js"></script>
+    <script type="text/javascript" src="./arethusa/dist/arethusa.comments.min.js"></script>
+    <script type="text/javascript" src="./arethusa/dist/arethusa.context_menu.min.js"></script>
+    <script type="text/javascript" src="./arethusa/dist/arethusa.constituents.min.js"></script>
+    <script type="text/javascript" src="./arethusa/dist/arethusa.exercise.min.js"></script>
+    <script type="text/javascript">
+      window.i18npath = "./arethusa/i18n/";
+      window.dagred3path = "vendor/dagre-d3/dagre-d3.min.js";
+    </script>
+
+    <link rel="stylesheet" type="text/css" href="./arethusa/css/arethusa.min.css">
+    <link rel="stylesheet" type="text/css" href="./arethusa/css/colorpicker.css">
+    <link rel="stylesheet" type="text/css" href="./arethusa/css/font-awesome.min.css">
+    <link rel="stylesheet" type="text/css" href="./arethusa/css/foundation-icons.css">
+    <link rel="stylesheet" type="text/css" href="./arethusa/css/widget.css">
+
+    <style>
+      body { margin: 0; font-family: sans-serif; }
+      #where { padding: 0.4em 0.8em; color: #555; font-size: 0.9em; }
+      #frame { width: 100%; height: 94vh; }
+      #trouble { padding: 1em; color: #a00; display: none; }
+      /* A CONSOLE IN THE PAGE, because an xwidget has none.  WebKitGTK's
+         inspector wants developer-extras turned on and Emacs does not
+         reliably offer a way to ask for it -- so everything the page and
+         Arethusa say is caught and printed here instead, where it can be
+         read and selected in the same window as the tree. */
+      #log { font-family: monospace; font-size: 11px; background: #111;
+             color: #ddd; max-height: 40vh; overflow: auto; padding: 0.5em;
+             display: none; white-space: pre-wrap; }
+      #log .err { color: #ff8a80; }
+      #log .warn { color: #ffd54f; }
+      #log button { float: right; }
+    </style>
+  </head>
+
+  <body>
+    <div id="where"></div>
+    <div id="trouble"></div>
+    <div id="log"></div>
+    <div id="frame">
+      <div class="__artsa"><div id="treebank_container"></div></div>
+    </div>
+
+    <script type="text/javascript">
+      // THE CONFIG IS THE WIDGET'S OWN, taken from its `ArethusaConfig.js'
+      // and changed in two places: the morphology service and the attribute
+      // set are Greek where the library's default is Latin.
+      var CONFIG = {
+  main: {
+    debug: false,
+    showKeys: false,
+    chunkParam: 'chunk',
+    auxConfPath: './configs',
+    retrievers: {
+      TreebankRetriever: {
+        resource: 'Gardener',
+        docIdentifier: 'treebank',
+        preselector: 'w',
+      },
+    },
+    plugins: [
+      'text',
+      'morph',
+      'relation',
+      'depTree',
+      'search',
+    ],
+    layouts: [
+      {
+        name: 'widget',
+        template: 'js/templates/widget.html',
+      },
+    ],
+  },
+  notifier: {
+    // ARETHUSA'S OWN MESSAGES, LEFT ON.  The library disables them for an
+    // embedded widget, which is reasonable in an application that has its
+    // own way of reporting trouble and wrong here: with them off, a document
+    // that cannot be fetched or parsed gives a blank panel and no reason.
+    disable: false,
+  },
+  navigator: {
+    chunkSize: 1,
+  },
+  navbar: false,
+  resources: {
+    Gardener: {
+      // THE DIRECTORY BELONGS IN THE ROUTE AND NOT IN THE PARAMETER.
+      // Arethusa substitutes `doc' into this route as ONE path segment and
+      // encodes it, so a doc of `/trees/x.xml' was fetched as
+      // `/%2Ftrees%2Fx.xml' and answered with a 404.  With the directory
+      // here, `doc' is a bare file name with nothing in it to encode.
+      // `__ROUTE__' is written by the script at the foot of this page, from
+      // the page's own `?dir=' or its default.
+      route: '/trees/:doc',
+      params: [
+        'doc',
+      ],
+    },
+    lexInvFusekiEndpoint: {
+      route: 'https://fuseki.perseids.org/fuseki/ds/query?format=json',
+    },
+    morphologyServiceLat: {
+      route: 'https://services.perseids.org/bsp/morphologyservice/analysis/word?lang=lat&engine=morpheuslat',
+    },
+    newMorphologyServiceLat: {
+      route: 'https://morph.perseids.org/analysis/word?lang=lat&engine=morpheuslat',
+    },
+    morphologyServiceGrc: {
+      route: 'https://services.perseids.org/bsp/morphologyservice/analysis/word?lang=grc&engine=morpheusgrc',
+    },
+    newMorphologyServiceGrc: {
+      route: 'https://morph.perseids.org/analysis/word?lang=grc&engine=morpheusgrc',
+    },
+    morphologyServicePer: {
+      route: 'https://localhost/extapi/morphologyservice/analysis/word?lang=per&engine=hazm',
+    },
+    citeMapper: {
+      route: 'https://services.perseids.org/cite_mapper/find_cite',
+    },
+    sgGrammar: {
+      route: 'https://services.perseids.org/sg/:doc.html',
+    },
+  },
+  plugins: {
+    text: {
+      main: true,
+      template: 'js/templates/text_with_context.html',
+    },
+    depTree: {
+      main: true,
+      contextMenu: false,
+      contextMenuTemplate: 'js/arethusa.dep_tree/templates/context_menu.html',
+      template: 'js/templates/dep_tree.html',
+    },
+    morph: {
+      retrievers: {
+        BspMorphRetriever: {
+          resource: 'morphologyServiceGrc',
+        },
+      },
+      template: 'js/templates/morph3.html',
+      contextMenu: true,
+      contextMenuTemplate: 'js/arethusa.morph/templates/context_menu.html',
+      lexicalInventory: {
+        retriever: {
+          LexicalInventoryRetriever: {
+            resource: 'lexInvFusekiEndpoint',
+          },
+        },
+      },
+      matchAll: true,
+      // THE GREEK ATTRIBUTES, WRITTEN OUT, for the same reason as the
+      // relations below: an `@include' that is not fetched leaves the panel
+      // with nothing to offer, and this way nothing has to be fetched.
+      // Copied from `app/js/arethusa.morph/configs/morph/gr_attributes.json'
+      // -- the postag schema, the attributes and the mappings, Arethusa's
+      // own.
+      //
+      // (The file is `gr_attributes.json'.  I had written `grc_', which is
+      // the name of nothing, and that 404 was the first fault here.)
+      "postagSchema": [
+          "pos",
+          "pers",
+          "num",
+          "tense",
+          "mood",
+          "voice",
+          "gend",
+          "case",
+          "degree"
+        ],
+        "attributes": {
+          "pos": {
+            "long": "Part of Speech",
+            "short": "pos",
+            "values": {
+              "noun": {
+                "long": "noun",
+                "short": "noun",
+                "postag": "n",
+                "style": {
+                  "color": "rgb(43, 114, 124)"
+                }
+              },
+              "adj": {
+                "long": "adjective",
+                "short": "adj",
+                "postag": "a",
+                "style": {
+                  "color": "blue"
+                }
+              },
+              "adv": {
+                "long": "adverb",
+                "short": "adv",
+                "postag": "d",
+                "style": {
+                  "color": "darkorange"
+                }
+              },
+              "conj": {
+                "long": "conjunction",
+                "short": "conj",
+                "postag": "c",
+                "style": {
+                  "color": "deeppink"
+                }
+              },
+              "prep": {
+                "long": "preposition",
+                "short": "prep",
+                "postag": "r",
+                "style": {
+                  "color": "green"
+                }
+              },
+              "pron": {
+                "long": "pronoun",
+                "short": "pron",
+                "postag": "p",
+                "style": {
+                  "color": "purple"
+                }
+              },
+              "excl": {
+                "long": "exclamation",
+                "short": "excl",
+                "postag": "e",
+                "style": {
+                  "color": "gold"
+                }
+              },
+              "verb": {
+                "long": "verb",
+                "short": "verb",
+                "postag": "v",
+                "style": {
+                  "color": "red"
+                }
+              },
+              "nrl": {
+                "long": "numeral",
+                "short": "nrl",
+                "postag": "m",
+                "style": {
+                  "color": "lightgreen"
+                }
+              },
+              "punct": {
+                "long": "punctuation",
+                "short": "punct",
+                "postag": "u"
+              },
+              "art": {
+                "long": "article",
+                "short": "art",
+                "postag": "l",
+                "style": {
+                  "color": "lightblue"
+                }
+              },
+              "prtl": {
+                "long": "particle",
+                "short": "prtl",
+                "postag": "g",
+                "style": {
+                  "color": "lightcoral"
+                }
+              },
+              "irreg": {
+                "long": "irregular",
+                "short": "irreg",
+                "postag": "x",
+                "style": {
+                  "color": "gray"
+                }
+              }
+            }
+          },
+          "pers": {
+            "long": "Person",
+            "short": "pers",
+            "values": {
+              "1st": {
+                "long": "first person",
+                "short": "1st",
+                "postag": "1"
+              },
+              "2nd": {
+                "long": "second person",
+                "short": "2nd",
+                "postag": "2"
+              },
+              "3rd": {
+                "long": "third person",
+                "short": "3rd",
+                "postag": "3"
+              }
+            },
+            "rules": [
+              {
+                "if": {
+                  "pos": "verb",
+                  "mood": "*"
+                },
+                "unless": {
+                  "mood": "part"
+                }
+              }
+            ]
+          },
+          "num": {
+            "long": "Number",
+            "short": "num",
+            "rules": [
+              {
+                "if": {
+                  "pos": [
+                    "noun",
+                    "art",
+                    "nrl",
+                    "part",
+                    "adj",
+                    "pron"
+                  ]
+                }
+              },
+              {
+                "if": {
+                  "pos": "verb",
+                  "mood": "*"
+                }
+              }
+            ],
+            "values": {
+              "sg": {
+                "long": "singular",
+                "short": "sg",
+                "postag": "s"
+              },
+              "pl": {
+                "long": "plural",
+                "short": "pl",
+                "postag": "p"
+              },
+              "dl": {
+                "long": "dual",
+                "short": "dl",
+                "postag": "d"
+              }
+            }
+          },
+          "tense": {
+            "long": "Tense",
+            "short": "tense",
+            "rules": [
+              {
+                "if": {
+                  "pos": "verb"
+                }
+              }
+            ],
+            "values": {
+              "pr": {
+                "long": "present",
+                "short": "pr",
+                "postag": "p"
+              },
+              "imp": {
+                "long": "imperfect",
+                "short": "imp",
+                "postag": "i"
+              },
+              "perf": {
+                "long": "perfect",
+                "short": "perf",
+                "postag": "r"
+              },
+              "pqpf": {
+                "long": "plusquamperfect",
+                "short": "pqpf",
+                "postag": "l"
+              },
+              "fex": {
+                "long": "future perfect",
+                "short": "fex",
+                "postag": "t"
+              },
+              "fut": {
+                "long": "future",
+                "short": "fut",
+                "postag": "f"
+              },
+              "aor": {
+                "long": "aorist",
+                "short": "aor",
+                "postag": "a"
+              }
+            }
+          },
+          "mood": {
+            "long": "Mood",
+            "short": "mood",
+            "rules": [
+              {
+                "if": {
+                  "pos": "verb"
+                }
+              }
+            ],
+            "values": {
+              "ind": {
+                "long": "indicative",
+                "short": "ind",
+                "postag": "i"
+              },
+              "sub": {
+                "long": "subjunctive",
+                "short": "sub",
+                "postag": "s"
+              },
+              "inf": {
+                "long": "infinitive",
+                "short": "inf",
+                "postag": "n"
+              },
+              "imp": {
+                "long": "imperative",
+                "short": "imp",
+                "postag": "m"
+              },
+              "part": {
+                "long": "participle",
+                "short": "part",
+                "postag": "p"
+              },
+              "opt": {
+                "long": "optative",
+                "short": "opt",
+                "postag": "o"
+              }
+            }
+          },
+          "voice": {
+            "long": "Voice",
+            "short": "voice",
+            "rules": [
+              {
+                "if": {
+                  "pos": "verb"
+                }
+              }
+            ],
+            "values": {
+              "act": {
+                "long": "active",
+                "short": "act",
+                "postag": "a"
+              },
+              "pass": {
+                "long": "passive",
+                "short": "pass",
+                "postag": "p"
+              },
+              "mid": {
+                "long": "middle",
+                "short": "mid",
+                "postag": "m"
+              },
+              "mp": {
+                "long": "medio-passive",
+                "short": "mp",
+                "postag": "e"
+              },
+              "dep": {
+                "long": "deponens",
+                "short": "dep",
+                "postag": "d"
+              }
+            }
+          },
+          "gend": {
+            "long": "gender",
+            "short": "gend",
+            "rules": [
+              {
+                "if": {
+                  "pos": [
+                    "art",
+                    "noun",
+                    "adj",
+                    "pron",
+                    "nrl"
+                  ]
+                }
+              },
+              {
+                "if": {
+                  "pos": "verb",
+                  "mood": "part"
+                }
+              }
+            ],
+            "values": {
+              "masc": {
+                "long": "masculine",
+                "short": "masc",
+                "postag": "m"
+              },
+              "fem": {
+                "long": "feminine",
+                "short": "fem",
+                "postag": "f"
+              },
+              "neut": {
+                "long": "neuter",
+                "short": "neut",
+                "postag": "n"
+              }
+            }
+          },
+          "case": {
+            "long": "Casus",
+            "short": "case",
+            "rules": [
+              {
+                "if": {
+                  "pos": [
+                    "art",
+                    "noun",
+                    "adj",
+                    "pron",
+                    "nrl"
+                  ]
+                }
+              },
+              {
+                "if": {
+                  "pos": "verb",
+                  "mood": "part"
+                }
+              }
+            ],
+            "values": {
+              "nom": {
+                "long": "nominative",
+                "short": "nom",
+                "postag": "n"
+              },
+              "gen": {
+                "long": "genitive",
+                "short": "gen",
+                "postag": "g"
+              },
+              "dat": {
+                "long": "dative",
+                "short": "dat",
+                "postag": "d"
+              },
+              "acc": {
+                "long": "accusative",
+                "short": "acc",
+                "postag": "a"
+              },
+              "voc": {
+                "long": "vocative",
+                "short": "voc",
+                "postag": "v"
+              },
+              "loc": {
+                "long": "locative",
+                "short": "loc",
+                "postag": "l"
+              }
+            }
+          },
+          "degree": {
+            "long": "Degree",
+            "short": "degree",
+            "rules": [
+              {
+                "if": {
+                  "pos": "adj"
+                }
+              },
+              {
+                "if": {
+                  "pos": "verb",
+                  "mood": "part"
+                }
+              }
+            ],
+            "values": {
+              "pos": {
+                "long": "positive",
+                "short": "pos",
+                "postag": "p"
+              },
+              "comp": {
+                "long": "comparative",
+                "short": "comp",
+                "postag": "c"
+              },
+              "sup": {
+                "long": "superlative",
+                "short": "sup",
+                "postag": "s"
+              }
+            }
+          }
+        },
+        "mappings": {
+          "BspMorphRetriever": {
+            "attributes": {
+              "pofs": "pos",
+              "comp": "degree"
+            },
+            "values": {
+              "pos": {
+                "verb\nparticiple": "verb"
+              },
+              "tense": {
+                "pluperfect": "plusquamperfect"
+              },
+              "voice": {
+                "mediopassive": "medio-passive"
+              }
+            }
+          }
+        },
+    },
+    search: {
+      template: 'js/templates/search.html',
+      regex: true,
+    },
+    relation: {
+      // A TAB OF ITS OWN, and it wants a template to be one.  The config the
+      // library ships gives `relation' neither `main' nor a template, and a
+      // sidepanel plugin with nothing to render is a tab that does not
+      // appear -- which is why `morph', `selector' and `comments' arrived
+      // and the relations did not.
+      template: 'js/templates/relation.html',
+      advancedMode: true,
+      // THE RELATIONS, WRITTEN OUT HERE.  Arethusa's own root configurations
+      // pull this in with an `@include', and that was tried first: it wants
+      // the include to be fetched and merged before the plugin starts, and
+      // where it is not -- a path resolved against the wrong base, a source
+      // tree not given -- `relation.js' does
+      // `self.relationValues = self.conf.relations' and then reads `.labels'
+      // of nothing at all, which stops the plugin outright.
+      //
+      // So the set is copied from
+      // `app/js/arethusa.relation/configs/relation/relations.json' and sits
+      // here where nothing can fail to fetch it: thirteen labels with the
+      // Aux family nested under `Aux', the `_CO' and `_AP' suffixes, and
+      // Arethusa's own colours.  It is the AGDT's set, not one of mine.
+      relations: {
+        "labels": {
+          "PRED": {
+            "short": "PRED",
+            "long": "predicate",
+            "style": {
+              "color": "rgb(223, 38, 38)"
+            }
+          },
+          "SBJ": {
+            "short": "SBJ",
+            "long": "subject",
+            "style": {
+              "color": "rgb(92, 201, 83)"
+            }
+          },
+          "OBJ": {
+            "short": "OBJ",
+            "long": "object",
+            "style": {
+              "color": "rgb(11, 200, 216)"
+            }
+          },
+          "ATR": {
+            "short": "ATR",
+            "long": "attribute",
+            "style": {
+              "color": "blue"
+            }
+          },
+          "ADV": {
+            "short": "ADV",
+            "long": "adverbial",
+            "style": {
+              "color": "darkorange"
+            }
+          },
+          "Aux": {
+            "short": "Aux",
+            "long": "auxiliary",
+            "nested": {
+              "AuxP": {
+                "short": "AuxP",
+                "long": "preposition",
+                "style": {
+                  "color": "green"
+                }
+              },
+              "AuxC": {
+                "short": "AuxC",
+                "long": "conjunction",
+                "style": {
+                  "color": "deeppink"
+                }
+              },
+              "AuxY": {
+                "short": "AuxY",
+                "long": "sentence adverbial",
+                "style": {
+                  "color": "rgb(139, 211, 31)"
+                }
+              },
+              "AuxZ": {
+                "short": "AuxZ",
+                "long": "emphasizing particle",
+                "style": {
+                  "color": "rgb(216, 57, 159)"
+                }
+              },
+              "AuxV": {
+                "short": "AuxV",
+                "long": "auxiliary verb",
+                "style": {
+                  "color": "rgb(70, 96, 235)"
+                }
+              },
+              "AuxR": {
+                "short": "AuxR",
+                "long": "reflexive passive",
+                "style": {
+                  "color": "rgb(162, 70, 235)"
+                }
+              },
+              "AuxG": {
+                "short": "AuxG",
+                "long": "bracketing punctuation",
+                "style": {
+                  "color": "black"
+                }
+              },
+              "AuxX": {
+                "short": "AuxX",
+                "long": "comma",
+                "style": {
+                  "color": "black"
+                }
+              },
+              "AuxK": {
+                "short": "AuxK",
+                "long": "terminal punctuation",
+                "style": {
+                  "color": "black"
+                }
+              }
+            }
+          },
+          "COORD": {
+            "short": "COORD",
+            "long": "coordinator",
+            "style": {
+              "color": "rgb(154, 130, 206)"
+            }
+          },
+          "ATV": {
+            "short": "ATV",
+            "long": "complement",
+            "style": {
+              "color": "rgb(131, 11, 16)"
+            }
+          },
+          "AtvV": {
+            "short": "AtvV",
+            "long": "complement",
+            "style": {
+              "color": "rgb(131, 11, 16)"
+            }
+          },
+          "PNOM": {
+            "short": "PNOM",
+            "long": "predicate nominal",
+            "style": {
+              "color": "rgb(87, 160, 119)"
+            }
+          },
+          "OCOMP": {
+            "short": "OCOMP",
+            "long": "object complement",
+            "style": {
+              "color": "rgb(92, 201, 83)"
+            }
+          },
+          "APOS": {
+            "short": "APOS",
+            "long": "apposing element",
+            "style": {
+              "color": "rgb(7, 95, 39)"
+            }
+          },
+          "ExD": {
+            "short": "ExD",
+            "long": "ellipsis",
+            "style": {
+              "color": "rgb(17, 131, 67)"
+            }
+          }
+        },
+        "suffixes": {
+          "CO": {
+            "short": "CO",
+            "long": "coordinated",
+            "style": {
+              "color": "rgb(154, 130, 206)"
+            }
+          },
+          "AP": {
+            "short": "AP",
+            "long": "apposing",
+            "style": {
+              "color": "rgb(154, 130, 206)"
+            }
+          },
+          "AP_CO": {
+            "short": "AP_CO",
+            "long": "apposing and coordinated"
+          }
+        }
+      },
+    },
+  },
+  keyCapture: {
+    regex: {
+      greek: {
+        α: '[\u03b1\u1f01\u1f05\u1f03\u1f07\u1f00\u1f04\u1f02\u1f06\u03ac\u1f70\u1fb6\u1f81\u1f85\u1f83\u1f87\u1f80\u1f84\u1f82\u1f86\u1fb4\u1fb2\u1fb7\u1fb3]',
+        ε: '[\u03b5\u03ad\u1f72\u1f10\u1f11\u1f14\u1f12\u1f15\u1f13]',
+        η: '[\u03b7\u1f21\u1f25\u1f23\u1f27\u1f20\u1f24\u1f22\u1f26\u03ae\u1f74\u1fc6\u1f91\u1f95\u1f93\u1f97\u1f90\u1f94\u1f92\u1f96\u1fc4\u1fc2\u1fc7\u1fc3]',
+        ι: '[\u03b9\u1f31\u1f35\u1f33\u1f37\u1f30\u1f34\u1f32\u1f36\u03af\u1f76\u1fd6]',
+        ο: '[\u03bf\u03cc\u1f78\u1f40\u1f41\u1f44\u1f42\u1f45\u1f43]',
+        υ: '[\u03c5\u1f51\u1f55\u1f53\u1f57\u1f50\u1f54\u1f52\u1f56\u03cd\u1f7a\u1fe6]',
+        ω: '[\u03c9\u1f61\u1f65\u1f63\u1f67\u1f60\u1f64\u1f62\u1f66\u03ce\u1f7c\u1ff6\u1fa1\u1fa5\u1fa3\u1fa7\u1fa0\u1fa4\u1fa2\u1fa6\u1ff4\u1ff2\u1ff7\u1ff3]',
+      },
+    },
+    keys: {},
+  },
+};
+
+      // WHICH TREE, FROM THE QUERY STRING.  Emacs opens this page with
+      // `?doc=...&chunk=1', the shape Arethusa's own app uses, so a URL
+      // written by hand works too.
+      var params = new URLSearchParams(window.location.search);
+      // EVERYTHING THE PAGE SAYS, KEPT.  Installed before anything else
+      // runs, so that a module failing to register at load time is caught
+      // too -- which is the case one most wants to see and the hardest to
+      // catch afterwards.
+      (function () {
+        var box = document.getElementById("log");
+        var shown = false;
+        function write(kind, args) {
+          var line = document.createElement("div");
+          if (kind) { line.className = kind; }
+          line.textContent = Array.prototype.map.call(args, function (one) {
+            if (one instanceof Error) { return one.stack || String(one); }
+            if (typeof one === "object") {
+              try { return JSON.stringify(one); } catch (e) { return String(one); }
+            }
+            return String(one);
+          }).join(" ");
+          box.appendChild(line);
+          // SHOWN ONLY WHEN THERE IS SOMETHING WRONG, or when asked for with
+          // `?log=1': a page that opens with a black panel of chatter under
+          // the tree is a worse page.
+          if (!shown && (kind || params.get("log") === "1")) {
+            box.style.display = "block";
+            shown = true;
+          }
+          box.scrollTop = box.scrollHeight;
+        }
+        ["log", "info", "warn", "error"].forEach(function (name) {
+          var was = console[name] ? console[name].bind(console) : function () {};
+          console[name] = function () {
+            write(name === "error" ? "err" : (name === "warn" ? "warn" : ""),
+                  arguments);
+            was.apply(null, arguments);
+          };
+        });
+        // A SCRIPT OR A STYLESHEET THAT WILL NOT LOAD, which is caught only
+        // in the CAPTURE phase: a resource error does not bubble, so the
+        // ordinary listener below sees none of them.  Every module this page
+        // asks for and does not get was therefore silent -- and a missing
+        // module is a missing tab, which is exactly the fault one is looking
+        // for here.
+        window.addEventListener("error", function (event) {
+          var what = event.target;
+          if (what && (what.src || what.href)) {
+            write("err", ["could not load", what.src || what.href]);
+          }
+        }, true);
+        window.addEventListener("error", function (event) {
+          write("err", [event.message, "--", event.filename + ":" + event.lineno]);
+        });
+        window.addEventListener("unhandledrejection", function (event) {
+          write("err", ["unhandled rejection:", event.reason]);
+        });
+        // AND THE REQUESTS THAT FAIL, which is how the last four faults were
+        // found: a 404 for a module, a template, or the tree itself.
+        var fetched = window.fetch;
+        if (fetched) {
+          window.fetch = function (url, options) {
+            return fetched(url, options).then(function (answer) {
+              if (!answer.ok) { write("err", ["fetch", answer.status, url]); }
+              return answer;
+            }, function (trouble) {
+              write("err", ["fetch failed", url, trouble]);
+              throw trouble;
+            });
+          };
+        }
+        var opened = XMLHttpRequest.prototype.open;
+        XMLHttpRequest.prototype.open = function (method, url) {
+          this.addEventListener("load", function () {
+            if (this.status >= 400) {
+              write("err", [method, this.status, url]);
+            }
+          });
+          this.addEventListener("error", function () {
+            write("err", [method, "failed", url]);
+          });
+          return opened.apply(this, arguments);
+        };
+      }());
+
+      var doc = params.get("doc");
+      // ARETHUSA'S OWN GREEK CONFIGURATION, where it is there to be had.
+      // `dist/arethusa/configs' ships the real ones -- `aldt2grc.json' is the
+      // Ancient Greek Dependency Treebank's: its relation set, its
+      // morphology attributes, the lot.  The object inlined below is a
+      // fallback and a poor one by comparison, being the widget's Latin
+      // default with two lines changed.
+      //
+      // `?conf=' chooses another -- `morphgrc', `pedalion', `ud' -- and the
+      // widget's own layout is put back over whichever is loaded, a full
+      // application's layout being wrong in a panel this size.
+      var conf = params.get("conf") || "aldt2grc";
+      // THE SIDEPANEL, WHICH IS WHERE THE EDITING IS.  The widget ships two
+      // layouts and this page was using the smaller: `widget.html' is the
+      // tree and nothing else, and `main_with_sidepanel.html' is the tree
+      // with Arethusa's panels beside it -- the morphology, the relations,
+      // the search.  A viewer wants the first; somebody who means to
+      // annotate wants the second, and there was no way to ask for it.
+      //
+      // `?panel=0' goes back to the bare tree.
+      var panel = params.get("panel") !== "0";
+      // THE NAVBAR, which is the bar of icons down the side of Perseids'
+      // Arethusa and the menus along its top.  The widget's own config turns
+      // it off -- reasonably, for a panel in somebody else's page -- and a
+      // reader who wants the whole application wants it on.  `?navbar=0'
+      // turns it off again.
+      var navbar = params.get("navbar") !== "0";
+      // WHERE THE TREES ARE, relative to this page: `?dir=' overrides it,
+      // and the default is the `trees' link beside index.html.
+      var dir = params.get("dir") || "/trees";
+      CONFIG.main.retrievers.TreebankRetriever.resource = "Gardener";
+      CONFIG.resources.Gardener.route =
+        dir.replace(/\/$/, "") + "/:doc";
+      var chunk = params.get("chunk") || "1";
+      var words = params.get("w");
+
+      function complain(said) {
+        var box = document.getElementById("trouble");
+        box.style.display = "block";
+        box.textContent = said;
+      }
+
+      function merge(into, from) {
+        // DEEP, AND `from\' WINS.  Arethusa\'s own config files are not all
+        // whole configurations: `aldt2grc.json\' has no `main\' at all -- it is
+        // an auxiliary config, a relation set and a morphology tagset, meant
+        // to be included by one.  Handed over as a whole config it left
+        // Arethusa with no plugins and a reader with a blank panel.
+        //
+        // So the built-in object below is the BASE, and whatever is fetched is
+        // merged into it: a file with `main\' replaces those parts, and a file
+        // without one contributes only what it has.
+        Object.keys(from || {}).forEach(function (key) {
+          var value = from[key];
+          if (value && typeof value === "object" && !Array.isArray(value)
+              && into[key] && typeof into[key] === "object"
+              && !Array.isArray(into[key])) {
+            merge(into[key], value);
+          } else {
+            into[key] = value;
+          }
+        });
+        return into;
+      }
+
+      function overlay(config) {
+        // WHAT WE INSIST ON, over whatever the config says.
+        config.main = config.main || {};
+        config.main.chunkParam = "chunk";
+        // RELATIVE TO WHAT `from()' WAS GIVEN, and not to this page.
+        // Arethusa resolves this against its own base -- `./arethusa' -- so
+        // `./arethusa/configs' became `./arethusa/./arethusa/configs' and
+        // every named configuration it went looking for was missing:
+        // `failed to retrieve aldt2grc'.  The library's own default is
+        // `./configs', which is why it worked before this line was added.
+        config.main.auxConfPath = "./configs";
+        config.main.layouts =
+          [panel
+           ? { name: "main_with_sidepanel",
+               template: "js/templates/main_with_sidepanel.html" }
+           : { name: "widget", template: "js/templates/widget.html" }];
+        config.navbar = navbar ? { template: "js/templates/navbar.html" }
+                     : false;
+        config.notifier = { disable: false };
+        config.resources = config.resources || {};
+        // THE DIRECTORY IN THE ROUTE, for the reason given above.
+        config.resources.Gardener = { route: dir.replace(/\/$/, "") + "/:doc",
+                                      params: ["doc"] };
+        // THE PANELS ARE PLUGINS, so asking for the layout is not enough:
+        // a sidepanel with nothing configured to sit in it is an empty
+        // sidepanel.  Whatever the config already lists is kept -- it knows
+        // its own tagset -- and the four the panels need are added where
+        // they are missing.
+        if (panel) {
+          // THE TABS ARE PLUGINS, and a plugin absent from this list is a
+          // tab that does not appear however well its module loaded.  `sg'
+          // is Smyth, `artificialToken' the tokens one adds for an ellipsis,
+          // `comments' the notes on a token.
+          //
+          // `?plugins=' replaces this list outright, for a reader who wants
+          // fewer -- every plugin is a panel to draw and a service to start.
+          var asked = params.get("plugins");
+          var wanted = asked
+            ? asked.split(",")
+            : ["text", "morph", "relation", "depTree", "search",
+               "sg", "artificialToken", "comments", "history"];
+          var have = (config.main.plugins || []).slice();
+          wanted.forEach(function (one) {
+            if (have.indexOf(one) === -1) { have.push(one); }
+          });
+          config.main.plugins = have;
+        }
+        // THE CITE MAPPER IS DROPPED.  Arethusa's default config points it at
+        // `services.perseids.org/cite_mapper', which resolves a CTS URN to a
+        // citation for display -- and which is not dependably up any more.
+        // The request fails, and the failure is noise: our own `document_id'
+        // IS the URN and the citation is in `subdoc' beside it, so there is
+        // nothing for the mapper to tell us.
+        if (config.resources) { delete config.resources.citeMapper; }
+        // ARETHUSA SAVES BACK TO THE FILE.  `TreebankPersister' is the
+        // service that does it -- `resource.save(xml, "text/xml")', which is
+        // a POST of the document as it stands -- and it needs a resource to
+        // post to and to be named in `main.persisters'.
+        //
+        // THE ROUTE IS THIS TREE'S OWN URL, built here, with no parameter in
+        // it.  A route of `/trees/:doc' would leave Arethusa to fill `doc'
+        // from its own idea of the document's name, which is one more thing
+        // to be wrong; the page already knows which file it opened.
+        //
+        // `serve.py' answers a POST to `/trees/NAME.xml' by writing it, and
+        // keeps the previous version beside it as `NAME.xml~'.  The Emacs
+        // editor is watching the file and rereads it -- see
+        // `tei-diorisis-tree-watch' -- so a tree saved here appears there
+        // without anybody asking.
+        config.resources.treebankSave = {
+          route: dir.replace(/\/$/, "") + "/" + doc,
+        };
+        config.main.persisters = {
+          TreebankPersister: { resource: "treebankSave",
+                               docIdentifier: "treebank" },
+        };
+        config.main.retrievers = config.main.retrievers || {};
+        config.main.retrievers.TreebankRetriever = {
+          resource: "Gardener", docIdentifier: "treebank", preselector: "w",
+        };
+        return config;
+      }
+
+      function start(fetched) {
+        // THE BASE IS OURS AND THE FILE IS AN AMENDMENT, for the reason in
+        // `merge\' above.
+        var config = merge(JSON.parse(JSON.stringify(CONFIG)), fetched);
+        try {
+          var widget = new Arethusa();
+          widget.on("treebank_container")
+                .from("./arethusa")
+                .with(overlay(config))
+                .start({ doc: doc, chunk: chunk,
+                         w: words ? words.split(",").map(Number) : undefined });
+        } catch (trouble) {
+          complain("Arethusa would not start: " + trouble);
+        }
+      }
+
+      if (doc && doc.indexOf("/") !== -1) {
+        // A PATH IN `doc' CANNOT WORK, for the reason in the route above --
+        // said plainly rather than left as a 404 in a server log.
+        complain("?doc= wants a file NAME, not a path: the directory goes in"
+                 + " ?dir=.  Asked for: " + doc);
+        doc = null;
+      }
+
+      if (!doc) {
+        complain("No tree asked for: this page wants ?doc=<file name of an"
+                 + " ALDT file>, and optionally ?dir=<where they are>.");
+      } else {
+        document.getElementById("where").textContent =
+          dir + "/" + doc + "  \u00b7  sentence " + chunk
+          + "  \u00b7  config " + conf
+          + (panel ? "  \u00b7  with the editor panels" : "  \u00b7  tree only")
+          + "  \u00b7  saving writes the file";
+        // FETCHED, AND THE FALLBACK USED IF IT CANNOT BE.  A config that is
+        // missing is not a reason to show nothing: the inlined object below
+        // draws the same tree with a poorer relation set.
+        fetch("./arethusa/configs/" + conf + ".json")
+          .then(function (answer) {
+            if (!answer.ok) { throw new Error(answer.status); }
+            return answer.json();
+          })
+          .then(start)
+          .catch(function (trouble) {
+            complain("Could not read configs/" + conf + ".json ("
+                     + trouble + "); using the built-in configuration.");
+            start({});
+          });
+      }
+    </script>
+  </body>
+</html>

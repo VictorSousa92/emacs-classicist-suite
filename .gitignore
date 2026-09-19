@@ -1,3 +1,6 @@
 *.elc
 __pycache__/
 *.pyc
+tools/viewer/node_modules/
+tools/viewer/arethusa
+tools/viewer/trees
