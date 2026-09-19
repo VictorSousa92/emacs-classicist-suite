@@ -369,6 +369,16 @@
 
 <main id="panel-config" class="half">
 <section class="pane">
+  <h2>Where to start</h2>
+  <p class="note">Two starting points, and everything below stays yours to
+     change. Neither installs less than the other: the whole suite is there
+     either way, and these decide what it does out of the box.</p>
+  <div class="distro" id="c-start">
+    <label data-start="fixes"><button type="button" data-start="fixes">Fixes only</button></label>
+    <label data-start="rec"><button type="button" data-start="rec">Recommended</button></label>
+  </div>
+  <p class="note" id="c-startnote">&nbsp;</p>
+
   <h2>What you run</h2>
   <p class="note">So that the key boxes below can warn you about a key your
      configuration already uses.</p>
@@ -484,8 +494,8 @@
   </div>
   <div class="row">
     <input type="checkbox" id="c-claimbuffers" checked>
-    <label for="c-claimbuffers">Give Diogenes buffers a role
-      <em><code>classicist-claim-buffers</code> &mdash; on by default, and the focus keys and window-purpose need it.</em></label>
+    <label for="c-claimbuffers">Claim buffers for the perspective they appear in
+      <em><code>classicist-claim-buffers</code> &mdash; on by default. persp-mode and perspective.el only notice a buffer that was visited, so one made by a program is invisible to the keys that walk the list until it is claimed.</em></label>
   </div>
   <div class="row">
     <input type="checkbox" id="c-gotobylevel" checked>
@@ -3081,6 +3091,65 @@ el('c-download').addEventListener('click', () => {
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob); a.download = 'diogenes-config.el'; a.click();
   URL.revokeObjectURL(a.href);
+});
+
+// ---------- where to start ----------
+// The two starting points SET the controls; they hold no values of their own,
+// so there is one place the state lives and the Configuration box below is
+// always what will be written.
+const START = {
+  fixes: {
+    // Nothing that changes how Diogenes looks.  Not the base -- the base
+    // without its rough edges.
+    'c-headerline': false, 'c-citations': false, 'c-analysis': false,
+    'c-joinwords': true, 'c-completelemmata': true, 'c-allentries': true,
+    'c-claimbuffers': true, 'c-gotobylevel': true,
+    preset: '', gesture: ''
+  },
+  rec: {
+    // The above, plus what the package is for.
+    'c-headerline': true, 'c-citations': true, 'c-analysis': true,
+    'c-joinwords': true, 'c-completelemmata': true, 'c-allentries': true,
+    'c-claimbuffers': true, 'c-gotobylevel': true,
+    preset: 'split', gesture: '<mouse-1>'
+  }
+};
+const START_NOTE = {
+  fixes: 'The suite is installed and working, with the corrections it makes. '
+       + 'Windows go wherever your Emacs already sends a new buffer.',
+  rec:   'An entry opens beside the text and later entries share that window; '
+       + 'the browser carries a header line, citations show beside the '
+       + 'passage, a double-click looks a word up, and the analysis comes '
+       + 'with the entry.'
+};
+function applyStart(which) {
+  const s = START[which];
+  if (!s) return;
+  Object.keys(s).forEach(k => {
+    if (k === 'preset' || k === 'gesture') return;
+    const box = document.getElementById(k);
+    if (box) box.checked = s[k];
+  });
+  // THE PRESET, on the radio group the builder already had. I added a second
+  // chooser without finding this one, having grepped for the name I would
+  // have given it rather than for the thing itself.
+  const radio = document.querySelector(
+    'input[name=preset][value="' + s.preset + '"]');
+  if (radio) { radio.checked = true; radio.dispatchEvent(new Event('change', {bubbles: true})); }
+  // THE GESTURE, set rather than emitted: the click section below already
+  // offers it, and a second setq would argue with what it writes.  A plain
+  // click is safe to take -- Emacs fires mouse-1 only on a click in place,
+  // and a drag is drag-mouse-1, so marking a passage still works.
+  const g = el('mousegesture');
+  if (g) { g.value = s.gesture; g.dispatchEvent(new Event('input', {bubbles: true})); }
+  document.querySelectorAll('[data-start]').forEach(l =>
+    l.classList.toggle('on', l.dataset.start === which));
+  el('c-startnote').textContent = START_NOTE[which] || '\u00a0';
+  renderConfig();
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('button[data-start]');
+  if (b) { e.preventDefault(); applyStart(b.dataset.start); }
 });
 
 renderConfig();
