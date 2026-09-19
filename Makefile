@@ -11,7 +11,7 @@ EMACSL    = -L . -L $(DIOGENES)
 ELS = $(wildcard *.el)
 BASELINE = per-file-baseline.txt
 
-.PHONY: all check compile declare baseline balance duplicates forms clean help
+.PHONY: all check compile declare baseline balance duplicates builder forms clean help
 
 all: check
 
@@ -36,7 +36,16 @@ help:
 ## them.  So this runs after every cut, not once.
 duplicates:
 	@$(PYTHON) tools/check-elisp-duplicates.py
-check: compile declare duplicates
+
+## THE BUILDER EMITS CONFIGURATION AND NOTHING CHECKED IT.  2,969 lines of
+## HTML generating a reader init file, and it had thirty-four stale names --
+## every one still working through an obsolete alias, so nothing failed and a
+## reader just got deprecated names.  A generator should generate the real
+## ones; the aliases are for configuration that already exists.
+builder:
+	@DIOGENES=$(DIOGENES) $(PYTHON) tools/check-builder-names.py
+
+check: compile declare duplicates builder
 
 ## THE RATCHET, AND NOT A ZERO.  tei-browser fails on a single warning
 ## because that file is at zero and can stay there.  This package is at 154
