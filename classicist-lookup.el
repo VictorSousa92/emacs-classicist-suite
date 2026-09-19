@@ -841,7 +841,13 @@ Declared first, configured second: a dictionary the user has said they use
 is offered whatever its paths are doing, and one they have not is offered
 when its paths are set.  Either way the SHOW rules then decide whether it
 belongs on THIS entry -- see `classicist-lookup-register-dictionary'."
-  (and (or (classicist--lookup-dict-declared-p entry)
+  ;; THE FEATURE FIRST.  A reader who has not asked for the printed
+  ;; dictionaries is offered none of them, whatever their paths say and
+  ;; whatever 'classicist-declared-dictionaries' holds -- which is the
+  ;; coarse half of a two-level switch, the fine half being that list.
+  (and (or (not (fboundp 'classicist-feature-p))
+           (classicist-feature-p 'dictionaries))
+       (or (classicist--lookup-dict-declared-p entry)
            (classicist--lookup-dict-available-p (plist-get entry :available-p)))
        (pcase (plist-get entry :show)
          ('always t)

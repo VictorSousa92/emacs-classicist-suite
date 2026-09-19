@@ -68,6 +68,11 @@
 (eval-when-compile (require 'cl-lib))
 (require 'seq)
 
+;; THE SUITE FEATURE LIST.  Declared and not required, as in the three
+;; files beside it: absent the suite the guards fall back to what they did
+;; before the list existed, which is why the autoloaded one asks fboundp.
+(declare-function classicist-feature-p "classicist-groups" (feature))
+
 ;; Diogenes' own, called at run time.  Declared rather than required, so this
 ;; file compiles without a configured Diogenes and fails only where it should:
 ;; at the point a reader asks for something Diogenes has to answer.
@@ -1051,7 +1056,12 @@ costs nothing but a message."
   "Put the note keys in the browser.  Idempotent.
 A key already taken is left alone and said so, another module's binding being
 its own business."
-  (when (boundp 'classicist-browser-mode-map)
+  ;; THE FEATURE FIRST, and fboundp before it: this function is autoloaded,
+  ;; so it can run before classicist-groups has loaded, and absent the suite
+  ;; it should do what it did before the list existed.
+  (when (and (or (not (fboundp 'classicist-feature-p))
+                 (classicist-feature-p 'notes))
+             (boundp 'classicist-browser-mode-map))
     (dolist (pair (list (cons diogenes-org-notes-key #'diogenes-org-notes)
                         (cons diogenes-org-note-key #'diogenes-org-note)))
       (let* ((key (car pair))
