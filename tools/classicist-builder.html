@@ -567,7 +567,7 @@
     </label>
     <label class="featurerow" data-feature="notes" data-wants="texts tei-corpora">
       <input type="checkbox" id="f-notes" data-feature="notes">
-      <div><b>Notes in org</b><span>a note on the passage in hand, and what has been said about these lines. Wants a browser &mdash; Diogenes&rsquo; corpora or the TEI editions, either will do</span></div>
+      <div><b>Notes in org</b><span>a note on the passage in hand, and what has been said about these lines &mdash; and, with the diogenes-roam package, filed under its author and its work. Wants a browser &mdash; Diogenes&rsquo; corpora or the TEI editions, either will do</span></div>
     </label>
     <label class="featurerow" data-feature="windows">
       <input type="checkbox" id="f-windows" data-feature="windows">
@@ -792,7 +792,7 @@
     <label for="c-useroam">Passage notes filed by author and work
       <em><code>diogenes-roam</code> &mdash; a package of its own, branch <code>classicist-roam</code>. The suite’s own org commands work without it; this files a note under its author and its work, and keeps an index of them.</em></label>
   </div>
-  <div id="c-roamopts" hidden>
+  <div id="c-roamopts" data-ownedbybox="c-useroam" hidden>
     <div class="field">
       <span>The subdirectory in your roam
         <em><code>diogenes-roam-subdirectory</code> &mdash; ref by default, so a note lands under ref/author/work/</em></span>
@@ -2642,6 +2642,9 @@ function configText() {
         ? 'nitardus/diogenes.el' : 'VictorSousa92/diogenes.el';
   const baseBranch = baseFrom === 'upstream' ? null : 'classicist-base';
   const SUITE = 'VictorSousa92/emacs-classicist-suite';
+  const ROAM_REPO = 'VictorSousa92/diogenes-roam';
+  const ROAM_BRANCH = 'classicist-roam';
+  const wantRoam = () => !!(el('c-useroam') && el('c-useroam').checked);
 
   if (distro === 'doom') {
     out.push(';; ---- in ~/.config/doom/packages.el ----');
@@ -2656,6 +2659,15 @@ function configText() {
     out.push('  :recipe (:host github');
     out.push(`           :repo ${JSON.stringify(SUITE)}))`);
     out.push('');
+    if (wantRoam()) {
+      out.push('');
+      out.push(';; Passage notes filed by author and work: a package of its');
+      out.push(';; own, which this suite neither requires nor notices.');
+      out.push('(package! diogenes-roam');
+      out.push('  :recipe (:host github');
+      out.push(`           :repo ${JSON.stringify(ROAM_REPO)}`);
+      out.push(`           :branch ${JSON.stringify(ROAM_BRANCH)}))`);
+    }
     out.push(';; ---- in ~/.config/doom/config.el ----');
     out.push('(use-package! classicist');
     out.push('  :init');
@@ -2670,6 +2682,13 @@ function configText() {
     out.push(';;   (classicist :location (recipe :fetcher github');
     out.push(`;;                                :repo ${JSON.stringify(SUITE)}))`);
     out.push('');
+    if (wantRoam()) {
+      out.push(';;   ;; Passage notes filed by author and work.');
+      out.push(';;   (diogenes-roam :location (recipe :fetcher github');
+      out.push(`;;                                   :repo ${JSON.stringify(ROAM_REPO)}`);
+      out.push(`;;                                   :branch ${JSON.stringify(ROAM_BRANCH)}))`);
+    }
+    out.push('');
     out.push(';; ---- in dotspacemacs/user-config ----');
     out.push('(use-package classicist');
     out.push('  :init');
@@ -2681,6 +2700,15 @@ function configText() {
     if (baseBranch)
       out.push(`       :branch ${JSON.stringify(baseBranch)}))   ; Emacs 30 and later`);
     out.push('');
+    if (wantRoam()) {
+      out.push('');
+      out.push(';; Passage notes filed by author and work: a package of its');
+      out.push(';; own, which this suite neither requires nor notices.');
+      out.push('(use-package diogenes-roam');
+      out.push(`  :vc (:url ${JSON.stringify('https://github.com/' + ROAM_REPO)}`);
+      out.push(`       :branch ${JSON.stringify(ROAM_BRANCH)}))   ; Emacs 30 and later`);
+      out.push('');
+    }
     out.push('(use-package classicist');
     out.push(`  :vc (:url ${JSON.stringify('https://github.com/' + SUITE)})   ; Emacs 30 and later`);
     out.push('  :init');
@@ -2930,8 +2958,6 @@ function configText() {
       rblock.push(`  (setq diogenes-roam-index-open-in '${el('r-idxopen').value})`);
     out.push('');
     out.push(';; PASSAGE NOTES FILED BY AUTHOR AND WORK are their own package.');
-    out.push(';; Install VictorSousa92/diogenes-roam, branch classicist-roam,');
-    out.push(';; the same way you installed the two above.');
     out.push('  (with-eval-after-load \'diogenes-roam');
     out.push('    (diogenes-roam-mode 1))');
     if (rblock.length) out.push(...rblock);
@@ -3817,7 +3843,13 @@ if ('IntersectionObserver' in window) {
 function showSections() {
   document.querySelectorAll('#panel-config h2[data-feature], #panel-config h3[data-feature]').forEach(h2 => {
     const on = featureOn(h2.dataset.feature);
-    sectionOf(h2).forEach(el => { el.hidden = !on; });
+    // NOT WHAT A BOX OWNS.  c-roamopts is hidden until its own checkbox is
+    // ticked, and unhiding every sibling of a woken section took that away --
+    // two pieces of code writing one .hidden, last one winning.
+    sectionOf(h2).forEach(el => {
+      if (el.dataset && el.dataset.ownedbybox) return;
+      el.hidden = !on;
+    });
   });
   syncRails();
 }
