@@ -454,6 +454,45 @@
       <em><code>classicist-lookup-always-ask-dictionary</code> &mdash; off by default; on prompts rather than choosing by language.</em></label>
   </div>
 
+  <h2>How it behaves</h2>
+  <p class="note">All seven are on. The first three change what you see the
+  moment you open a text; the rest are fixes, or are invisible until used.</p>
+  <div class="row">
+    <input type="checkbox" id="c-headerline" checked>
+    <label for="c-headerline">A header line on the browser
+      <em><code>classicist-browser-header-line</code> &mdash; on by default; off leaves an ordinary buffer.</em></label>
+  </div>
+  <div class="row">
+    <input type="checkbox" id="c-citations" checked>
+    <label for="c-citations">Citations beside the text
+      <em><code>classicist-browser-show-citations</code> &mdash; on by default; off shows them only in the header.</em></label>
+  </div>
+  <div class="row">
+    <input type="checkbox" id="c-analysis" checked>
+    <label for="c-analysis">The analysis with the entry
+      <em><code>classicist-lookup-show-analysis</code> &mdash; on by default; off gives the entry alone.</em></label>
+  </div>
+  <div class="row">
+    <input type="checkbox" id="c-joinwords" checked>
+    <label for="c-joinwords">Rejoin a word broken across a line
+      <em><code>classicist-browser-join-broken-words</code> &mdash; on by default, and off means a hyphenated word cannot be looked up.</em></label>
+  </div>
+  <div class="row">
+    <input type="checkbox" id="c-completelemmata" checked>
+    <label for="c-completelemmata">Complete lemmata at the search prompt
+      <em><code>diogenes-complete-lemmata</code> &mdash; on by default; the first use in a session takes a second or two.</em></label>
+  </div>
+  <div class="row">
+    <input type="checkbox" id="c-claimbuffers" checked>
+    <label for="c-claimbuffers">Give Diogenes buffers a role
+      <em><code>classicist-claim-buffers</code> &mdash; on by default, and the focus keys and window-purpose need it.</em></label>
+  </div>
+  <div class="row">
+    <input type="checkbox" id="c-gotobylevel" checked>
+    <label for="c-gotobylevel">Ask for a passage level by level
+      <em><code>classicist-browser-goto-by-level</code> &mdash; on by default; off takes the whole citation at once.</em></label>
+  </div>
+
   <h2>Keys</h2>
   <p class="note">Blank keeps the default. <code>-</code> binds nothing, and the
      keyboard button records the keys you press.</p>
@@ -2048,6 +2087,30 @@ function configText() {
   if (el('c-alwaysask').checked)
     reading.push('  (setq classicist-lookup-always-ask-dictionary t)');
   if (reading.length) { out.push(''); out.push('  ;; Reading.'); out.push(...reading); }
+
+  // HOW IT BEHAVES.  All seven are on by default, so a line appears only
+  // where the reader has turned one off -- the rule the boxes above follow
+  // too: say nothing where nothing differs.
+  const behave = [];
+  if (!el('c-headerline').checked)
+    behave.push('  (setq classicist-browser-header-line nil)');
+  if (!el('c-citations').checked)
+    behave.push('  (setq classicist-browser-show-citations nil)');
+  if (!el('c-analysis').checked)
+    behave.push('  (setq classicist-lookup-show-analysis nil)');
+  if (!el('c-joinwords').checked)
+    behave.push('  (setq classicist-browser-join-broken-words nil)');
+  if (!el('c-completelemmata').checked)
+    behave.push('  (setq diogenes-complete-lemmata nil)');
+  if (!el('c-claimbuffers').checked)
+    behave.push('  (setq classicist-claim-buffers nil)');
+  if (!el('c-gotobylevel').checked)
+    behave.push('  (setq classicist-browser-goto-by-level nil)');
+  if (behave.length) {
+    out.push('');
+    out.push('  ;; How it behaves.');
+    out.push(...behave);
+  }
 
   // The dictionary letters, only those moved or unbound.
   const dictKeys = [];
