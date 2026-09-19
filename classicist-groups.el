@@ -31,6 +31,8 @@
 
 ;;; Code:
 
+(require 'cl-lib)   ; cl-loop, cl-some
+
 (defgroup classicist nil
   "A suite of tools for classicists.
 Diogenes\\=' corpora and lexica, the Diorisis corpus, treebank annotation, and
@@ -72,7 +74,22 @@ AND THE CORPORA ARE NOT ALL DIOGENES\='.  `tei-corpora\=' reads editions from
 disk and wants nothing of the CD-ROMs; `diorisis\=' reads its own index, and
 will open a hit in its own reader where the browser cannot.  So
 `(diorisis tei-corpora)\=', with no Diogenes data at all, is a working
-answer."
+answer.
+WHICH WANTS WHICH.  Three of the eight are not free-standing:
+
+  `treebank\='      wants `diorisis\=': it annotates that corpus\='s sentences,
+                  requires its file, and puts its keys in its results buffer.
+  `dictionaries\='  wants `lexica\=': the printed ones are reached from the
+                  banner at the head of an LSJ or Lewis & Short entry.
+  `notes\='         wants `texts\=' or `tei-corpora\=': a note is about a
+                  passage, and either browser will do.
+
+The other five stand alone.  `diorisis\=' and `tei-corpora\=' in particular
+want nothing of Diogenes\=' own data: both read their own, and a hit in the
+Diorisis corpus opens in its own reader where the browser cannot.  So
+`(diorisis tei-corpora)\=', with no `diogenes-path\=' at all, is a working
+answer.
+"
   :type '(set (const :tag "Diogenes' corpora" texts)
               (const :tag "The LSJ and Lewis & Short" lexica)
               (const :tag "The printed dictionaries" dictionaries)
@@ -88,6 +105,45 @@ answer."
 A function rather than a `memq\=' at every site, so that a transient\='s `:if\='
 reads as a question and the answer can change without editing eleven places."
   (and (memq feature classicist-features) t))
+
+(defconst classicist-feature-wants
+  '((treebank     diorisis)
+    (dictionaries lexica)
+    (notes        texts tei-corpora))
+  "What a feature wants, as (FEATURE . ONE-OF).
+A feature is useful when one of the features it wants is also awake -- so
+`notes\=' is content with either browser, and `treebank\=' wants the one corpus
+it annotates.  The five not named here stand alone.
+
+DATA AND NOT PROSE, so that `classicist-check-features\=' and the
+configuration builder answer from the same place.  Derived by reading: the
+treebank requires `diorisis.el\=' outright, the printed dictionaries are a
+banner on a lexicon entry, and a note is about a passage in some browser.")
+
+(defun classicist-check-features ()
+  "Say which awake features want one that is not.
+Interactively, say so either way."
+  (interactive)
+  (let ((missing
+         (cl-loop for (feature . wants) in classicist-feature-wants
+                  when (and (classicist-feature-p feature)
+                            (not (cl-some #'classicist-feature-p wants)))
+                  collect (cons feature wants))))
+    (cond
+     ((null missing)
+      (when (called-interactively-p 'interactive)
+        (message "Every feature has what it wants"))
+      t)
+     (t
+      (message
+       "%s"
+       (mapconcat
+        (lambda (m)
+          (format "`%s' wants %s, and none of those is on"
+                  (car m)
+                  (mapconcat (lambda (w) (format "`%s'" w)) (cdr m) " or ")))
+        missing "; "))
+      nil))))
 
 (provide 'classicist-groups)
 
