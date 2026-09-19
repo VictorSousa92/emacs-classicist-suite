@@ -73,7 +73,7 @@ group exists whichever loaded first."
   :group 'tools
   :prefix "tei-treebank-")
 
-(defcustom treebank-treebank-directory
+(defcustom treebank-directory
   (expand-file-name "diorisis-treebank/" user-emacs-directory)
   "Where exported sentences are written."
   :type 'directory
@@ -192,7 +192,7 @@ where each token really stood, without which nothing could be sent back."
        (string-join (nreverse lines) "\n")
        "\n\n"))))
 
-(defcustom treebank-treebank-format 'aldt
+(defcustom treebank-format 'aldt
   "Which format an exported sentence is written in.
 
 `aldt' is the Perseus treebank XML that Arethusa, the Arethusa widget and
@@ -501,17 +501,17 @@ text reaches the corpus as part of a form."
 ONE SENTENCE OR TWO HUNDRED go through here alike: a treebank of one sentence
 and a treebank of a search differ in how the sentences were chosen and in
 nothing else."
-  (make-directory treebank-treebank-directory t)
+  (make-directory treebank-directory t)
   (let ((written nil))
-    (when (memq treebank-treebank-format '(aldt both))
+    (when (memq treebank-format '(aldt both))
       (let ((file (expand-file-name (concat name ".xml")
-                                    treebank-treebank-directory)))
+                                    treebank-directory)))
         (with-temp-file file
           (insert (treebank--aldt-document keys)))
         (push file written)))
-    (when (memq treebank-treebank-format '(conllu both))
+    (when (memq treebank-format '(conllu both))
       (let ((file (expand-file-name (concat name ".conllu")
-                                    treebank-treebank-directory)))
+                                    treebank-directory)))
         (with-temp-file file
           (dolist (key keys)
             (let ((text (apply #'treebank--conllu-sentence key)))
@@ -522,7 +522,7 @@ nothing else."
 (defun treebank-export-sentence (&optional hit)
   "Write HIT's sentence out to be annotated.
 
-The format is `treebank-treebank-format': ALDT XML for Arethusa and the
+The format is `treebank-format': ALDT XML for Arethusa and the
 `treebank-react' viewer, CoNLL-U for a Universal Dependencies tool, or both."
   (interactive)
   (let* ((hit (or hit (diorisis--hit-at)))
@@ -981,7 +981,7 @@ the printed diagrams do."
   :type 'boolean
   :group 'tei-diorisis)
 
-(defcustom treebank-treebank-viewer
+(defcustom treebank-viewer
   "http://localhost:8087/?doc=%n&chunk=1"
   "Where a tree is opened to be drawn properly, as a URL with %n in it.
 
@@ -1004,7 +1004,7 @@ somewhere is, is yours to say."
   :type '(choice (const :tag "The file itself" nil) string)
   :group 'tei-diorisis)
 
-(defconst treebank-treebank-viewers
+(defconst treebank-viewers
   '(("The viewer this package serves, on its own port"
      . "http://localhost:8087/?doc=%n&chunk=1")
     ("The same viewer on the usual port, served by hand"
@@ -1016,7 +1016,7 @@ somewhere is, is yours to say."
   "Viewers a tree can be opened in, as (NAME . URL-TEMPLATE).
 
 OFFERED BY `treebank-tree-widget\=' with a prefix argument, and one of them
-may be set as `treebank-treebank-viewer\='.  The first two want a viewer
+may be set as `treebank-viewer\='.  The first two want a viewer
 served from somewhere -- `treebank-react\=' and the Arethusa widget are
 JavaScript and have to be -- and a file:// URL reaches them only if the
 browser and the server allow it; a tree copied into the server\='s own
@@ -1974,7 +1974,7 @@ which is where it stays."
   "Whether Emacs starts the treebank viewer's own server when it is wanted.
 
 Non-nil starts `tools/viewer/serve.py' from this package's own directory on
-`treebank-viewer-port', pointed at `treebank-treebank-directory', and
+`treebank-viewer-port', pointed at `treebank-directory', and
 kills it when Emacs exits.
 
 Nil leaves the serving to the reader, which is right for a viewer deployed
@@ -2014,7 +2014,7 @@ sends.
 
 AND THE WHOLE APPLICATION, at `/app/index.html\=' -- Arethusa proper, the thing
 Perseids runs, with its navbar and its menus.  Point
-`treebank-treebank-viewer\=' at it to use that instead of the embedded
+`treebank-viewer\=' at it to use that instead of the embedded
 panel:
 
     \"http://localhost:8087/app/index.html#/staging?doc=/trees/%n&chunk=1\"
@@ -2094,7 +2094,7 @@ that fails to bind and leaves its complaint in a buffer nobody reads."
                              "--port" (number-to-string
                                        treebank-viewer-port)
                              "--trees" (expand-file-name
-                                        treebank-treebank-directory))
+                                        treebank-directory))
                        ;; AND ARETHUSA'S SOURCE WHERE THERE IS SOME.
                        ;; APPENDED AND NOT PASSED EMPTY: an empty string is
                        ;; an argument, and `--arethusa ""' would have the
@@ -2182,8 +2182,8 @@ it is excluded by name rather than by counting to one."
   "Open this tree in a treebank viewer, to be drawn as a diagram.
 
 With a prefix argument, choose the viewer from
-`treebank-treebank-viewers\=' rather than using
-`treebank-treebank-viewer\='.
+`treebank-viewers\=' rather than using
+`treebank-viewer\='.
 
 Saves first: what a viewer reads is the file, and a viewer showing the tree as
 it stood ten edits ago is worse than no viewer at all."
@@ -2203,9 +2203,9 @@ it stood ten edits ago is worse than no viewer at all."
           (cond
            (ask (cdr (assoc (completing-read
                              "Open it in: "
-                             treebank-treebank-viewers nil t)
-                            treebank-treebank-viewers)))
-           (t treebank-treebank-viewer)))
+                             treebank-viewers nil t)
+                            treebank-viewers)))
+           (t treebank-viewer)))
          (file (concat "file://" treebank--tree-file))
          ;; `%n\=' AND `%f\='.  A viewer served from somewhere cannot fetch a
          ;; `file://\=' path, the browser refusing it as another origin -- so a
@@ -2232,7 +2232,7 @@ it stood ten edits ago is worse than no viewer at all."
     (treebank--open-url url)
     (unless template
       (message "No viewer set: showing the file itself.  See %s"
-               "treebank-treebank-viewer"))))
+               "treebank-viewer"))))
 
 (defun treebank--xwidgets-p ()
   "Whether this Emacs can show a page in a window of its own."
@@ -3293,9 +3293,9 @@ relations to be filled in."
                        (plist-get hit :work-id)
                        (plist-get hit :sentence)))
          (file (expand-file-name (concat name ".xml")
-                                 treebank-treebank-directory)))
+                                 treebank-directory)))
     (unless (file-exists-p file)
-      (let ((treebank-treebank-format 'aldt))
+      (let ((treebank-format 'aldt))
         (treebank--write-treebank
          (list (list (plist-get hit :author-id)
                      (plist-get hit :work-id)
@@ -3516,12 +3516,12 @@ says nothing."
                      (guess (nth 1 guess))
                      ("")))
               lines)))
-    (make-directory treebank-treebank-directory t)
+    (make-directory treebank-directory t)
     (let* ((name (format "%s-%s-%s" author work
                          (replace-regexp-in-string
                           "[^[:alnum:]]+" "_" (or where "1"))))
            (file (expand-file-name (concat name ".xml")
-                                   treebank-treebank-directory)))
+                                   treebank-directory)))
       (with-temp-file file
         (insert "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
                 (format "<treebank xml:lang=\"%s\" format=\"aldt\"\
@@ -3848,7 +3848,7 @@ ordinary Org buffer and every Org key does what it always did."
 
 (defun treebank--annotation-index ()
   "Where the record of annotated sentences is kept."
-  (expand-file-name "annotations.tsv" treebank-treebank-directory))
+  (expand-file-name "annotations.tsv" treebank-directory))
 
 (defun treebank--annotation-key (author work sentence)
   "The key a sentence is recorded under."
@@ -3910,7 +3910,7 @@ key."
   "Write ALL to the index."
   (condition-case error
       (progn
-        (make-directory treebank-treebank-directory t)
+        (make-directory treebank-directory t)
         (with-temp-file (treebank--annotation-index)
           (insert "# tei-diorisis annotations 2\t"
                   "key\tfile\tauthor\twork\twhere\tkind\n")
@@ -4094,7 +4094,7 @@ open."
    ("s" "Annotate the hit at point" treebank-annotate)]
   ["Where they are"
    ("d" "Open the treebank directory"
-    (lambda () (interactive) (dired treebank-treebank-directory)))
+    (lambda () (interactive) (dired treebank-directory)))
    ("i" "Show the annotation index"
     (lambda () (interactive)
       (find-file (treebank--annotation-index))))])
