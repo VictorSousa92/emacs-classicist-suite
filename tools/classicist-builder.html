@@ -867,8 +867,25 @@
       </select>
     </div>
   </div>
+  <h2 data-feature="windows">Frames</h2>
+  <div class="row">
+    <input type="checkbox" id="c-pixelwise">
+    <label for="c-pixelwise"><code>frame-resize-pixelwise</code>
+      <em>Wanted under a tiling window manager: without it a frame rounds its
+      size down to whole character cells and leaves part of its tile empty.
+      Harmless otherwise, and needed only if you use frames.</em></label>
+  </div>
+
+</section>
+
+<section class="pane watch">
+  <nav class="rail" id="c-rail-right" aria-label="The parts of this column">
+    <a href="#s-config">Your configuration</a>
+    <a href="#s-keys">Keys</a>
+  </nav>
+
   <h2 data-feature="windows">A preset at startup</h2>
-  <p class="note">Optional. The four below need nothing else set; for one of
+  <p class="note">Optional. The four builtins need nothing else set; for one of
      your own, name it and say where the presets live. Make one on the
      <b>Presets</b> tab.</p>
   <div id="c-presets"></div>
@@ -882,24 +899,7 @@
       <input type="text" id="c-preset-dir" placeholder="~/.emacs.d/diogenes-presets/"
              data-drop="1">
     </div>
-  </div>
-</section>
-
-<section class="pane watch">
-  <nav class="rail" id="c-rail-right" aria-label="The parts of this column">
-    <a href="#s-config">Your configuration</a>
-    <a href="#s-keys">Keys</a>
-  </nav>
-  <h2 data-feature="windows">Frames</h2>
-  <div class="row">
-    <input type="checkbox" id="c-pixelwise">
-    <label for="c-pixelwise"><code>frame-resize-pixelwise</code>
-      <em>Wanted under a tiling window manager: without it a frame rounds its
-      size down to whole character cells and leaves part of its tile empty.
-      Harmless otherwise, and needed only if you use frames.</em></label>
-  </div>
-
-  <h2 id="s-config">Your configuration</h2>
+  </div>  <h2 id="s-config">Your configuration</h2>
   <pre id="c-out"></pre>
   <div class="actions">
     <button id="c-copy">Copy</button>
