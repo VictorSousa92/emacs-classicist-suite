@@ -45,12 +45,36 @@ emacs -Q --batch -L . \
 -- which answers `t`, and is worth keeping beside
 `advised: nil / page turn: t` as a check that can be rerun.
 
-**The second draft was wrong about `diogenes-lisp-utils.el`.** It listed that
-file among the nine to inherit unmodified. Forty-four of its forms were the
-window layer and fifty-nine more are additions of the fork's own: it is not
-an upstream file with a few changes, it is an upstream file the fork nearly
-doubled. It wants the same reading pass as perseus before anything inherits
-it.
+**`diogenes-lisp-utils.el` was the exception, and is one 90-line extraction
+from being inheritable.** The second draft listed it among the nine to inherit
+unmodified and the third said it could not be: forty-four of its forms were
+the window layer and fifty-nine more were the fork's own.
+
+It has since lost the window layer (44), the focus commands (8) and 51
+obsolete aliases, and what remains is **upstream's twenty-two definitions
+exactly, plus seven of the fork's own** — no more, none removed, none changed.
+
+Those seven are one thing:
+
+| | |
+|---|---|
+| `--loading-bundle` | is a bundle being loaded now |
+| `--declared-at-load-p` | was this declared at load time |
+| `--path-set-p`, `--source-set-p` | is the path configured |
+| `--path-usable-p`, `--source-usable-p` | and does it work |
+| `--require-path` | assert one, or explain how to set it |
+
+`--require-path`'s docstring states the purpose: *"a missing one should say
+what to set and how rather than failing somewhere downstream."*
+
+**Eighteen files call them** — sixteen dictionary modules plus the lookup
+layer plus this file — which makes it the suite's SECOND extension point. The
+registry says what a dictionary is; this says whether it is usable and what to
+tell the reader if not.
+
+So `classicist-installation.el`, or some such, and then
+`diogenes-lisp-utils.el` is upstream's file again and the nine can be
+inherited as the plan says.
 
 **Three extractions are out, and every new file compiles clean alone.**
 
@@ -880,6 +904,88 @@ naming a function in a docstring; and `diogenes-browser-reference` mentioning
 comments**, and none of the ones written here did.
 
 
+## The Perl API, which is the real dependency
+
+Item 7 was written as "the facade: 35 sites destructuring Perl data shapes,
+the only insurance against a marshalling change." Reading it says otherwise.
+
+**There are sixteen consumers, not thirty-five**, and everything inbound
+passes through ONE function:
+
+```elisp
+(defun diogenes--read-info (script)
+  (read (with-temp-buffer ... (buffer-string))))
+```
+
+Whatever the Perl prints becomes lisp, unnormalised and unvalidated. So there
+is one seam, not thirty-five, and a facade over the consumers would be
+guarding the wrong place.
+
+**Four shapes, and all four are stable.** Author lists and TLG categories are
+keyword-keyed plists, which `--assoc-cadr`, `--keyword->string` and
+`--string->keyword` already hide in ten places — a partial facade that exists
+and was never finished. Work labels are a flat list of strings.
+
+**And the `vectorp` test is not what it looks like.** `diogenes-corpora.el`
+reads a works value with
+
+```elisp
+(cond ((vectorp works) ...these works...)
+      ((eql works 1)   "")        ; all of them
+      (t (error "Illegal value %s for author %s" works author)))
+```
+
+which is a **deliberate two-valued encoding**, not a defence against
+inconsistent marshalling: a vector means *these works*, `1` means *all of
+them*, and the `error` says those are the only two. Normalising vectors to
+lists on the way in would destroy the distinction and break corpus selection.
+
+So there is nothing to normalise, and the first instinct — one function in
+`--read-info` to map vectors to lists — was a bug waiting to be introduced.
+The `vectorp` is load-bearing. The other one, in `--list->perl`, is outbound
+and also stays.
+
+### And what breaks if Diogenes itself changes
+
+The exposure is not the elisp shapes. It is the Perl API the generated
+scripts call, and that is small enough to write down:
+
+| module | used by |
+|---|---|
+| `Diogenes::Base` | `--define-corpus-script`, `--get-filter-file-script` |
+| `Diogenes::Browser` | the two browse scripts, and the author, work and label lists |
+| `Diogenes::Indexed` | the two search scripts, `--get-wordlist-matches-script` |
+| `Diogenes::Search` | the same three, and `--get-tlg-categories-script` |
+
+| method | where |
+|---|---|
+| `new` | every script |
+| `select_authors` | `--search`, `--indexed-search`, `--get-tlg-categories`, `--define-corpus` |
+| `do_search`, `read_index` | `--indexed-search-script`; `read_index` also in `--get-wordlist-matches` |
+| `seek_passage` | both browse scripts |
+| `browse_forward` | both browse scripts |
+| `browse_backward` | `--browse-interactively-script` |
+| `browse_half_backward` | `--browser-script` |
+| `browse_authors`, `browse_works`, `browse_location` | the three list scripts |
+
+**Twelve methods and four modules.** When Diogenes updates, that is the list
+to diff — and most of what could change announces itself:
+
+| change | how it shows |
+|---|---|
+| a method renamed, or its arguments changed | the script dies, Perl exits non-zero, and `--read-info` errors with "Perl exited with errors, no data received!" — **loudly** |
+| a module renamed | `use` fails, same path |
+| the data layout moved | `diogenes-path` finds nothing, loudly |
+| **a return shape changed** | `(read ...)` gets a different datum, and **possibly nothing says so** |
+
+The loud cases need no insurance; the existing error names the problem. The
+silent case is the one to watch, and there is nothing to be done about it in
+advance beyond knowing which twelve methods can produce it.
+
+**This list is the insurance.** Thirty-five accessors would guard against a
+rewrite nobody is doing — the suite's whole plan is to KEEP this bridge — and
+would not have told anyone where to look when something did change.
+
 ## The gates, and the tools
 
 Every check was a command somebody typed, until it was not.  `tei-browser`
@@ -1010,14 +1116,22 @@ the load order independently of the graph.
    `(require 'diogenes)` is NOT yet stopped -- `diogenes.el` requires
    `classicist-browser`, which inverts the plan and is marked as temporary in
    the file. It stops when `classicist.el` exists to require both.
-5. **The reading pass on `diogenes-lisp-utils.el`**, which the suite cannot
-   inherit as-is.
+5. **`classicist-installation.el`**: seven forms, ~90 lines, eighteen
+   consumers, out of `diogenes-lisp-utils.el`. Not a reading pass any more --
+   the pass is done and the membership is above. After it that file is
+   upstream's again.
 6. ~~**Perseus into four.**~~ **DONE.** 4,173 lines into four files, one
    direction. See above for what each cut cost -- the design was right in
    shape and wrong in detail every time.
-7. **The facade**, and the 35-site conversion. Still the only insurance
-   against a marshalling change, and more so now that the Perl bridge is the
-   part being kept.
+7. ~~**The facade**, and the 35-site conversion.~~ **DROPPED**, and replaced
+   by a table rather than code -- see above. Sixteen consumers, not
+   thirty-five; one seam, `diogenes--read-info'; four shapes, all stable; and
+   the `vectorp' that looked like a defence against marshalling is a
+   deliberate two-valued encoding that normalising would have broken.
+
+   What is left is the Perl API table: twelve methods and four modules, which
+   is what to diff when Diogenes updates. That is the insurance the facade was
+   meant to be, and it says where to look.
 8. **`tei-diorisis.el` into `diorisis-*` and `treebank-*`.** The reading pass
    is DONE and the design closed — see above. Two packages, 386 symbols
    renamed with no aliases, five seams of which one is already in place, the
