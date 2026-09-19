@@ -57,6 +57,12 @@
 
 (require 'text-property-search)
 
+;; THE SUITE FEATURE LIST, if this file is part of a suite at all.
+;; Declared and not required, as in the two files beside it: absent the
+;; suite the guard falls back to installing the keys, which is what this
+;; did before the list existed.
+(declare-function classicist-feature-p "classicist-groups" (feature))
+
 (declare-function classicist--parse-word "classicist-morphology" (word lang))
 ;; AND THE BASE, WHERE THE SAME FUNCTION KEEPS ITS OLD NAME: the four-way
 ;; split of the base perseus renamed it, and a reader with the base and not
@@ -4098,6 +4104,34 @@ open."
    ("i" "Show the annotation index"
     (lambda () (interactive)
       (find-file (treebank--annotation-index))))])
+
+(defun treebank-install-results-keys ()
+  "Bind the treebank keys in the Diorisis results buffer.
+Called at load, and again after `classicist-features' changes so that a
+reader who turns the treebank on need not restart.
+
+IN THE CORPUS BUFFER, because that is where a reader is when they want a tree:
+looking at a hit.  Which makes these the second of this package's five
+seams, and the reason they are installed by a function rather than written
+into `diorisis-results-mode-map''s own definition -- a `defvar-keymap' is
+a literal and cannot ask whether the treebank is wanted.
+
+Modelled on `classicist-browser-install-mouse-keys', which is
+`interactive' and asks `boundp' for the same reasons."
+  (interactive)
+  (when (and (boundp 'diorisis-results-mode-map)
+             (or (not (fboundp 'classicist-feature-p))
+                 (classicist-feature-p 'treebank)))
+    (dolist (cell '(("T" . treebank-export-sentence)
+                    ("A" . treebank-annotate)
+                    ("c" . treebank-collect)
+                    ("C" . treebank-collect-all)
+                    ("b" . treebank-workbook)
+                    ("C-c C-t" . treebank-export-hits)))
+      (keymap-set diorisis-results-mode-map (car cell) (cdr cell)))))
+
+;; AT LOAD, and after the corpus has made its keymap.
+(with-eval-after-load 'diorisis (treebank-install-results-keys))
 
 (provide 'treebank)
 

@@ -2490,6 +2490,11 @@ having meant the hit."
         (message "The first hit")))))
 
 (defun diorisis-widen-to-lemma ()
+  ;; THE TREEBANK KEYS ARE NOT HERE.  Six of them belong to treebank.el and
+  ;; are installed by treebank-install-results-keys, so that a reader who
+  ;; has not asked for the treebank has no keys for it -- a defvar-keymap is
+  ;; a literal and cannot be conditional.  This is the second of the five
+  ;; seams: the treebank reaching into the corpus buffer.
   "Search again for the lemma alone, dropping the form and the morphology.
 
 THE LEMMA IS WHAT THE CORPUS IS FOR.  A reader who came in by a form -- or who
@@ -2579,14 +2584,8 @@ question and is sometimes the whole of what one wants."
   "C-c C-c" #'diorisis-lookup-word
   "d"   #'diorisis-by-text
   "L"   #'diorisis-widen-to-lemma
-  "T"   #'treebank-export-sentence
-  "A"   #'treebank-annotate
   "S"   #'diorisis-save-search
   "O"   #'diorisis-open-search
-  "c"   #'treebank-collect
-  "C"   #'treebank-collect-all
-  "b"   #'treebank-workbook
-  "C-c C-t" #'treebank-export-hits
   "w"   #'diorisis-open-work
   "n"   #'diorisis-next-hit
   "p"   #'diorisis-previous-hit
@@ -3251,8 +3250,8 @@ genre alone reads the whole corpus and says so before doing it."
    ("o" "Open a search saved before" diorisis-open-search)
    ("D" "Switch between the plain and merged databases"
     diorisis-switch-database)
-   ("L" "Annotated trees" treebank-annotations-menu)
-   ("b" "The workbook of collected sentences" treebank-workbook)
+   ("L" "Annotated trees" treebank-annotations-menu :if (lambda () (classicist-feature-p 'treebank)))
+   ("b" "The workbook of collected sentences" treebank-workbook :if (lambda () (classicist-feature-p 'treebank)))
    ("c" "Count only" diorisis-run-count)
    ("d" "Count by author and work" diorisis-run-by-text)])
 
