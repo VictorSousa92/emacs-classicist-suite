@@ -2986,7 +2986,7 @@ function configText() {
     pagingBits.push(pairs.length
       ? `(setq classicist-browser-turn-keys '(${pairs.join(' ')}))`
       : '(setq classicist-browser-turn-keys nil)');
-    pagingBits.push("(with-eval-after-load 'diogenes-browser");
+    pagingBits.push("(with-eval-after-load 'classicist-browser");
     pagingBits.push('  (classicist-browser-install-turn-keys))');
   }
   if (pagingBits.length) {
@@ -2996,7 +2996,7 @@ function configText() {
   }
 
   // A click that looks a word up.  After the use-package form, not inside it:
-  // the keys are bound when `diogenes-browser' loads, so the installer has to
+  // the keys are bound when `classicist-browser' loads, so the installer has to
   // be called once the option has its value -- which is why the option alone
   // does nothing, and why this writes both.
   const clickGesture = el('mousegesture') ? el('mousegesture').value.trim() : '';
@@ -3009,7 +3009,7 @@ function configText() {
     out.push('');
     out.push(';; A click looks a word up in the browser.');
     out.push(`(setq classicist-browser-mouse-keys '(${clickPairs.join(' ')}))`);
-    out.push("(with-eval-after-load 'diogenes-browser");
+    out.push("(with-eval-after-load 'classicist-browser");
     out.push('  (classicist-browser-install-mouse-keys))');
   }
   const changedKeys = out.some(l => /classicist-lookup-keys|dictionary-keys|-key /.test(l));

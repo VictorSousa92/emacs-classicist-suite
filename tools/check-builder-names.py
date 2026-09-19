@@ -51,7 +51,12 @@ ALIAS = re.compile(r"\(define-obsolete-\w+-alias\s+'(\S+)\s*\n?\s*'(\S+)")
 # variable or a command and cannot be checked.  Each was looked at by hand.
 NOT_SYMBOLS = {
     "diogenes",                 # the feature, and the base's transient
-    "diogenes-browser",         # a feature name in `with-eval-after-load'
+    # THE FEATURE NAMES, in with-eval-after-load forms the builder writes.
+    # diogenes-browser was here and was TRUE when the browser was called
+    # that; classicist-browser.el provides only classicist-browser, so the
+    # two forms naming the old feature never fired and this exception hid
+    # it.  An exception outliving the fact that justified it.
+    "classicist-browser",
     "diogenes-presets",         # likewise
     "diogenes-config",          # the builder's own word for a config block
     "classicist",               # the feature
