@@ -260,7 +260,7 @@
   .win b { display: block; font-size: .69rem; letter-spacing: .05em; text-transform: uppercase; }
   /* An analysis divides the entry's own window, downward: drawn as a band
      inside it rather than as a column of the frame, which is what
-     `diogenes-display-beside-companion' actually does. */
+     `classicist-display-beside-companion' actually does. */
   .win.nested { padding: 0; }
   .win.nested > .half { flex: 1; padding: .35rem .5rem; overflow: hidden;
                         display: flex; flex-direction: column; justify-content: center; }
@@ -398,7 +398,7 @@
     <input type="text" id="c-path" placeholder="/usr/local/diogenes" data-drop="1">
   </div>
   <div class="field">
-    <span><code>diogenes-morpheus-directory</code> &mdash; for forms the wordlists never saw. Optional.</span>
+    <span><code>classicist-morpheus-directory</code> &mdash; for forms the wordlists never saw. Optional.</span>
     <input type="text" id="c-morpheus" placeholder="~/morpheus/morpheus" data-drop="1">
   </div>
 
@@ -408,7 +408,7 @@
      The key box shows the default &mdash; fill it only to change it, or type
      <code>-</code> to bind nothing.</p>
   <p class="note"><b>Tick a dictionary to declare it</b>
-     (<code>diogenes-declared-dictionaries</code>): it is then offered on every
+     (<code>classicist-declared-dictionaries</code>): it is then offered on every
      entry of its language whatever its paths say, and pressing its key explains
      what to set. Worth ticking one you are about to install, or one whose files
      are somewhere this check cannot see. Leave it unticked and the paths decide,
@@ -446,12 +446,12 @@
   <div class="row">
     <input type="checkbox" id="c-allentries" checked>
     <label for="c-allentries">Show every matching entry
-      <em><code>diogenes-lookup-show-all-entries</code> &mdash; on by default; off shows only the first.</em></label>
+      <em><code>classicist-lookup-show-all-entries</code> &mdash; on by default; off shows only the first.</em></label>
   </div>
   <div class="row">
     <input type="checkbox" id="c-alwaysask">
     <label for="c-alwaysask">Always ask which dictionary
-      <em><code>diogenes-lookup-always-ask-dictionary</code> &mdash; off by default; on prompts rather than choosing by language.</em></label>
+      <em><code>classicist-lookup-always-ask-dictionary</code> &mdash; off by default; on prompts rather than choosing by language.</em></label>
   </div>
 
   <h2>Keys</h2>
@@ -497,14 +497,14 @@
      buttons, <b>turn</b> the page: the same number of lines, in place of what
      was shown.</p>
   <div class="field">
-    <span>Lines a page shows &mdash; <code>diogenes-browser-page-lines</code>.
+    <span>Lines a page shows &mdash; <code>classicist-browser-page-lines</code>.
       Empty for as many as the first page came with, which Diogenes sizes to the
       window.</span>
     <input type="text" id="pagelines" value="" placeholder="as it comes">
   </div>
   <div class="field">
     <span>What <code>C-c C-n</code> and <code>C-c C-p</code> add &mdash;
-      <code>diogenes-browser-add-lines</code></span>
+      <code>classicist-browser-add-lines</code></span>
     <select id="addhow">
       <option value="0.5">Half a page &mdash; the other half stays in view</option>
       <option value="1.0">A whole page &mdash; as much as the buttons turn</option>
@@ -545,7 +545,7 @@
      in place, and dragging to mark a passage is a different event which is left
      alone. So you can still mark a stretch of lines.</p>
   <div class="field">
-    <span>The gesture &mdash; <code>diogenes-browser-mouse-keys</code></span>
+    <span>The gesture &mdash; <code>classicist-browser-mouse-keys</code></span>
     <select id="mousegesture">
       <option value="">None &mdash; clicking places point, as elsewhere in Emacs</option>
       <option value="&lt;mouse-1&gt;">A plain click</option>
@@ -559,8 +559,8 @@
   <div class="field">
     <span>And what it does</span>
     <select id="mousecommand">
-      <option value="diogenes-browser-lookup">Analyse the word and show the entry</option>
-      <option value="diogenes-lookup-in-dictionary">Ask which dictionary first</option>
+      <option value="classicist-browser-lookup">Analyse the word and show the entry</option>
+      <option value="classicist-lookup-in-dictionary">Ask which dictionary first</option>
     </select>
   </div>
   <div class="field" id="mousesecondrow" hidden>
@@ -667,7 +667,7 @@
   <h2>How a window is made</h2>
   <div class="pair">
     <div class="field">
-      <span>Direction &mdash; <code>diogenes-split-direction</code></span>
+      <span>Direction &mdash; <code>classicist-split-direction</code></span>
       <select id="direction">
         <option value="">Let Emacs choose</option>
         <option value="below">Below the text</option>
@@ -677,7 +677,7 @@
       </select>
     </div>
     <div class="field">
-      <span>Divide which &mdash; <code>diogenes-split-from</code></span>
+      <span>Divide which &mdash; <code>classicist-split-from</code></span>
       <select id="from">
         <option value="selected">The window I am in</option>
         <option value="largest">The largest window</option>
@@ -692,7 +692,7 @@
      that no frame you have can be split.</p>
   <p class="note"><b>Or drag a window</b> in the diagram to a side of its frame.
      One setting serves every kind, so dragging the entry to the right puts
-     scans there too &mdash; <code>diogenes-split-direction</code> is a single
+     scans there too &mdash; <code>classicist-split-direction</code> is a single
      direction and not one per kind.</p>
 
   <h2>Proportions <i id="propshint"></i></h2>
@@ -877,14 +877,14 @@ const DICTS = [
 // their own.  DEFAULT is what the package does; a reader fills a box only to
 // change it, so the generated block stays as short as their departures from it.
 const LOOKUP_KEYS = [
-  ['diogenes-perseus-action', 'RET', 'follow a citation or look up the word at point'],
-  ['diogenes-perseus-action', 'C-c C-c', 'the same, on a chord'],
-  ['diogenes-lookup-in-dictionary', 'C-c C-o', 'look a word up, asking which dictionary'],
-  ['diogenes-lookup-next', 'C-c C-n', 'the next entry in the file'],
-  ['diogenes-lookup-previous', 'C-c C-p', 'the entry before'],
-  ['diogenes-lookup-open-tll-or-tgl', 't', 'the TLL in Latin, the TGL in Greek',
+  ['classicist-perseus-action', 'RET', 'follow a citation or look up the word at point'],
+  ['classicist-perseus-action', 'C-c C-c', 'the same, on a chord'],
+  ['classicist-lookup-in-dictionary', 'C-c C-o', 'look a word up, asking which dictionary'],
+  ['classicist-lookup-next', 'C-c C-n', 'the next entry in the file'],
+  ['classicist-lookup-previous', 'C-c C-p', 'the entry before'],
+  ['classicist-lookup-open-tll-or-tgl', 't', 'the TLL in Latin, the TGL in Greek',
    ['tll', 'tgl']],
-  ['diogenes-lookup-lewis', 'l', 'Lewis & Short, or the LSJ in Greek',
+  ['classicist-lookup-lewis', 'l', 'Lewis & Short, or the LSJ in Greek',
    ['lewis', 'lsj']],
   ['diogenes--quit', 'q', 'close the entry'],
 ];
@@ -908,16 +908,16 @@ const EVIL_KEYS = [
 // group of them: the conflict check, the warnings, and the emitted block.
 const SINGLE_KEYS = SCAN_KEYS.concat(EVIL_KEYS);
 
-// Going from one Diogenes window to another: `diogenes-focus-keys'.  A table of
+// Going from one Diogenes window to another: `classicist-focus-keys'.  A table of
 // its own because it is one option, written whole when any of it changes -- and
 // because these are the keys most likely to collide with something a reader has
 // bound, being short chords in a common shape.
 const FOCUS_KEYS = [
-  ['diogenes-focus-browser', 'C-c C-b',
+  ['classicist-focus-browser', 'C-c C-b',
    'go to the text \u2014 raising its frame if it is in one'],
-  ['diogenes-focus-lookup', 'C-c C-l',
+  ['classicist-focus-lookup', 'C-c C-l',
    'go to the entry \u2014 raising its frame if it is in one'],
-  ['diogenes-focus-morphology', 'C-c C-a',
+  ['classicist-focus-morphology', 'C-c C-a',
    'go to the analysis \u2014 raising its frame if it is in one'],
 ];
 
@@ -988,7 +988,7 @@ let sizes = { lookup: 0.5, browser: 0.5, dictionary: 0.5 };
 
 // An analysis shares the entry's column: `split' for `morphology' divides the
 // window the ENTRY is in, downward, rather than making a third column -- see
-// `diogenes-display-beside-companion'.  So it is not a boundary of the frame's
+// `classicist-display-beside-companion'.  So it is not a boundary of the frame's
 // own but one inside the entry's group, and the diagram draws it that way.
 function analysisSharesTheEntry() {
   return kind.morphology === 'split' || kind.morphology === 'reuse';
@@ -1025,7 +1025,7 @@ function groupsFor() {
              kind.lookup !== 'frames') {
     // No entry in this frame and none in a frame of its own: nothing to be
     // beside, so the analysis takes a window here, which is what
-    // `diogenes-display-beside-companion' falls back to.  Where the ENTRIES are
+    // `classicist-display-beside-companion' falls back to.  Where the ENTRIES are
     // in frames the analysis follows them into that frame instead, and is not a
     // boundary of this one.
     groups.push({ kinds: ['morphology'], label: 'analysis' });
@@ -1145,7 +1145,7 @@ function installGrips() {
 }
 
 // Dragging a window to a side of the frame sets which way a split goes.
-// `diogenes-split-direction' is ONE setting for every kind -- the package has
+// `classicist-split-direction' is ONE setting for every kind -- the package has
 // no per-kind direction -- so dragging any window sets it for all of them, and
 // the note below the diagram says so rather than letting the gesture imply
 // otherwise.
@@ -1213,7 +1213,7 @@ function say(html) { el('said').innerHTML = html; }
 
 // The companion pair, read in both directions: an analysis divides the entry's
 // window, and an entry divides the analysis's where no entry is showing.  See
-// `diogenes--companion-role'.
+// `classicist--companion-role'.
 function companionOf(k) {
   const chosen = el('companion') ? el('companion').value : 'lookup';
   if (!chosen) return null;                    // a window of its own
@@ -1222,7 +1222,7 @@ function companionOf(k) {
   const asWin = { lookup: 'entry', browser: 'browser', dictionary: 'dict',
                   morphology: 'morphology' };
   if (k === 'morphology') return asWin[chosen] || null;
-  // Read in reverse only for a real role, as `diogenes--companion-role' does.
+  // Read in reverse only for a real role, as `classicist--companion-role' does.
   if (asWin[chosen] === k) return 'morphology';
   return null;
 }
@@ -1340,7 +1340,7 @@ const STEPS = {
         'The analysis is what you asked for, and the entry is a keypress away.');
     }
     if (behaviour === 'split' && entry) {
-      // `diogenes-display-beside-companion': the ENTRY's window is divided,
+      // `classicist-display-beside-companion': the ENTRY's window is divided,
       // downward, wherever the command was given from.
       entry.win.nested = true;
       entry.win.nestedLabel = 'siderum: neut gen pl';
@@ -1351,7 +1351,7 @@ const STEPS = {
         'consultation and belonging in one column. The frame gains no third column.');
     }
     // NO ENTRY to be beside: a window of its own, by the ordinary rules.  This
-    // is the fallback in `diogenes-display-beside-companion', which answers nil
+    // is the fallback in `classicist-display-beside-companion', which answers nil
     // when it finds no companion window.
     const before = scene.reduce((n, f) => n + f.wins.length, 0);
     const result = place('morphology', 'siderum: neut gen pl');
@@ -1544,9 +1544,9 @@ function preset() {
     out.push(`;; Named after a builtin, so this file is what that name means.`);
   out.push('');
   out.push(';; Where the buffers go.');
-  if (u) out.push(`(setq diogenes-window-behaviour '${u})`);
+  if (u) out.push(`(setq classicist-window-behaviour '${u})`);
   else {
-    out.push("(setq diogenes-window-behaviour");
+    out.push("(setq classicist-window-behaviour");
     out.push("      '((lookup     . " + kind.lookup + ")");
     out.push("        (browser    . " + kind.browser + ")");
     out.push("        (dictionary . " + kind.dictionary + ")");
@@ -1557,11 +1557,11 @@ function preset() {
       out.push("");
       if (beside === 'selected') {
         out.push(";; An analysis divides whichever window you are in.");
-        out.push("(setq diogenes-companion-roles '((morphology . selected)))");
+        out.push("(setq classicist-companion-roles '((morphology . selected)))");
       } else if (beside === '') {
         out.push(";; An analysis takes a window by the ordinary rules rather");
         out.push(";; than dividing another.");
-        out.push("(setq diogenes-companion-roles nil)");
+        out.push("(setq classicist-companion-roles nil)");
       } else {
         out.push(";; An analysis divides the window " +
                  (beside === 'lookup' ? "the ENTRY is in" :
@@ -1569,9 +1569,9 @@ function preset() {
                   "a SCANNED PAGE is in") + ",");
         out.push(";; wherever the command was given from -- so one asked for");
         out.push(";; while reading elsewhere still appears where it belongs.");
-        out.push("(setq diogenes-companion-roles '((morphology . " + beside + ")))");
+        out.push("(setq classicist-companion-roles '((morphology . " + beside + ")))");
       }
-      if (beside !== '') out.push("(setq diogenes-companion-direction '" + dir + ")");
+      if (beside !== '') out.push("(setq classicist-companion-direction '" + dir + ")");
     }
   }
   if (el('scanplace').value === 'own') {
@@ -1584,13 +1584,13 @@ function preset() {
   }
   const dir = el('direction').value, from = el('from').value;
   const splitBits = [];
-  if (dir) splitBits.push(`(setq diogenes-split-direction '${dir})`);
-  if (from !== 'selected') splitBits.push(`(setq diogenes-split-from '${from})`);
+  if (dir) splitBits.push(`(setq classicist-split-direction '${dir})`);
+  if (from !== 'selected') splitBits.push(`(setq classicist-split-from '${from})`);
   const named = boundaries();
   if (named.length) {
     const lines = named.map(b =>
       `        (${b.owner.padEnd(10)} . ${b.value.toFixed(2)})`);
-    splitBits.push('(setq diogenes-split-size\n      \'(' +
+    splitBits.push('(setq classicist-split-size\n      \'(' +
                    lines.join('\n').trimStart() + '))');
   }
   if (splitBits.length) { out.push(''); out.push(';; How a window is made.'); out.push(...splitBits); }
@@ -1600,7 +1600,7 @@ function preset() {
   if (frameBits.length) { out.push(''); out.push(';; Frames.'); out.push(...frameBits); }
   out.push('');
   out.push(';; Reading.');
-  out.push(`(setq diogenes-lookup-show-all-entries ${el('allentries').checked ? 't' : 'nil'})`);
+  out.push(`(setq classicist-lookup-show-all-entries ${el('allentries').checked ? 't' : 'nil'})`);
   out.push(`(setq diogenes-old-pdf-fit ${el('fitwidth').checked ? "'width" : 'nil'})`);
   out.push(`(setq diogenes-old-open-quietly ${el('quietly').checked ? 't' : 'nil'})`);
 
@@ -1796,7 +1796,7 @@ function renderMouseSecond() {
   const what = el('mousesecondwhat');
   if (what) {
     const chosen = el('mousecommand') ? el('mousecommand').value : '';
-    what.textContent = (chosen === 'diogenes-browser-lookup')
+    what.textContent = (chosen === 'classicist-browser-lookup')
       ? 'asking which dictionary first'
       : 'analysing the word and showing the entry';
   }
@@ -1805,9 +1805,9 @@ function renderMouseSecond() {
 // The other command: what a second gesture will run.
 function mouseOtherCommand() {
   const chosen = el('mousecommand') ? el('mousecommand').value : '';
-  return (chosen === 'diogenes-browser-lookup')
-    ? 'diogenes-lookup-in-dictionary'
-    : 'diogenes-browser-lookup';
+  return (chosen === 'classicist-browser-lookup')
+    ? 'classicist-lookup-in-dictionary'
+    : 'classicist-browser-lookup';
 }
 
 function renderAddHow() {
@@ -1818,7 +1818,7 @@ function renderAddHow() {
   if (linesRow) linesRow.hidden = (how !== 'lines');
 }
 
-// What to write for `diogenes-browser-add-lines': a FLOAT is a share of a page
+// What to write for `classicist-browser-add-lines': a FLOAT is a share of a page
 // and an INTEGER a count, which is how the option tells them apart -- so a
 // fraction keeps its point and a line count must not have one.
 function addLinesValue() {
@@ -1962,7 +1962,7 @@ function configText() {
     out.push('  :init');
   }
   out.push(`  (setq diogenes-path ${JSON.stringify(dpath || "/path/to/diogenes")})`);
-  if (morph) out.push(`  (setq diogenes-morpheus-directory ${JSON.stringify(morph)})`);
+  if (morph) out.push(`  (setq classicist-morpheus-directory ${JSON.stringify(morph)})`);
   if (paths.length) { out.push(''); out.push('  ;; The dictionaries you have.'); out.push(...paths); }
 
   // Declared dictionaries: offered whatever their paths say, so that pressing
@@ -1974,7 +1974,7 @@ function configText() {
     out.push('');
     out.push('  ;; Offered on every entry of their language, whatever the paths');
     out.push('  ;; say -- so a key explains what to set rather than doing nothing.');
-    out.push(`  (setq diogenes-declared-dictionaries '(${declared.join(' ')}))`);
+    out.push(`  (setq classicist-declared-dictionaries '(${declared.join(' ')}))`);
   }
 
   // Reading, only where it differs from the default.
@@ -1982,9 +1982,9 @@ function configText() {
   if (el('c-viewer').value !== 'auto')
     reading.push(`  (setq diogenes-old-pdf-viewer '${el('c-viewer').value})`);
   if (!el('c-allentries').checked)
-    reading.push('  (setq diogenes-lookup-show-all-entries nil)');
+    reading.push('  (setq classicist-lookup-show-all-entries nil)');
   if (el('c-alwaysask').checked)
-    reading.push('  (setq diogenes-lookup-always-ask-dictionary t)');
+    reading.push('  (setq classicist-lookup-always-ask-dictionary t)');
   if (reading.length) { out.push(''); out.push('  ;; Reading.'); out.push(...reading); }
 
   // The dictionary letters, only those moved or unbound.
@@ -1997,7 +1997,7 @@ function configText() {
   if (dictKeys.length) {
     out.push('');
     out.push('  ;; Dictionary keys you have moved; the banner follows these.');
-    out.push("  (setq diogenes-lookup-dictionary-keys\n        '(" +
+    out.push("  (setq classicist-lookup-dictionary-keys\n        '(" +
              dictKeys.join('\n').trimStart() + '))');
   }
 
@@ -2016,10 +2016,10 @@ function configText() {
     out.push('');
     out.push('  ;; The whole table: it is one option, so the keys you have not');
     out.push('  ;; changed are written too rather than left unbound.');
-    out.push("  (setq diogenes-lookup-keys\n        '(" + rows.join('\n').trimStart() + '))');
+    out.push("  (setq classicist-lookup-keys\n        '(" + rows.join('\n').trimStart() + '))');
   }
 
-  // `diogenes-focus-keys' is one option, so any change writes the whole table
+  // `classicist-focus-keys' is one option, so any change writes the whole table
   // -- the keys not changed included, or they would be unbound.  The scanned
   // page is absent from it on purpose: `C-c C-e' reaches that, and giving the
   // focus command a key of its own would be a second way to do one thing.
@@ -2031,12 +2031,12 @@ function configText() {
       const key = v === undefined ? k[1] : v;
       return `        (${k[0].padEnd(26)} . ${key === null ? 'nil' : JSON.stringify(key)})`;
     });
-    rows.push('        (diogenes-focus-dictionary   . nil)');
+    rows.push('        (classicist-focus-dictionary   . nil)');
     out.push('');
     out.push('  ;; Going from one Diogenes window to another.  Bound in the');
     out.push('  ;; Diogenes buffers, not globally.  The whole table, since it is');
     out.push('  ;; one option and the keys left out of it would be unbound.');
-    out.push("  (setq diogenes-focus-keys\n        '(" + rows.join('\n').trimStart() + '))');
+    out.push("  (setq classicist-focus-keys\n        '(" + rows.join('\n').trimStart() + '))');
   }
 
   const singles = [];
@@ -2088,19 +2088,19 @@ function configText() {
   const turnBack  = el('turnback') ? el('turnback').value.trim() : '';
   const pagingBits = [];
   if (pageLines && /^[0-9]+$/.test(pageLines))
-    pagingBits.push(`(setq diogenes-browser-page-lines ${pageLines})`);
+    pagingBits.push(`(setq classicist-browser-page-lines ${pageLines})`);
   // Only where it differs from half a page, which is the default.
   if (addLines && addLines !== '0.5')
-    pagingBits.push(`(setq diogenes-browser-add-lines ${addLines})`);
+    pagingBits.push(`(setq classicist-browser-add-lines ${addLines})`);
   if (turnFwd !== 'C-c C-<right>' || turnBack !== 'C-c C-<left>') {
     const pairs = [];
-    if (turnFwd)  pairs.push(`("${turnFwd}" . diogenes-browser-page-forward)`);
-    if (turnBack) pairs.push(`("${turnBack}" . diogenes-browser-page-backward)`);
+    if (turnFwd)  pairs.push(`("${turnFwd}" . classicist-browser-page-forward)`);
+    if (turnBack) pairs.push(`("${turnBack}" . classicist-browser-page-backward)`);
     pagingBits.push(pairs.length
-      ? `(setq diogenes-browser-turn-keys '(${pairs.join(' ')}))`
-      : '(setq diogenes-browser-turn-keys nil)');
+      ? `(setq classicist-browser-turn-keys '(${pairs.join(' ')}))`
+      : '(setq classicist-browser-turn-keys nil)');
     pagingBits.push("(with-eval-after-load 'diogenes-browser");
-    pagingBits.push('  (diogenes-browser-install-turn-keys))');
+    pagingBits.push('  (classicist-browser-install-turn-keys))');
   }
   if (pagingBits.length) {
     out.push('');
@@ -2121,11 +2121,11 @@ function configText() {
       clickPairs.push(`("${second}" . ${mouseOtherCommand()})`);
     out.push('');
     out.push(';; A click looks a word up in the browser.');
-    out.push(`(setq diogenes-browser-mouse-keys '(${clickPairs.join(' ')}))`);
+    out.push(`(setq classicist-browser-mouse-keys '(${clickPairs.join(' ')}))`);
     out.push("(with-eval-after-load 'diogenes-browser");
-    out.push('  (diogenes-browser-install-mouse-keys))');
+    out.push('  (classicist-browser-install-mouse-keys))');
   }
-  const changedKeys = out.some(l => /diogenes-lookup-keys|dictionary-keys|-key /.test(l));
+  const changedKeys = out.some(l => /classicist-lookup-keys|dictionary-keys|-key /.test(l));
   if (changedKeys) {
     out.push('');
     out.push(';; Keys are worth checking in your own Emacs: open an entry, press');
