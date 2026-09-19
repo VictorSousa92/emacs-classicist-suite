@@ -1,0 +1,2969 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Diogenes configuration &amp; preset builder</title>
+<style>
+  :root {
+    --ink: #1c1a17; --paper: #f7f4ee; --rule: #d8d2c6; --quiet: #6f6a61;
+    --entry: #b8543f; --browser: #3f6b8a; --dict: #6d6136; --accent: #7a3b2e;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font: 15px/1.55 "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  }
+  header { padding: 1.5rem 2rem 1rem; border-bottom: 1px solid var(--rule); }
+  h1 { margin: 0; font-size: 1.4rem; font-weight: 600; letter-spacing: -0.01em; }
+  header p { margin: .4rem 0 0; color: var(--quiet); max-width: 70ch; }
+  .tabs { display: flex; align-items: baseline; gap: .25rem; padding: 0 2rem;
+          border-bottom: 1px solid var(--rule); background: #f2eee6; }
+  .tab { font: inherit; font-size: .92rem; padding: .55rem 1rem; cursor: pointer;
+         border: 1px solid transparent; border-bottom: 0; background: none;
+         color: var(--quiet); border-radius: 4px 4px 0 0; position: relative; top: 1px; }
+  .tab:hover { color: var(--ink); }
+  .tab.on { background: var(--paper); border-color: var(--rule); color: var(--ink);
+            font-weight: 600; }
+  .tabnote { margin-left: auto; font-size: .82rem; color: var(--quiet); padding: .55rem 0; }
+  /* `!important' because a panel also has a layout class, and `main.single'
+     matched with the same specificity as `main[hidden]' -- so the later rule
+     won and a hidden panel stayed on the page, both tabs showing at once. */
+  main[hidden] { display: none !important; }
+  /* The Configuration tab is two EQUAL columns: a form and what it produces,
+     neither of which is the other's illustration.  The Presets tab gives its
+     right-hand side more room, the diagram there being the thing one watches
+     while changing the left. */
+  main.half { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .keybox { display: grid; grid-template-columns: minmax(4.5rem, auto) auto; gap: .3rem; }
+  .keybox input { field-sizing: content; min-width: 4.5rem; }
+  .keybox button {
+    font: inherit; font-size: .74rem; padding: .25rem .45rem; cursor: pointer;
+    border: 1px solid var(--rule); background: #fff; border-radius: 3px;
+    color: var(--quiet);
+  }
+  .keybox button:hover { border-color: var(--accent); color: var(--accent); }
+  .keybox button.recording {
+    border-color: var(--accent); background: var(--accent); color: #fff;
+  }
+  input.capturing { border-color: var(--accent); background: #fbf3f0; }
+  .kwarn { font-size: .78rem; margin: .15rem 0 0; grid-column: 1 / -1; }
+  /* A warning belongs to its ROW and not to a cell.  Inside `.keybox' it
+     landed in a 4.5rem column, so a prompt rendered there was invisible and
+     looked like no prompt at all -- the dictionary rows, which had it outside,
+     showed theirs correctly, which is what made the difference hard to see. */
+  .warnline { grid-column: 1 / -1; }
+  .keybox > [data-warnfor] { grid-column: 1 / -1; }
+  /* A prompt reads as prose, so it wraps rather than stretching its column. */
+  .kwarn.prompt { line-height: 1.5; }
+  .caveat {
+    font-size: .86rem; color: var(--ink); background: #fbf6f0;
+    border-left: 2px solid var(--accent); padding: .55rem .7rem;
+    margin: .6rem 0; max-width: 60ch;
+  }
+  .caveat + .caveat { margin-top: -.2rem; }
+  .kwarn.clash { color: var(--accent); }
+  .kwarn.fine { color: var(--quiet); }
+  .kwarn.prompt { display: block; margin-top: .2rem; color: var(--quiet); }
+  .kwarn.prompt button {
+    font: inherit; font-size: .78rem; padding: .1rem .4rem; margin: 0 .1rem;
+    cursor: pointer; border: 1px solid var(--accent); background: #fff;
+    color: var(--accent); border-radius: 3px;
+  }
+  .kwarn.prompt button:hover { background: var(--accent); color: #fff; }
+  .distro { display: flex; gap: .4rem; flex-wrap: wrap; margin: .3rem 0 .6rem; }
+  .distro label {
+    border: 1px solid var(--rule); border-radius: 3px; padding: .35rem .7rem;
+    cursor: pointer; font-size: .9rem; background: #fff;
+  }
+  .distro label.on { border-color: var(--accent); box-shadow: inset 2px 0 0 var(--accent); }
+  .distro input { display: none; }
+  .uploadrow { display: flex; gap: .6rem; align-items: baseline; flex-wrap: wrap;
+               margin: .4rem 0 .2rem; }
+  .uploadrow input[type=file] { font: inherit; font-size: .84rem; }
+  .kwarn.blocked { color: var(--accent); font-weight: 600; }
+  .filelist { font-size: .82rem; color: var(--quiet); margin: .3rem 0 0; }
+  .filelist code { color: var(--ink); }
+  .presets { display: grid; gap: .4rem; margin: .3rem 0 .5rem; }
+  .presetrow {
+    display: grid; grid-template-columns: 4.2rem 1fr; gap: .7rem;
+    border: 1px solid var(--rule); border-radius: 3px; padding: .5rem .6rem;
+    cursor: pointer; background: #fff; align-items: center;
+  }
+  .presetrow.on { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+  .presetrow input { display: none; }
+  .presetrow b { font-weight: 600; font-size: .9rem; }
+  .presetrow span { display: block; color: var(--quiet); font-size: .84rem; }
+  /* a small drawing of what each does */
+  .mini { display: flex; gap: 2px; height: 2.4rem; }
+  .mf { flex: 1; border: 1px solid var(--ink); border-radius: 2px; display: flex;
+        overflow: hidden; }
+  .mf.col { flex-direction: column; }
+  .mw { flex: 1; }
+  .mw.browser { background: #eaf1f6; }
+  .mw.entry { background: #fbeeea; }
+  .mw.dict { background: #f4f1e4; }
+  .mw + .mw { border-left: 1px solid var(--rule); }
+  .mf.col .mw + .mw { border-left: 0; border-top: 1px solid var(--rule); }
+  .field { position: relative; }
+  input[type=text].dropping {
+    border-color: var(--accent); background: #fbf3f0;
+  }
+  .pathrow { display: grid; grid-template-columns: 1fr auto; gap: .35rem; }
+  .pathrow button {
+    font: inherit; font-size: .78rem; padding: .3rem .5rem; cursor: pointer;
+    border: 1px solid var(--rule); background: #fff; border-radius: 3px;
+    color: var(--quiet); white-space: nowrap;
+  }
+  .pathrow button:hover { border-color: var(--accent); color: var(--accent); }
+
+  .dictrow { display: grid; grid-template-columns: 1fr minmax(5rem, max-content);
+             gap: .5rem;
+             align-items: end; margin: .7rem 0; padding-bottom: .7rem;
+             border-bottom: 1px solid var(--rule); }
+  .dictrow:last-child { border-bottom: 0; }
+  .dictrow .name { font-weight: 600; font-size: .9rem; margin-bottom: .2rem;
+                   display: flex; align-items: baseline; gap: .4rem; }
+  .dictrow .name input { position: relative; top: 2px; }
+  .dictrow .name label { cursor: pointer; }
+  .dictrow .name em { font-style: normal; font-weight: 400; color: var(--quiet); }
+  .dictrow .keycol span { font-size: .72rem; color: var(--quiet); display: block; }
+  /* The right-hand column holds the key AND its warning, so a prompt appears
+     under the key it is about -- as it does in the dictionary rows, where the
+     `.keycol' does the same.  Wide enough for a sentence: it was the warning
+     squeezed into a narrow cell that made one invisible before. */
+  .keyrow { display: grid; grid-template-columns: 1fr minmax(15rem, 24rem);
+            gap: .35rem .6rem; align-items: baseline; margin: .6rem 0; }
+  .keyrow > .warnline { grid-column: 2; }
+  .keyrow .what { font-size: .88rem; }
+  .keyrow .what em { font-style: normal; color: var(--quiet); font-size: .8rem; display: block; }
+  main {
+    display: grid; grid-template-columns: minmax(19rem, 24rem) minmax(0, 1fr);
+    align-items: start; max-width: 106rem;
+  }
+  .pane { padding: 1.4rem 1.8rem 2.5rem; min-width: 0; }
+  .pane + .pane { border-left: 1px solid var(--rule); }
+  /* The right-hand pane holds the two things one watches while changing the
+     left-hand one, so it stays put rather than scrolling away. */
+  .pane.watch {
+    position: sticky; top: 0; max-height: 100vh; overflow-y: auto;
+  }
+  @media (max-width: 1000px) {
+    main { grid-template-columns: 1fr; }
+    .pane + .pane { border-left: 0; border-top: 1px solid var(--rule); }
+    .pane.watch { position: static; max-height: none; overflow: visible; }
+  }
+  h2 {
+    font-size: .76rem; text-transform: uppercase; letter-spacing: .09em;
+    color: var(--quiet); font-weight: 600; margin: 1.8rem 0 .6rem;
+    display: flex; align-items: baseline; gap: .5rem;
+  }
+  /* A group within a section: the keys divide into three kinds, and a reader
+     looking for the frame navigation should not have to read every row to find
+     it. */
+  h3 {
+    font-size: .88rem; font-weight: 600; color: var(--ink);
+    margin: 1.3rem 0 .2rem; padding-top: .7rem;
+    border-top: 1px solid var(--rule);
+  }
+  h3:first-of-type { border-top: 0; padding-top: 0; }
+  h2:first-child { margin-top: 0; }
+  h2 i { font-style: normal; text-transform: none; letter-spacing: 0; font-weight: 400; }
+  .kinds { display: grid; grid-template-columns: 5.5rem 1fr; gap: .3rem .6rem; align-items: center; }
+  .kinds label { font-size: .9rem; }
+  .kinds label b { font-weight: 600; }
+  select, input[type=text], input[type=number] {
+    padding: .32rem .45rem; border: 1px solid var(--rule); border-radius: 3px;
+    font-family: ui-monospace, Menlo, monospace; font-size: .82rem;
+    background: #fff; color: var(--ink); width: 100%;
+  }
+  .row { display: flex; gap: .55rem; align-items: flex-start; margin: .5rem 0; }
+  .row input[type=checkbox] { margin: 0; position: relative; top: 5px; }
+  .row label { font-size: .92rem; }
+  .row label em { font-style: normal; color: var(--quiet); display: block; font-size: .83rem; }
+  .field { margin: .55rem 0; }
+  .field span { display: block; font-size: .79rem; color: var(--quiet); margin-bottom: .12rem; }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; }
+  .stage { background: #fff; border: 1px solid var(--rule); border-radius: 4px; padding: 1rem; }
+  /* One frame is one screen's worth, so frames stack rather than sharing a
+     row: side by side each would be drawn narrower than the screen it stands
+     for, and the shape is the point of drawing it. */
+  /* Three quarters of the pane's width.  The height follows from the screen
+     shape, so capping the width is all that is needed and the frames stay the
+     shape of a screen. */
+  .frames { display: flex; flex-direction: column; gap: .6rem;
+            width: 65%; min-width: 16rem; margin-inline: auto; }
+  /* ON ITS SIDE, the same screen stood on its end: the width it now has is the
+     height it had, and the height it now has is the width it had.  Both
+     measurements are kept and exchanged, which is what turning a monitor does
+     -- where filling the pane's width and letting the new ratio decide the
+     height would have made a 16:9 frame over a thousand pixels tall, and
+     capping the height instead would have shrunk it rather than turning it. */
+  /* `min-width: 0' matters: the 18rem floor above would have overridden a
+     rotated ultrawide, which is about 13rem across, and stretched it back into
+     a shape no monitor has. */
+  .frames.onside { width: var(--framew, 16rem); min-width: 0;
+                   align-items: stretch; margin-inline: 0; flex: 0 0 auto; }
+  /* Stood on its end a frame is tall, and the buttons under it went off the
+     bottom of the window -- a control one cannot see is a control one has not
+     got.  So they move BESIDE it: the drawing to the left, everything that was
+     under it to the right, which is room a tall narrow frame has left over. */
+  .board.onside { display: flex; gap: 1.1rem; align-items: flex-start; }
+  .board.onside .sidepanel { flex: 1 1 0; min-width: 12rem; }
+  .board.onside .steps { flex-direction: column; align-items: stretch; }
+  .board.onside .steps button { text-align: left; }
+  .screenrow .sidelabel {
+    display: flex; align-items: center; gap: .3rem; font-size: .84rem;
+    cursor: pointer; white-space: nowrap;
+  }
+  .frame {
+    flex: 0 0 auto; min-width: 0; border: 2px solid var(--ink); border-radius: 3px;
+    background: #fdfcfa; overflow: hidden;
+  }
+  .frame.fresh { box-shadow: 0 0 0 3px rgba(122,59,46,.22); }
+  .frame .bar {
+    font: 600 .66rem/1.8 ui-monospace, Menlo, monospace; text-align: center;
+    background: var(--ink); color: var(--paper); letter-spacing: .04em;
+  }
+  .windows { display: flex; aspect-ratio: var(--screen, 1.778); min-height: 4rem; }
+  .screenrow {
+    display: flex; align-items: baseline; gap: .5rem; margin: 0 0 .8rem;
+    font-size: .84rem; flex-wrap: wrap;
+  }
+  .screenrow label { color: var(--quiet); }
+  .screenrow select { width: auto; flex: 0 1 22rem; }
+  .screenrow .note { margin: 0; }
+  /* `above' and `left' are `below' and `right' with the new window on the
+     other side of the divider, so the box is reversed rather than reordered --
+     the scene stays in the order things happened. */
+  .windows.col { flex-direction: column; }
+  .windows.col.flip { flex-direction: column-reverse; }
+  .windows.rowdir { flex-direction: row; }
+  .windows.rowdir.flip { flex-direction: row-reverse; }
+  .win {
+    /* `min-height: 44px' made three windows need 132px, and the frame -- whose
+       height comes from its aspect ratio -- grew to fit them instead of the
+       windows sharing it.  A window has to be allowed to be small: the frame
+       stands for a screen, and dividing it is the whole point. */
+    flex: 1 1 0; min-height: 0; min-width: 0; overflow: hidden;
+    padding: .4rem .5rem; font-size: .8rem;
+    display: flex; flex-direction: column; justify-content: center;
+    border-top: 1px solid var(--rule);
+  }
+  .windows.rowdir .win { border-top: 0; border-left: 1px solid var(--rule); }
+  .win:first-child { border-top: 0; border-left: 0; }
+  /* Reversed, the divider belongs on the other edge of each window. */
+  .windows.col.flip .win { border-top: 0; border-bottom: 1px solid var(--rule); }
+  .windows.col.flip .win:first-child { border-bottom: 0; }
+  .windows.rowdir.flip .win { border-left: 0; border-right: 1px solid var(--rule); }
+  .windows.rowdir.flip .win:first-child { border-right: 0; }
+  .win b { display: block; font-size: .69rem; letter-spacing: .05em; text-transform: uppercase; }
+  /* An analysis divides the entry's own window, downward: drawn as a band
+     inside it rather than as a column of the frame, which is what
+     `diogenes-display-beside-companion' actually does. */
+  .win.nested { padding: 0; }
+  .win.nested > .half { flex: 1; padding: .35rem .5rem; overflow: hidden;
+                        display: flex; flex-direction: column; justify-content: center; }
+  .win.nested > .half + .half { border-top: 1px solid var(--rule); }
+  .win.nested > .half.morph { background: #eef1ea; }
+  .win { overflow-wrap: anywhere; }
+  .win.entry { background: #fbeeea; } .win.entry b { color: var(--entry); }
+  .win.browser { background: #eaf1f6; } .win.browser b { color: var(--browser); }
+  .win.dict { background: #f4f1e4; } .win.dict b { color: var(--dict); }
+  .win.home { background: #f2f2f0; color: var(--quiet); font-style: italic; }
+  .win.fresh { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .steps { display: flex; gap: .35rem; flex-wrap: wrap; margin: .9rem 0 .2rem; }
+  .steps button {
+    font: inherit; font-size: .83rem; padding: .32rem .65rem; cursor: pointer;
+    border: 1px solid var(--rule); background: #fff; border-radius: 3px; color: var(--ink);
+  }
+  .steps button:hover { border-color: var(--accent); color: var(--accent); }
+  .steps button.reset { margin-left: auto; color: var(--quiet); }
+  .steps button:disabled {
+    color: #b8b3aa; border-color: #e8e4dc; cursor: default; background: #fbfaf8;
+  }
+  .steps button:disabled:hover { border-color: #e8e4dc; color: #b8b3aa; }
+  .steps kbd { font: 600 .78em ui-monospace, Menlo, monospace; color: var(--quiet); margin-left: .3rem; }
+  .said {
+    margin: .75rem 0 0; font-size: .88rem; min-height: 3.4em;
+    border-left: 2px solid var(--rule); padding-left: .7rem;
+  }
+  .said em { font-style: normal; color: var(--quiet); }
+  .said code { background: #f4f1eb; padding: 0 .2em; border-radius: 2px; }
+  pre {
+    background: #fff; border: 1px solid var(--rule); border-radius: 4px;
+    padding: .85rem 1rem; overflow: auto; font-size: .79rem; line-height: 1.5;
+    font-family: ui-monospace, Menlo, monospace; white-space: pre;
+    max-height: 34vh; margin: 0;
+  }
+  #initsnippet { max-height: 18vh; }
+  .actions { display: flex; gap: .6rem; margin-top: .8rem; align-items: center; flex-wrap: wrap; }
+  .actions button {
+    font: inherit; padding: .42rem .9rem; cursor: pointer; border-radius: 3px;
+    border: 1px solid var(--accent); background: var(--accent); color: #fff;
+  }
+  .actions button.ghost { background: #fff; color: var(--accent); }
+  .note { font-size: .85rem; color: var(--quiet); margin: .5rem 0 0; max-width: 70ch; }
+  .legend { display: flex; gap: .5rem; align-items: center; margin: .7rem 0 0;
+            font-size: .8rem; color: var(--quiet); flex-wrap: wrap; }
+  .legend .key {
+    width: .8rem; height: .8rem; border-radius: 2px; display: inline-block;
+    border: 1px solid var(--rule);
+  }
+  .legend .key + .key { margin-left: .6rem; }
+  .legend .browser { background: #eaf1f6; }
+  .legend .entry { background: #fbeeea; }
+  .legend .dict { background: #f4f1e4; }
+  code { font-family: ui-monospace, Menlo, monospace; font-size: .86em; }
+  .warn { color: var(--accent); }
+  .prop { margin: .6rem 0; }
+  .prop .top { display: flex; justify-content: space-between; align-items: baseline;
+               font-size: .84rem; gap: .5rem; }
+  .prop .top b { font-weight: 600; }
+  .prop .top span { color: var(--quiet); font-variant-numeric: tabular-nums; }
+  .prop input[type=range] { width: 100%; margin: .2rem 0 0; accent-color: var(--accent); }
+  .prop.inert { opacity: .45; }
+  .prop.inert input[type=range] { pointer-events: none; }
+  .windows { position: relative; }
+  .grip { position: absolute; z-index: 3; background: var(--accent); opacity: 0;
+          transition: opacity .12s; }
+  .grip:hover, .grip.dragging { opacity: .4; }
+  /* Dragging a window to a side sets the direction of the split. */
+  .win[draggable] { cursor: grab; }
+  .win.lifted { opacity: .4; }
+  .zones { position: absolute; inset: 0; z-index: 5; display: none; }
+  .zones.on { display: block; }
+  .zone {
+    position: absolute; border: 2px dashed var(--accent); background: rgba(122,59,46,.06);
+    display: flex; align-items: center; justify-content: center;
+    font-size: .72rem; letter-spacing: .06em; text-transform: uppercase;
+    color: var(--accent); font-weight: 600;
+  }
+  .zone.over { background: rgba(122,59,46,.2); }
+  .zone.above { top: 0; left: 0; right: 0; height: 34%; }
+  .zone.below { bottom: 0; left: 0; right: 0; height: 34%; }
+  .zone.left { top: 34%; bottom: 34%; left: 0; width: 42%; }
+  .zone.right { top: 34%; bottom: 34%; right: 0; width: 42%; }
+  .windows.col > .grip { left: 0; right: 0; height: 7px; margin-top: -3px; cursor: row-resize; }
+  .windows.rowdir > .grip { top: 0; bottom: 0; width: 7px; margin-left: -3px; cursor: col-resize; }
+  select:disabled { background: #f4f2ee; color: #a9a49b; }
+  .kinds label.dim { color: #a9a49b; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Diogenes configuration &amp; preset builder</h1>
+  <p>Two things, on two tabs. <b>Configuration</b> is what is true of this
+     machine &mdash; where Diogenes and your dictionaries are, which viewer opens
+     a scan, which keys you want &mdash; and it writes the block for your init
+     file. <b>Presets</b> is what varies with what you are doing: where the
+     windows go, how much room each gets, how much of an entry to show. It
+     writes a file you can load and change without touching your init file.</p>
+</header>
+
+<nav class="tabs">
+  <button class="tab on" data-tab="config">Configuration</button>
+  <button class="tab" data-tab="preset">Presets</button>
+  <span class="tabnote">Configuration is what is true of this machine; a preset is what varies with what you are doing.</span>
+</nav>
+
+<main id="panel-config" class="half">
+<section class="pane">
+  <h2>What you run</h2>
+  <p class="note">So that the key boxes below can warn you about a key your
+     configuration already uses.</p>
+  <div id="c-distro"></div>
+  <div class="row">
+    <input type="checkbox" id="c-evil">
+    <label for="c-evil">Using evil
+      <em>Doom and Spacemacs default to it. Diogenes puts its read-only buffers
+      in Emacs state, so the single letters are free there &mdash; but a scanned
+      page stays in normal state, where evil's own keys apply.</em></label>
+  </div>
+  <p class="note" id="c-evilnote"></p>
+
+  <h2>Your own keys</h2>
+  <p class="note">Optional, and it makes the warnings below far better: add the
+     file or files where your keys are set, and this checks against them.
+     Nothing is uploaded anywhere &mdash; the page reads them in your browser.</p>
+  <div class="uploadrow">
+    <input type="file" id="c-dotfiles" multiple accept=".el,.org,text/plain">
+    <span class="note" id="c-dotstatus">No files added.</span>
+  </div>
+  <p class="note" id="c-dothelp"></p>
+
+  <h2>Diogenes itself</h2>
+  <div class="field">
+    <span><code>diogenes-path</code> &mdash; the root of your installation; everything inside is found from here</span>
+    <input type="text" id="c-path" placeholder="/usr/local/diogenes" data-drop="1">
+  </div>
+  <div class="field">
+    <span><code>diogenes-morpheus-directory</code> &mdash; for forms the wordlists never saw. Optional.</span>
+    <input type="text" id="c-morpheus" placeholder="~/morpheus/morpheus" data-drop="1">
+  </div>
+
+  <h2>Dictionaries</h2>
+  <p class="note">A dictionary appears when its path is set and the file is
+     there; an empty path means one fewer dictionary rather than a broken one.
+     The key box shows the default &mdash; fill it only to change it, or type
+     <code>-</code> to bind nothing.</p>
+  <p class="note"><b>Tick a dictionary to declare it</b>
+     (<code>diogenes-declared-dictionaries</code>): it is then offered on every
+     entry of its language whatever its paths say, and pressing its key explains
+     what to set. Worth ticking one you are about to install, or one whose files
+     are somewhere this check cannot see. Leave it unticked and the paths decide,
+     which is what most people want.</p>
+  <p class="caveat">The key boxes here are the dictionary letters, and the same
+     caution applies to them as to the keys further down: <b>check each one in
+     your own Emacs before settling on it.</b> Open a Diogenes entry, press
+     <code>C-h k</code> and the key, and Emacs names whatever holds it. What
+     this tool knows is a curated list and cannot include your own packages or
+     bindings.</p>
+  <p class="note"><b>Copy a file in your file manager and paste it into a box</b>
+     &mdash; the clipboard carries the whole path and the box takes it, on
+     Windows, macOS and Linux alike. Typing works too. Dragging works in some
+     browsers: most now withhold the path of a dropped file, the same rule that
+     hides it in a file chooser, and the box says so when that happens. Nothing
+     is uploaded anywhere.</p>
+  <p class="note">On Windows, <em>Copy as path</em> in Explorer's right-click
+     menu (hold Shift) gives what these boxes want. Backslashes are turned into
+     forward slashes, which Emacs accepts and which keeps the generated
+     configuration readable.</p>
+  <div id="c-dicts"></div>
+
+  <h2>Reading</h2>
+  <div class="field">
+    <span>Which viewer opens a scanned dictionary &mdash;
+      <code>diogenes-old-pdf-viewer</code>. The keys it takes for itself are
+      checked against yours below.</span>
+    <select id="c-viewer">
+      <option value="auto">auto &mdash; pdf-tools if you have it, else doc-view</option>
+      <option value="pdf-tools">pdf-tools</option>
+      <option value="doc-view">doc-view, which ships with Emacs</option>
+      <option value="emacs-reader">the Emacs Reader (MuPDF)</option>
+    </select>
+  </div>
+  <div class="row">
+    <input type="checkbox" id="c-allentries" checked>
+    <label for="c-allentries">Show every matching entry
+      <em><code>diogenes-lookup-show-all-entries</code> &mdash; on by default; off shows only the first.</em></label>
+  </div>
+  <div class="row">
+    <input type="checkbox" id="c-alwaysask">
+    <label for="c-alwaysask">Always ask which dictionary
+      <em><code>diogenes-lookup-always-ask-dictionary</code> &mdash; off by default; on prompts rather than choosing by language.</em></label>
+  </div>
+
+  <h2>Keys</h2>
+  <p class="note">Blank keeps the default. <code>-</code> binds nothing, and the
+     keyboard button records the keys you press.</p>
+  <p class="caveat"><b>Check every key in your own Emacs before you settle on
+     it.</b> What this tool knows is a curated list &mdash; Emacs itself, your
+     distribution's usual bindings, evil, and the PDF viewer you chose &mdash;
+     and it cannot know your packages, your modules, or anything you have bound
+     yourself. Nothing here is a guarantee that a key is free.</p>
+  <p class="caveat">The way to find out takes a moment. Open a Diogenes entry
+     and press <code>C-h k</code> then the key: Emacs names whatever holds it,
+     or says it is undefined. In a scanned dictionary do the same &mdash; the
+     answer differs there. For a sequence under a leader, press the leader and
+     let which-key list what is taken.</p>
+  <h3>Inside an entry</h3>
+  <p class="note">What the keys of a lookup buffer do. One table, so changing
+     any of them writes all of them.</p>
+  <div id="c-keys-lookup"></div>
+
+  <h3>Going between the windows and frames</h3>
+  <p class="note"><b>These four are frame navigation.</b> They matter most with
+     <em>frames</em>, where each kind is in a frame of its own and
+     <code>C-x o</code> cannot reach it &mdash; the key raises that frame and
+     puts you in it. Within a single frame they move between windows just as
+     usefully. Press one twice where there are two of a kind, an OLD page and a
+     TLL page say, and you go to the second.</p>
+  <p class="note">The scanned page has an option of its own rather than a place
+     in the table below it, because that command does one thing the others do
+     not: it prefers the page opened from the entry you are reading. Grouped
+     here regardless, since what you mean by the key is the same.</p>
+  <div id="c-keys-focus"></div>
+
+  <h3>Inside a print dictionary</h3>
+  <p class="note">Pressed on a scanned page, and bound there through a minor
+     mode of Diogenes' own, so an unrelated PDF keeps its own keys.</p>
+  <div id="c-keys-scan"></div>
+
+  <h3>Turning a page</h3>
+  <p class="note">Two ways to read on. <code>C-c C-n</code> and
+     <code>C-c C-p</code> <b>add</b> text and keep what is there, for reading a
+     little further without losing your place. The keys below, and the header's
+     buttons, <b>turn</b> the page: the same number of lines, in place of what
+     was shown.</p>
+  <div class="field">
+    <span>Lines a page shows &mdash; <code>diogenes-browser-page-lines</code>.
+      Empty for as many as the first page came with, which Diogenes sizes to the
+      window.</span>
+    <input type="text" id="pagelines" value="" placeholder="as it comes">
+  </div>
+  <div class="field">
+    <span>What <code>C-c C-n</code> and <code>C-c C-p</code> add &mdash;
+      <code>diogenes-browser-add-lines</code></span>
+    <select id="addhow">
+      <option value="0.5">Half a page &mdash; the other half stays in view</option>
+      <option value="1.0">A whole page &mdash; as much as the buttons turn</option>
+      <option value="fraction">A fraction of a page&hellip;</option>
+      <option value="lines">A number of lines&hellip;</option>
+    </select>
+  </div>
+  <div class="field" id="addfractionrow" hidden>
+    <span>The fraction &mdash; 0.25 for a quarter of a page</span>
+    <input type="text" id="addfraction" value="0.25">
+  </div>
+  <div class="field" id="addlinesrow" hidden>
+    <span>The number of lines, whatever a page happens to be</span>
+    <input type="text" id="addlines" value="15">
+  </div>
+  <div class="field">
+    <span>Key that turns a page forward</span>
+    <div class="keybox">
+      <input type="text" id="turnforward" value="C-c C-&lt;right&gt;">
+      <button data-record="1"
+              title="Press the keys instead of typing them">&#8984;</button>
+    </div>
+  </div>
+  <div class="field">
+    <span>Key that turns a page back</span>
+    <div class="keybox">
+      <input type="text" id="turnback" value="C-c C-&lt;left&gt;">
+      <button data-record="1"
+              title="Press the keys instead of typing them">&#8984;</button>
+    </div>
+  </div>
+
+  <h3>Clicking a word</h3>
+  <p class="note">Heslin&rsquo;s Diogenes looks a word up when you click it, and
+     the browser can too. Off unless you choose a gesture, an Emacs buffer
+     ordinarily placing point when it is clicked.</p>
+  <p class="note">A plain click is safe to take: Emacs fires it only on a click
+     in place, and dragging to mark a passage is a different event which is left
+     alone. So you can still mark a stretch of lines.</p>
+  <div class="field">
+    <span>The gesture &mdash; <code>diogenes-browser-mouse-keys</code></span>
+    <select id="mousegesture">
+      <option value="">None &mdash; clicking places point, as elsewhere in Emacs</option>
+      <option value="&lt;mouse-1&gt;">A plain click</option>
+      <option value="&lt;double-mouse-1&gt;">A double click</option>
+      <option value="&lt;C-mouse-1&gt;">Control-click</option>
+      <option value="&lt;C-S-mouse-1&gt;">Control-shift-click</option>
+      <option value="&lt;S-mouse-1&gt;">Shift-click</option>
+      <option value="&lt;mouse-3&gt;">The right button</option>
+    </select>
+  </div>
+  <div class="field">
+    <span>And what it does</span>
+    <select id="mousecommand">
+      <option value="diogenes-browser-lookup">Analyse the word and show the entry</option>
+      <option value="diogenes-lookup-in-dictionary">Ask which dictionary first</option>
+    </select>
+  </div>
+  <div class="field" id="mousesecondrow" hidden>
+    <span>A second gesture, for <span id="mousesecondwhat">the other</span>
+      &mdash; leave it as None to bind only the one above</span>
+    <select id="mousegesture2">
+      <option value="">None</option>
+      <option value="&lt;mouse-1&gt;">A plain click</option>
+      <option value="&lt;double-mouse-1&gt;">A double click</option>
+      <option value="&lt;C-mouse-1&gt;">Control-click</option>
+      <option value="&lt;C-S-mouse-1&gt;">Control-shift-click</option>
+      <option value="&lt;S-mouse-1&gt;">Shift-click</option>
+      <option value="&lt;mouse-3&gt;">The right button</option>
+    </select>
+  </div>
+
+  <div id="c-keys-evil-group" hidden>
+    <h3>Evil</h3>
+    <p class="note">Diogenes puts its read-only buffers in Emacs state, so the
+       single letters reach the dictionaries. This is the way back to normal
+       state.</p>
+    <div id="c-keys-evil"></div>
+  </div>
+
+  <h2>Frames</h2>
+  <div class="row">
+    <input type="checkbox" id="c-pixelwise">
+    <label for="c-pixelwise"><code>frame-resize-pixelwise</code>
+      <em>Wanted under a tiling window manager: without it a frame rounds its
+      size down to whole character cells and leaves part of its tile empty.
+      Harmless otherwise, and needed only if you use frames.</em></label>
+  </div>
+
+  <h2>A preset at startup</h2>
+  <p class="note">Optional. The four below need nothing else set; for one of
+     your own, name it and say where the presets live. Make one on the
+     <b>Presets</b> tab.</p>
+  <div id="c-presets"></div>
+  <div id="c-preset-other" hidden>
+    <div class="field">
+      <span>Its name &mdash; the file without <code>.el</code></span>
+      <input type="text" id="c-preset-name" placeholder="my-preset">
+    </div>
+    <div class="field">
+      <span><code>diogenes-preset-directory</code> &mdash; where your presets live</span>
+      <input type="text" id="c-preset-dir" placeholder="~/.emacs.d/diogenes-presets/"
+             data-drop="1">
+    </div>
+  </div>
+</section>
+
+<section class="pane watch">
+  <h2>Your configuration</h2>
+  <pre id="c-out"></pre>
+  <div class="actions">
+    <button id="c-copy">Copy</button>
+    <button class="ghost" id="c-download">Download</button>
+    <span class="note" id="c-copied"></span>
+  </div>
+  <p class="note">Only what differs from the default is written, so the block
+     says what is particular about your installation and nothing else.</p>
+  <p class="note" id="c-wherenote"></p>
+</section>
+</main>
+
+<main id="panel-preset" hidden>
+<section class="pane">
+  <h2>Where things go <i id="mixedhint"></i></h2>
+  <div class="kinds" id="kinds"></div>
+  <p class="note" id="mixednote"></p>
+
+  <h2>Analyses</h2>
+  <div class="field">
+    <span>Which window an analysis divides, when it is set to <em>split</em></span>
+    <select id="companion">
+      <option value="lookup">The open lookup window &mdash; wherever you pressed the key</option>
+      <option value="selected">Whichever window you are in</option>
+      <option value="browser">The text</option>
+      <option value="dictionary">A scanned page</option>
+      <option value="">Nothing in particular &mdash; a window of its own</option>
+    </select>
+  </div>
+  <div class="field">
+    <span>And which way it divides that window</span>
+    <select id="companiondir">
+      <option value="below">Below &mdash; the two read as one column</option>
+      <option value="above">Above</option>
+      <option value="right">To the right</option>
+      <option value="left">To the left</option>
+    </select>
+  </div>
+  <p class="note" id="companionnote"></p>
+
+  <h2>Scanned pages</h2>
+  <div class="field">
+    <span>Where a printed dictionary’s page goes</span>
+    <select id="scanplace">
+      <option value="replace">Replace the entry &mdash; <code>q</code> brings it back</option>
+      <option value="own">A window or frame of its own</option>
+    </select>
+  </div>
+  <p class="note" id="scannote"></p>
+
+  <h2>How a window is made</h2>
+  <div class="pair">
+    <div class="field">
+      <span>Direction &mdash; <code>diogenes-split-direction</code></span>
+      <select id="direction">
+        <option value="">Let Emacs choose</option>
+        <option value="below">Below the text</option>
+        <option value="above">Above the text</option>
+        <option value="right">To the right</option>
+        <option value="left">To the left</option>
+      </select>
+    </div>
+    <div class="field">
+      <span>Divide which &mdash; <code>diogenes-split-from</code></span>
+      <select id="from">
+        <option value="selected">The window I am in</option>
+        <option value="largest">The largest window</option>
+        <option value="root">The whole frame</option>
+      </select>
+    </div>
+  </div>
+
+  <p class="note">A direction asks Emacs nothing. <em>Let Emacs choose</em> goes
+     through <code>split-window-sensibly</code>, which consults
+     <code>split-height-threshold</code> &mdash; and a distribution may set that so
+     that no frame you have can be split.</p>
+  <p class="note"><b>Or drag a window</b> in the diagram to a side of its frame.
+     One setting serves every kind, so dragging the entry to the right puts
+     scans there too &mdash; <code>diogenes-split-direction</code> is a single
+     direction and not one per kind.</p>
+
+  <h2>Proportions <i id="propshint"></i></h2>
+  <div id="proportions"></div>
+  <p class="note" id="propsnote"></p>
+
+  <h2>Frames</h2>
+  <div class="row">
+    <input type="checkbox" id="popupframes">
+    <label for="popupframes">Set <code>pop-up-frames</code> too
+      <em>New buffers get frames generally, not only Diogenes ones.</em></label>
+  </div>
+  <p class="note"><code>frame-resize-pixelwise</code> is on the
+     <b>Configuration</b> tab: it depends on your window manager rather than on
+     what you are reading, and setting it in both places would have a preset
+     quietly overriding your init file.</p>
+
+  <h2>Reading</h2>
+  <div class="row">
+    <input type="checkbox" id="allentries" checked>
+    <label for="allentries">Every matching entry
+      <em>Not only the first, so homographs each get a buffer.</em></label>
+  </div>
+  <div class="row">
+    <input type="checkbox" id="fitwidth" checked>
+    <label for="fitwidth">Fit a scanned page to the window
+      <em>Neither pdf-tools nor doc-view does this by itself.</em></label>
+  </div>
+  <div class="row">
+    <input type="checkbox" id="scaling">
+    <label for="scaling">HiDPI scaling for scans
+      <em>Renders each page twice over. Off unless the display needs it.</em></label>
+  </div>
+  <div class="row">
+    <input type="checkbox" id="quietly" checked>
+    <label for="quietly">Open dictionaries quietly
+      <em>No version control, recent-files or backups for a half-gigabyte scan.
+      Measured at 3.65 seconds against 0.09.</em></label>
+  </div>
+
+
+  <h2>Under evil</h2>
+  <div class="row">
+    <input type="checkbox" id="evilstate" checked>
+    <label for="evilstate">Emacs state in the read-only buffers
+      <em>So the single letters reach the dictionaries. Escape gives you normal
+      state when you want evil's keyboard.</em></label>
+  </div>
+  <div class="field">
+    <span>Key that leaves Emacs state &mdash; <code>diogenes-evil-normal-state-key</code></span>
+    <input type="text" id="escapekey" value="&lt;escape&gt;">
+  </div>
+
+  <h2>The file</h2>
+  <div class="field">
+    <span>Folder &mdash; <code>diogenes-preset-directory</code>, where presets of your own live</span>
+    <input type="text" id="presetdir" value="~/.emacs.d/diogenes-presets/">
+  </div>
+  <div class="field">
+    <span>Name &mdash; how <code>diogenes-preset</code> and <code>M-x diogenes-load-preset</code> refer to it</span>
+    <input type="text" id="presetname" value="my-preset">
+  </div>
+  <div class="field">
+    <span>Description &mdash; shown beside the name when choosing. Left empty
+      it says <em>my personal reading configurations</em>.</span>
+    <input type="text" id="presetdesc"
+           placeholder="my personal reading configurations">
+  </div>
+  <div class="row">
+    <input type="checkbox" id="shadow">
+    <label for="shadow">Name it after a builtin
+      <em>Call it <code>split</code> and your file <em>is</em> what
+      <code>split</code> means; the builtin steps aside.</em></label>
+  </div>
+</section>
+
+<section class="pane watch">
+  <h2>What that does</h2>
+  <div class="stage">
+    <div class="screenrow">
+      <label for="ratio">Screen</label>
+      <select id="ratio">
+        <option value="1.778">16:9 &mdash; most laptops and monitors</option>
+        <option value="1.6">16:10</option>
+        <option value="1.5">3:2 &mdash; Surface, some ThinkPads</option>
+        <option value="1.333">4:3</option>
+        <option value="2.333">21:9 &mdash; ultrawide</option>
+
+      </select>
+      <label class="sidelabel">
+        <input type="checkbox" id="c-onside"> turned on its side
+      </label>
+      <span class="note">Drawn to shape, so a split looks as it will look.</span>
+    </div>
+    <div class="board" id="board">
+    <div class="frames" id="frames"></div>
+    <div class="sidepanel">
+    <div class="steps">
+      <button data-step="browse">Browse a text<kbd>b l</kbd></button>
+      <button data-step="lookup">Look a word up<kbd>C-c C-c</kbd></button>
+      <button data-step="again">Another word<kbd>C-c C-c</kbd></button>
+      <button data-step="chain">A word inside the entry<kbd>C-c C-c</kbd></button>
+      <button data-step="analyse">Analyse the word<kbd>ml a</kbd></button>
+      <button data-step="dict">Open the OLD<kbd>o</kbd></button>
+      <button data-step="dict2">And the TLL<kbd>t</kbd></button>
+      <button data-step="quit">Close the page<kbd>q</kbd></button>
+      <button class="reset" data-step="reset">Start again</button>
+    </div>
+    <p class="said" id="said">Emacs has just started, with nothing in it but the
+       startup screen. Press the buttons in order.</p>
+    <p class="legend">
+      <span class="key browser"></span>text
+      <span class="key entry"></span>entry
+      <span class="key dict"></span>dictionary page
+    </p>
+    </div>
+    </div>
+  </div>
+
+  <h2>The preset</h2>
+  <pre id="out"></pre>
+  <div class="actions">
+    <button id="download">Download</button>
+    <button class="ghost" id="copy">Copy</button>
+    <span class="note" id="copied"></span>
+  </div>
+  <h2>And in your init file <i>once</i></h2>
+  <pre id="initsnippet"></pre>
+  <p class="note">The folder is optional. Leave it empty above and
+     <code>M-x diogenes-load-preset</code> still offers <code>defer</code>,
+     <code>reuse</code>, <code>split</code> and <code>frames</code> &mdash; the
+     four are presets already. A folder is for keeping something of your own,
+     and a file in it named after a builtin replaces that builtin.</p>
+  <p class="note" id="whereto"></p>
+</section>
+</main>
+
+<script>
+// ======================= the Configuration tab =======================
+// Every dictionary, its paths, and the key it takes by default.  A path left
+// empty means the dictionary is absent, which is not an error: `available-p'
+// asks the file system and the banner simply does not offer it.
+const DICTS = [
+  { id: 'old',       name: 'Oxford Latin Dictionary', lang: 'Latin', key: 'o',
+    fields: [['diogenes-old-pdf-file', 'the scan']] },
+  { id: 'tll',       name: 'Thesaurus Linguae Latinae', lang: 'Latin', key: 't',
+    fields: [['diogenes-tll-pdf-directory', 'the folder of fascicles']] },
+  { id: 'gaffiot',   name: 'Gaffiot', lang: 'Latin', key: 'g',
+    fields: [['diogenes-gaffiot-source-file', 'TEI source, as downloaded'],
+             ['diogenes-gaffiot-file', 'built XML, written by the package'],
+             ['diogenes-gaffiot-pdf-file', 'the scan (optional)']] },
+  { id: 'georges',   name: 'Georges', lang: 'Latin', key: 'G',
+    fields: [['diogenes-georges-source-file', 'TEI source'],
+             ['diogenes-georges-file', 'built XML'],
+             ['diogenes-georges-directory', 'the scans (optional)']] },
+  { id: 'montanari', name: 'Montanari', lang: 'Greek', key: 'm',
+    fields: [['diogenes-montanari-pdf-file', 'the scan']] },
+  { id: 'cambridge', name: 'Cambridge Greek Lexicon', lang: 'Greek', key: 'c',
+    fields: [['diogenes-cambridge-pdf-file', 'the scan']] },
+  { id: 'bdag',      name: 'BDAG', lang: 'Greek', key: 'b',
+    fields: [['diogenes-bdag-pdf-file', 'the scan']] },
+  { id: 'passow',    name: 'Passow', lang: 'Greek', key: 'p',
+    fields: [['diogenes-passow-directory', 'the folder of volumes']] },
+  { id: 'tgl',       name: 'Thesaurus Graecae Linguae', lang: 'Greek', key: 't',
+    fields: [['diogenes-tgl-directory', 'the folder of volumes']] },
+  { id: 'bailly',    name: 'Bailly', lang: 'Greek', key: 'B',
+    fields: [['diogenes-bailly-source-file', 'TEI source'],
+             ['diogenes-bailly-file', 'built XML'],
+             ['diogenes-bailly-pdf-file', 'the scan (optional)']] },
+  { id: 'pape',      name: 'Pape', lang: 'Greek', key: 'P',
+    fields: [['diogenes-pape-source-file', 'TEI source'],
+             ['diogenes-pape-file', 'built XML']] },
+  { id: 'dge',       name: 'DGE', lang: 'Greek', key: 'd',
+    fields: [['diogenes-dge-source-file', 'the DGE folder, as downloaded'],
+             ['diogenes-dge-file', 'built XML']] },
+  { id: 'lewis',     name: 'Lewis & Short', lang: 'Latin', key: 'l',
+    fields: [], shipped: true },
+  { id: 'lsj',       name: 'LSJ', lang: 'Greek', key: 'l',     fields: [], shipped: true },
+];
+
+// The keys the lookup buffer binds for itself, and the four with options of
+// their own.  DEFAULT is what the package does; a reader fills a box only to
+// change it, so the generated block stays as short as their departures from it.
+const LOOKUP_KEYS = [
+  ['diogenes-perseus-action', 'RET', 'follow a citation or look up the word at point'],
+  ['diogenes-perseus-action', 'C-c C-c', 'the same, on a chord'],
+  ['diogenes-lookup-in-dictionary', 'C-c C-o', 'look a word up, asking which dictionary'],
+  ['diogenes-lookup-next', 'C-c C-n', 'the next entry in the file'],
+  ['diogenes-lookup-previous', 'C-c C-p', 'the entry before'],
+  ['diogenes-lookup-open-tll-or-tgl', 't', 'the TLL in Latin, the TGL in Greek',
+   ['tll', 'tgl']],
+  ['diogenes-lookup-lewis', 'l', 'Lewis & Short, or the LSJ in Greek',
+   ['lewis', 'lsj']],
+  ['diogenes--quit', 'q', 'close the entry'],
+];
+
+// Inside a SCAN: pressed on a page of a printed dictionary, and bound there
+// through `diogenes-pdf-search-mode' so no unrelated PDF is affected.
+const SCAN_KEYS = [
+  ['diogenes-pdf-search-key', 'L',
+   'look a word up \u2014 with a prefix, its root, or a TGL index reference'],
+  ['diogenes-tgl-index-key', 'i',
+   "volume V's index, around the word you are on \u2014 TGL volumes only"],
+];
+
+// Only where evil is in use, which the answer at the top of this tab decides.
+const EVIL_KEYS = [
+  ['diogenes-evil-normal-state-key', '<escape>',
+   'leave Emacs state for normal state, in a read-only Diogenes buffer'],
+];
+
+// Both together, wherever the code wants every standalone key rather than a
+// group of them: the conflict check, the warnings, and the emitted block.
+const SINGLE_KEYS = SCAN_KEYS.concat(EVIL_KEYS);
+
+// Going from one Diogenes window to another: `diogenes-focus-keys'.  A table of
+// its own because it is one option, written whole when any of it changes -- and
+// because these are the keys most likely to collide with something a reader has
+// bound, being short chords in a common shape.
+const FOCUS_KEYS = [
+  ['diogenes-focus-browser', 'C-c C-b',
+   'go to the text \u2014 raising its frame if it is in one'],
+  ['diogenes-focus-lookup', 'C-c C-l',
+   'go to the entry \u2014 raising its frame if it is in one'],
+  ['diogenes-focus-morphology', 'C-c C-a',
+   'go to the analysis \u2014 raising its frame if it is in one'],
+];
+
+// The scanned page belongs in the same GROUP, doing the same thing, and in a
+// different OPTION: `diogenes-old-visit-dictionary-key' stands alone because
+// that command does something the others do not -- it prefers the page opened
+// from the entry one is reading.  Grouped by what a reader means by the key,
+// not by which variable holds it.
+const DICTIONARY_KEY = [
+  ['diogenes-old-visit-dictionary-key', 'C-c C-e',
+   'go to the scanned page \u2014 the one opened from this entry if there is one, ' +
+   'else any open scan; pressed inside a scan, the next one'],
+];
+
+const BEHAVIOURS = {
+  defer:  'whatever you have installed decides',
+  reuse:  'one window, each entry replacing the last',
+  split:  'a window of its own, later ones sharing it',
+  frames: 'a frame of its own, later ones gathered',
+};
+const KINDS = [
+  ['browser', 'Texts', 'passages from the corpora'],
+  ['lookup', 'Entries', 'dictionary entries'],
+  ['dictionary', 'Scans', 'pages of the printed dictionaries'],
+  ['morphology', 'Analyses', 'what ml and mg produce \u2014 an analysis, or a list of forms'],
+];
+
+let kind = { lookup: 'defer', browser: 'defer', dictionary: 'defer',
+             morphology: 'defer' };
+let scene = [], fresh = null;
+
+const el = id => document.getElementById(id);
+
+el('kinds').innerHTML = KINDS.map(([k, name, blurb]) => `
+  <label for="k-${k}"><b>${name}</b></label>
+  <select id="k-${k}" data-kind="${k}">
+    ${Object.entries(BEHAVIOURS).map(([v, d]) =>
+      `<option value="${v}">${v} \u2014 ${d}</option>`).join('')}
+  </select>`).join('');
+
+document.addEventListener('change', e => {
+  if (e.target.id === 'scanplace') reset();
+  if (e.target.dataset.kind) {
+    kind[e.target.dataset.kind] = e.target.value;
+    if (Object.values(kind).includes('frames')) el('popupframes').checked = true;
+    reset();
+  }
+  render();
+});
+document.addEventListener('input', render);
+
+// ---------- the rules, in the order the package applies them ----------
+const uniform = () => {
+  const vs = new Set(Object.values(kind));
+  return vs.size === 1 ? [...vs][0] : null;
+};
+const framesFor = k => kind[k] === 'frames' || el('popupframes').checked;
+const horizontal = () => ['right', 'left'].includes(el('direction').value);
+// `above' and `left' put the new window before the old one.
+const flipped = () => ['above', 'left'].includes(el('direction').value);
+
+// ---------- proportions ----------
+// What has a size is a WINDOW, not a kind.  Where a kind reuses another's
+// window there is one window and one size -- so the boundaries are computed
+// from the behaviours rather than listed, and a slider is a boundary between
+// two groups of kinds whose label names the groups.
+let sizes = { lookup: 0.5, browser: 0.5, dictionary: 0.5 };
+
+// An analysis shares the entry's column: `split' for `morphology' divides the
+// window the ENTRY is in, downward, rather than making a third column -- see
+// `diogenes-display-beside-companion'.  So it is not a boundary of the frame's
+// own but one inside the entry's group, and the diagram draws it that way.
+function analysisSharesTheEntry() {
+  return kind.morphology === 'split' || kind.morphology === 'reuse';
+}
+
+function groupsFor() {
+  const scanReplaces = el('scanplace').value === 'replace';
+  const groups = [{ kinds: ['browser'], label: 'text' }];
+  if (kind.lookup === 'split') groups.push({ kinds: ['lookup'], label: 'entry' });
+  else if (kind.lookup === 'reuse') {
+    groups[0].kinds.push('lookup');
+    groups[0].label += '+entry';
+  }
+  const dictKind = scanReplaces ? 'reuse' : kind.dictionary;
+  if (dictKind === 'split') groups.push({ kinds: ['dictionary'], label: 'dictionary' });
+  else if (dictKind === 'reuse') {
+    const host = groups[groups.length - 1];
+    host.kinds.push('dictionary');
+    host.label += '+dictionary';
+  }
+  // ANALYSES divide the entry's own window rather than the frame, so they are
+  // not a group of the frame's: `split' puts one under the entry, sharing its
+  // column, and `reuse' puts one in the entry's window outright.  A group of
+  // its own would have drawn a third column, which is what the package no
+  // longer does.
+  const entryGroup = groups.find(g => g.kinds.includes('lookup'));
+  if (kind.morphology === 'split' && entryGroup) {
+    entryGroup.nested = 'morphology';
+    entryGroup.label += ' / analysis';
+  } else if (kind.morphology === 'reuse' && entryGroup) {
+    entryGroup.kinds.push('morphology');
+    entryGroup.label += '+analysis';
+  } else if (kind.morphology === 'split' && !entryGroup &&
+             kind.lookup !== 'frames') {
+    // No entry in this frame and none in a frame of its own: nothing to be
+    // beside, so the analysis takes a window here, which is what
+    // `diogenes-display-beside-companion' falls back to.  Where the ENTRIES are
+    // in frames the analysis follows them into that frame instead, and is not a
+    // boundary of this one.
+    groups.push({ kinds: ['morphology'], label: 'analysis' });
+  }
+  // A kind with a frame of its own is no boundary in this frame.
+  return groups.filter(g => !g.kinds.every(k => kind[k] === 'frames'));
+}
+
+// A boundary lies between two adjacent groups, and the size belongs to the
+// kind whose window the split CREATES -- the second of the pair.
+function boundaries() {
+  const groups = groupsFor();
+  const out = [];
+  for (let i = 0; i + 1 < groups.length; i++) {
+    const owner = groups[i + 1].kinds[0];
+    out.push({ label: groups[i].label + ' | ' + groups[i + 1].label,
+               owner, value: sizes[owner] });
+  }
+  return out;
+}
+
+function renderCompanionNote() {
+  const note = el('companionnote');
+  if (!note) return;
+  const beside = el('companion').value;
+  note.innerHTML =
+    beside === 'lookup'
+      ? 'The default: the analysis appears under whatever lookup window is open, ' +
+        'even when <code>ml</code> was pressed while reading a passage. Not ' +
+        'necessarily an analysis <em>of</em> the entry showing there &mdash; you ' +
+        'may analyse one word while another\u2019s entry is open &mdash; but the two ' +
+        'belong in the same column, being the same sort of consultation. The ' +
+        'relation reads both ways: with an analysis showing and no lookup window, ' +
+        'an entry divides the analysis\u2019s.'
+      : beside === 'selected'
+      ? 'Whatever you are looking at is divided. Simple, but <code>ml</code> from ' +
+        'a passage will divide the passage rather than putting the analysis in the ' +
+        'lookup window\u2019s column.'
+      : beside === ''
+      ? 'An analysis takes a window by the ordinary rules, like any other kind.'
+      : 'An analysis appears beside the ' + (beside === 'browser' ? 'text' : 'scanned page') +
+        ', wherever the command was given from.';
+}
+
+function renderProportions() {
+  const bs = boundaries();
+  const box = el('proportions');
+  if (!bs.length) {
+    box.innerHTML = '';
+    el('propshint').textContent = '';
+    el('propsnote').innerHTML =
+      'Nothing is divided with these settings \u2014 every kind either shares a ' +
+      'window or has a frame of its own, and an undivided window has no ' +
+      'proportion to set.';
+    return;
+  }
+  el('propshint').textContent = '\u2014 or drag the dividers';
+  box.innerHTML = bs.map((b, i) => `
+    <div class="prop">
+      <div class="top"><b>${b.label}</b><span>${Math.round(b.value * 100)}%</span></div>
+      <input type="range" min="15" max="85" step="1"
+             value="${Math.round(b.value * 100)}" data-owner="${b.owner}">
+    </div>`).join('');
+  el('propsnote').innerHTML =
+    'Each slider is one boundary, and the percentage is the share taken by the ' +
+    'window the split creates. Two kinds sharing a window share its size, so ' +
+    'they are named together with one slider between them.';
+}
+
+// The divider in the diagram, draggable: the same number the slider carries.
+function installGrips() {
+  const boxes = [...document.querySelectorAll('.frame .windows')];
+  const bs = boundaries();
+  boxes.forEach(box => {
+    const sideways = horizontal();
+    // In VISUAL order, which is not the DOM order when the box is reversed:
+    // `above' and `left' draw the newer window first, so a divider placed from
+    // DOM order would land on the wrong edge and dragging it would move the
+    // wrong way.
+    const wins = [...box.querySelectorAll('.win')].sort((a, b) =>
+      sideways ? a.offsetLeft - b.offsetLeft : a.offsetTop - b.offsetTop);
+    const order = flipped() ? [...bs].reverse() : bs;
+    for (let i = 0; i + 1 < wins.length && i < order.length; i++) {
+      const grip = document.createElement('div');
+      grip.className = 'grip';
+      const before = wins[i];
+      const pos = sideways ? before.offsetLeft + before.offsetWidth
+                           : before.offsetTop + before.offsetHeight;
+      grip.style[sideways ? 'left' : 'top'] = pos + 'px';
+      grip.dataset.owner = order[i].owner;
+      box.appendChild(grip);
+      grip.addEventListener('pointerdown', ev => {
+        ev.preventDefault();
+        grip.classList.add('dragging');
+        const rect = box.getBoundingClientRect();
+        const move = m => {
+          const frac = sideways ? (m.clientX - rect.left) / rect.width
+                                : (m.clientY - rect.top) / rect.height;
+          // The size belongs to the window the split CREATES, which lies after
+          // the boundary in scene order -- so it is what the pointer leaves
+          // behind, or what the pointer covers where the box is reversed and
+          // that window is the one before the divider on screen.
+          const raw = flipped() ? frac : 1 - frac;
+          const share = Math.min(0.85, Math.max(0.15, raw));
+          sizes[grip.dataset.owner] = Math.round(share * 100) / 100;
+          render();
+        };
+        const up = () => {
+          window.removeEventListener('pointermove', move);
+          window.removeEventListener('pointerup', up);
+        };
+        window.addEventListener('pointermove', move);
+        window.addEventListener('pointerup', up);
+      });
+    }
+  });
+}
+
+// Dragging a window to a side of the frame sets which way a split goes.
+// `diogenes-split-direction' is ONE setting for every kind -- the package has
+// no per-kind direction -- so dragging any window sets it for all of them, and
+// the note below the diagram says so rather than letting the gesture imply
+// otherwise.
+function installDrags() {
+  const boxes = [...document.querySelectorAll('.frame .windows')];
+  boxes.forEach(box => {
+    const zones = box.querySelector('.zones');
+    box.querySelectorAll('.win[draggable]').forEach(win => {
+      win.addEventListener('dragstart', ev => {
+        win.classList.add('lifted');
+        if (zones) zones.classList.add('on');
+        ev.dataTransfer.setData('text/plain', win.dataset.kind || '');
+        ev.dataTransfer.effectAllowed = 'move';
+      });
+      win.addEventListener('dragend', () => {
+        win.classList.remove('lifted');
+        if (zones) zones.classList.remove('on');
+      });
+    });
+    if (!zones) return;
+    zones.querySelectorAll('.zone').forEach(zone => {
+      zone.addEventListener('dragover', ev => {
+        ev.preventDefault();
+        zone.classList.add('over');
+      });
+      zone.addEventListener('dragleave', () => zone.classList.remove('over'));
+      zone.addEventListener('drop', ev => {
+        ev.preventDefault();
+        zone.classList.remove('over');
+        zones.classList.remove('on');
+        el('direction').value = zone.dataset.dir;
+        render();
+      });
+    });
+  });
+}
+
+document.addEventListener('input', e => {
+  if (e.target.dataset.owner) {
+    sizes[e.target.dataset.owner] = Number(e.target.value) / 100;
+    render();
+  }
+});
+
+function newFrame(name) { const f = { name, wins: [] }; scene.push(f); return f; }
+function findWin(k) {
+  for (const frame of scene)
+    for (const win of frame.wins) if (win.kind === k) return { frame, win };
+  return null;
+}
+function soleHome() {
+  return (scene.length === 1 && scene[0].wins.length === 1 &&
+          scene[0].wins[0].kind === 'home') ? scene[0].wins[0] : null;
+}
+function put(win, k, label) { win.kind = k; win.label = label; fresh = win; }
+function nameOf(k) {
+  return k === 'entry' ? 'lookup window' : k === 'browser' ? 'text window'
+       : k === 'morphology' ? 'analysis window' : 'dictionary window';
+}
+function kindOf(k) {
+  return k === 'entry' ? 'lookup' : k === 'browser' ? 'browser'
+       : k === 'morphology' ? 'morphology' : 'dictionary';
+}
+function say(html) { el('said').innerHTML = html; }
+
+// The companion pair, read in both directions: an analysis divides the entry's
+// window, and an entry divides the analysis's where no entry is showing.  See
+// `diogenes--companion-role'.
+function companionOf(k) {
+  const chosen = el('companion') ? el('companion').value : 'lookup';
+  if (!chosen) return null;                    // a window of its own
+  if (chosen === 'selected') return 'selected';
+  // The scene's own words for the roles.
+  const asWin = { lookup: 'entry', browser: 'browser', dictionary: 'dict',
+                  morphology: 'morphology' };
+  if (k === 'morphology') return asWin[chosen] || null;
+  // Read in reverse only for a real role, as `diogenes--companion-role' does.
+  if (asWin[chosen] === k) return 'morphology';
+  return null;
+}
+
+function place(k, label, opts = {}) {
+  const behaviour = kind[kindOf(k)];
+
+  if (opts.chain) {
+    const here = findWin('entry');
+    if (here) {
+      put(here.win, k, label);
+      return say('A <code>C-c C-c</code> chain stays in the window it was pressed in, ' +
+        'whatever any of this says. Pressing the key <em>inside</em> an entry is asking ' +
+        'to stay put, and the entry you came from is alive behind it.');
+    }
+  }
+  // A companion already on the screen takes the split, wherever the reader is.
+  // Checked before the home window, since a companion is a better place than a
+  // startup page: the two are read against each other.
+  const wanted = companionOf(k);
+  // `selected' divides the window in hand, which in the simulation is whatever
+  // the last step touched -- the closest thing it has to point.
+  const companion = wanted === 'selected'
+    ? (fresh ? { win: fresh } : null)
+    : (wanted ? findWin(wanted) : null);
+  if (behaviour === 'split' && companion && !companion.win.nested) {
+    companion.win.nested = true;
+    companion.win.nestedLabel = label;
+    companion.win.nestedKind = k;
+    fresh = companion.win;
+    return say(k === 'entry'
+      ? 'An analysis was on the screen and no entry, so the entry divides the ' +
+        '<em>analysis\u2019s</em> window \u2014 the same rule read the other way. The two ' +
+        'belong together, and whichever arrives second joins the first.'
+      : 'The analysis divides the entry\u2019s window, downward.');
+  }
+  const home = soleHome();
+  if (home) {
+    put(home, k, label);
+    return say('The frame held nothing but the startup screen, so that window is used. ' +
+      'This holds whatever else is set \u2014 there was a window going spare.');
+  }
+  // A printed dictionary replaces the entry it was consulted from, unless the
+  // reader has asked for it to go elsewhere.  This is asked BEFORE the rest,
+  // because `diogenes-old-display-in-other-window' is asked before the rest.
+  if (k === 'dict' && el('scanplace').value === 'replace') {
+    const entry = findWin('entry');
+    if (entry) {
+      entry.win.replaced = entry.win.label;
+      put(entry.win, k, label);
+      return say('The page takes the window the entry was in \u2014 which is what ' +
+        '<code>diogenes-old-display-in-other-window</code> nil means, and it is the ' +
+        'default. <code>q</code> brings the entry back to that window. The behaviour ' +
+        'chosen for scans is not consulted at all while this is so.');
+    }
+  }
+  const sibling = findWin(k);
+  if (sibling) {
+    put(sibling.win, k, label);
+    return say(`A ${nameOf(k)} was already open, so it is reused. This is why repeated ` +
+      `lookups do not fill the screen with the same word, and why <em>split</em> splits ` +
+      `once and not again.`);
+  }
+  if (framesFor(kindOf(k))) {
+    const f = newFrame(k === 'browser' ? 'Diogenes \u2014 text'
+                     : k === 'entry' ? 'Diogenes \u2014 entries'
+                     : 'Diogenes \u2014 dictionary');
+    f.wins.push({ kind: k, label });
+    fresh = f.wins[0]; f.isFresh = true;
+    return say(`<em>${behaviour}</em> for this kind, so a frame is made and later ones ` +
+      `join it. Where a frame cannot be made, Diogenes falls back to a window rather ` +
+      `than quietly taking the one you are in.`);
+  }
+  if (behaviour === 'reuse') {
+    const f = scene[0] || newFrame('Emacs');
+    if (!f.wins.length) f.wins.push({});
+    put(f.wins[0], k, label);
+    f.wins.length = 1;
+    return say('<em>reuse</em> keeps one window: what was there is replaced, and its ' +
+      'buffer stays alive \u2014 <code>q</code> gets you back to it.');
+  }
+  const f = scene[0] || newFrame('Emacs');
+  f.wins.push({ kind: k, label });
+  fresh = f.wins[f.wins.length - 1];
+  if (behaviour === 'split') {
+    const dir = el('direction').value;
+    const from = el('from').value;
+    return say(`<em>split</em> gives it a window of its own, ` +
+      (dir ? `<code>${dir}</code>` : 'wherever Emacs sees room') +
+      `, dividing ${from === 'selected' ? 'the window you are in'
+                  : from === 'largest' ? 'the largest window' : 'the whole frame'}` +
+      (boundaries().length
+        ? ` and giving it ${Math.round(boundaries()[0].value * 100)}%`
+        : '') +
+      `. ${dir ? 'A direction asks Emacs nothing, so the thresholds cannot refuse it.'
+               : 'If the thresholds refuse both ways, Diogenes splits anyway rather than ' +
+                 'taking the window you are in.'}`);
+  }
+  return say('<em>defer</em> hands the question to whatever you have installed: ' +
+    'window-purpose, a popup manager, or plain Emacs. Drawn here is the plain-Emacs ' +
+    'answer; with purpose loaded it would be purpose\u2019s.');
+}
+
+const STEPS = {
+  browse: () => place('browser', 'Cicero, In Catilinam I'),
+  lookup: () => place('entry', 'arte \u2014 ars, artis, f.'),
+  again:  () => place('entry', 'siderum \u2014 sidus, eris, n.'),
+  chain:  () => place('entry', 'caelum \u2014 caelum, i, n.', { chain: true }),
+  analyse: () => {
+    const behaviour = kind.morphology;
+    const entry = findWin('entry');
+    if (behaviour === 'reuse' && entry) {
+      put(entry.win, 'morphology', 'siderum: neut gen pl');
+      return say('<code>reuse</code> puts the analysis in the entry\u2019s own window. ' +
+        'The analysis is what you asked for, and the entry is a keypress away.');
+    }
+    if (behaviour === 'split' && entry) {
+      // `diogenes-display-beside-companion': the ENTRY's window is divided,
+      // downward, wherever the command was given from.
+      entry.win.nested = true;
+      entry.win.nestedLabel = 'siderum: neut gen pl';
+      fresh = entry.win;
+      return say('The analysis divides the <em>lookup</em> window, downward \u2014 not ' +
+        'the window you pressed the key in. Ask for one while reading a passage and ' +
+        'it still appears there, entries and analyses being the same sort of ' +
+        'consultation and belonging in one column. The frame gains no third column.');
+    }
+    // NO ENTRY to be beside: a window of its own, by the ordinary rules.  This
+    // is the fallback in `diogenes-display-beside-companion', which answers nil
+    // when it finds no companion window.
+    const before = scene.reduce((n, f) => n + f.wins.length, 0);
+    const result = place('morphology', 'siderum: neut gen pl');
+    if (!entry) {
+      const after = scene.reduce((n, f) => n + f.wins.length, 0);
+      return say('There is no entry on the screen for the analysis to be beside, so ' +
+        'it takes a window ' + (after > before ? 'of its own' : 'by the ordinary rules') +
+        '. An entry looked up <em>afterwards</em> will divide this window, the ' +
+        'two belonging together whichever arrives first.');
+    }
+    return result;
+  },
+  dict:   () => place('dict', 'Oxford Latin Dictionary, p. 196'),
+  dict2:  () => place('dict', 'Thesaurus Linguae Latinae, fasc. III'),
+  quit:   () => {
+    const d = findWin('dict');
+    if (!d) return say('No dictionary page open to close.');
+    if (d.win.replaced) {
+      put(d.win, 'entry', d.win.replaced);
+      d.win.replaced = null;
+      return say('<code>q</code> puts the entry back in the window the page took \u2014 ' +
+        'the entry it was opened from, not whatever the window held before that, which ' +
+        'is what plain <code>quit-window</code> would have done.');
+    }
+    // A page in a window of its own: closing it leaves the window.
+    d.frame.wins = d.frame.wins.filter(w => w !== d.win);
+    if (!d.frame.wins.length) scene = scene.filter(f => f !== d.frame);
+    fresh = null;
+    return say('The page had a window of its own, so closing it gives the room back. ' +
+      'The entry was never displaced, and is where it was.');
+  },
+  reset: () => reset(),
+};
+document.querySelectorAll('.steps button').forEach(b =>
+  b.addEventListener('click', () => {
+    scene.forEach(f => f.isFresh = false);
+    STEPS[b.dataset.step]();
+    render();
+  }));
+
+// A step that cannot happen yet is dimmed rather than left to do nothing:
+// there is no word to look up before a text is open, and nothing to close
+// before a page is.
+function updateSteps() {
+  const has = k => !!findWin(k);
+  const can = {
+    browse: true,
+    lookup: true,
+    again:  has('entry'),
+    chain:  has('entry'),
+    analyse: true,
+    dict:   has('entry'),
+    dict2:  has('dict'),
+    quit:   has('dict'),
+    reset:  true,
+  };
+  document.querySelectorAll('.steps button').forEach(b => {
+    b.disabled = !can[b.dataset.step];
+  });
+}
+
+function reset() {
+  scene = [{ name: 'Emacs', wins: [{ kind: 'home', label: 'startup screen' }] }];
+  fresh = null;
+  say('Emacs has just started, with nothing in it but the startup screen. ' +
+      'Press the buttons in order.');
+}
+
+// The share of the frame each drawn window gets, in order.  Emacs's own
+// arithmetic: the first split gives the entry window its fraction OF THE
+// FRAME, and a second split divides THAT window -- so a dictionary at 0.5 of
+// an entry at 0.4 occupies a fifth of the frame, not a half of it.
+function shares(count) {
+  const bs = boundaries();
+  if (count < 2 || !bs.length) return new Array(count).fill(1 / count);
+  const out = [];
+  let left = 1;
+  for (let i = 0; i < bs.length && i < count - 1; i++) {
+    out.push(left * (1 - bs[i].value));
+    left = left * bs[i].value;
+  }
+  out.push(left);
+  // More windows than boundaries -- a startup window, say, or `*Messages*'
+  // sitting there -- share what is left of the last one evenly.
+  while (out.length < count) {
+    const tail = out.pop() / 2;
+    out.push(tail, tail);
+  }
+  return out;
+}
+
+function render() {
+  el('frames').innerHTML = scene.map(frame => `
+    <div class="frame${frame.isFresh ? ' fresh' : ''}">
+      <div class="bar">${frame.name}</div>
+      <div class="windows ${horizontal() ? 'rowdir' : 'col'}${flipped() ? ' flip' : ''}">
+        <div class="zones">
+          <div class="zone above" data-dir="above">above</div>
+          <div class="zone left" data-dir="left">left</div>
+          <div class="zone right" data-dir="right">right</div>
+          <div class="zone below" data-dir="below">below</div>
+        </div>
+        ${frame.wins.map((w, wi, all) => `
+          <div class="win ${w.kind}${w === fresh ? ' fresh' : ''}${w.nested ? ' nested' : ''}"
+               style="flex: ${shares(all.length)[wi].toFixed(4)} 1 0"
+               ${w.kind === 'home' ? '' : 'draggable="true"'}
+               data-kind="${w.kind}">
+            ${w.nested
+              ? `<div class="half"><b>${w.kind === 'morphology' ? 'analysis' :
+                                        w.kind === 'entry' ? 'entry' : w.kind}</b>${w.label || ''}</div>
+                 <div class="half morph"><b>${w.nestedKind === 'entry' ? 'entry' : 'analysis'}</b>${w.nestedLabel || ''}</div>`
+              : `${w.kind === 'home' ? '' :
+                   `<b>${w.kind === 'entry' ? 'entry' :
+                         w.kind === 'browser' ? 'text' :
+                         w.kind === 'morphology' ? 'analysis' : 'dictionary'}</b>`}
+                 ${w.label || ''}`}
+          </div>`).join('')}
+      </div>
+    </div>`).join('');
+  const own = el('scanplace').value === 'own';
+  el('scannote').innerHTML = own
+    ? 'The <b>Scans</b> row above decides which window or frame it gets.'
+    : 'The default. While this is chosen, the <b>Scans</b> row above has no ' +
+      'effect \u2014 <code>diogenes-old-display-in-other-window</code> is asked first, ' +
+      'and it says the page goes where the entry is.';
+  document.getElementById('k-dictionary').disabled = !own;
+  const dictLabel = document.querySelector('label[for="k-dictionary"]');
+  if (dictLabel) dictLabel.classList.toggle('dim', !own);
+  const u = uniform();
+  el('mixedhint').textContent = u ? '' : '\u2014 mixed';
+  el('mixednote').innerHTML = u
+    ? 'All three the same, so the preset says it in one word.'
+    : 'Different per kind, so the preset says it as an alist. A kind set to ' +
+      '<em>defer</em> is left to whatever you have installed rather than guessed at.';
+  el('out').textContent = preset();
+  el('initsnippet').textContent = initSnippet();
+  // The frames are drawn to the shape of a screen, so that a split of 40%
+  // looks like 40% of what the reader will actually see.  A property of the
+  // drawing and not of the preset: nothing about it is written to the file.
+  // The shape, and whether the screen is stood on its end.  Rotating inverts
+  // the ratio and fixes the height to what it was before, so the drawing turns
+  // rather than growing: a 16:9 frame at three quarters of the pane is about
+  // 300 pixels tall, and the same ratio inverted at the same WIDTH would be
+  // over a thousand.
+  {
+    const base = Number(el('ratio').value) || 1.778;
+    const onSide = el('c-onside') && el('c-onside').checked;
+    const frames = el('frames');
+    frames.classList.toggle('onside', !!onSide);
+    // The board holds the frame and the buttons; rotated, it lays them out
+    // side by side instead of one above the other.
+    if (el('board')) el('board').classList.toggle('onside', !!onSide);
+    frames.style.setProperty('--screen', onSide ? (1 / base) : base);
+    if (onSide) {
+      const pane = (frames.parentElement && frames.parentElement.clientWidth) || 640;
+      // The landscape frame's HEIGHT becomes the rotated frame's WIDTH; the
+      // inverted ratio then gives back the landscape frame's width as the new
+      // height.  Nothing is scaled, only turned.
+      // 0.65 to match the width the landscape frames take: the rotated width is
+      // the landscape HEIGHT, so the fraction has to be the same one or the
+      // rotation would change the scale as well as the orientation.
+      frames.style.setProperty('--framew',
+                               Math.round(pane * 0.65 / base) + 'px');
+    } else {
+      frames.style.removeProperty('--framew');
+    }
+  }
+  whereTo();
+  updateSteps();
+  renderCompanionNote();
+  renderProportions();
+  installGrips();
+  installDrags();
+}
+
+// ---------- the files ----------
+function esc(s) { return JSON.stringify(s); }
+
+function preset() {
+  const name = el('presetname').value.trim() || 'my-preset';
+  // What is shown when nothing is typed, rather than a summary of the settings
+  // -- a `Description' is for the reader to recognise their own preset by, and
+  // a list of behaviours is what the file itself already says.
+  const desc = el('presetdesc').value.trim() || 'my personal reading configurations';
+  const u = uniform();
+  const out = [];
+  out.push(`;;; ${name}.el --- Diogenes preset  -*- lexical-binding: t -*-`);
+  out.push(`;; Description: ${desc}`);
+  if (el('shadow').checked)
+    out.push(`;; Named after a builtin, so this file is what that name means.`);
+  out.push('');
+  out.push(';; Where the buffers go.');
+  if (u) out.push(`(setq diogenes-window-behaviour '${u})`);
+  else {
+    out.push("(setq diogenes-window-behaviour");
+    out.push("      '((lookup     . " + kind.lookup + ")");
+    out.push("        (browser    . " + kind.browser + ")");
+    out.push("        (dictionary . " + kind.dictionary + ")");
+    out.push("        (morphology . " + kind.morphology + ")))");
+    if (kind.morphology === 'split') {
+      const beside = el('companion').value;
+      const dir = el('companiondir').value;
+      out.push("");
+      if (beside === 'selected') {
+        out.push(";; An analysis divides whichever window you are in.");
+        out.push("(setq diogenes-companion-roles '((morphology . selected)))");
+      } else if (beside === '') {
+        out.push(";; An analysis takes a window by the ordinary rules rather");
+        out.push(";; than dividing another.");
+        out.push("(setq diogenes-companion-roles nil)");
+      } else {
+        out.push(";; An analysis divides the window " +
+                 (beside === 'lookup' ? "the ENTRY is in" :
+                  beside === 'browser' ? "the TEXT is in" :
+                  "a SCANNED PAGE is in") + ",");
+        out.push(";; wherever the command was given from -- so one asked for");
+        out.push(";; while reading elsewhere still appears where it belongs.");
+        out.push("(setq diogenes-companion-roles '((morphology . " + beside + ")))");
+      }
+      if (beside !== '') out.push("(setq diogenes-companion-direction '" + dir + ")");
+    }
+  }
+  if (el('scanplace').value === 'own') {
+    out.push('');
+    out.push(';; Scanned pages go somewhere of their own rather than replacing');
+    out.push(';; the entry.  Three variables, one per family of print dictionary.');
+    out.push('(setq diogenes-old-display-in-other-window t)');
+    out.push('(setq diogenes-passow-display-in-other-window t)');
+    out.push('(setq diogenes-tgl-display-in-other-window t)');
+  }
+  const dir = el('direction').value, from = el('from').value;
+  const splitBits = [];
+  if (dir) splitBits.push(`(setq diogenes-split-direction '${dir})`);
+  if (from !== 'selected') splitBits.push(`(setq diogenes-split-from '${from})`);
+  const named = boundaries();
+  if (named.length) {
+    const lines = named.map(b =>
+      `        (${b.owner.padEnd(10)} . ${b.value.toFixed(2)})`);
+    splitBits.push('(setq diogenes-split-size\n      \'(' +
+                   lines.join('\n').trimStart() + '))');
+  }
+  if (splitBits.length) { out.push(''); out.push(';; How a window is made.'); out.push(...splitBits); }
+  const frameBits = [];
+  if (el('popupframes').checked) frameBits.push("(setq pop-up-frames 'graphic-only)");
+
+  if (frameBits.length) { out.push(''); out.push(';; Frames.'); out.push(...frameBits); }
+  out.push('');
+  out.push(';; Reading.');
+  out.push(`(setq diogenes-lookup-show-all-entries ${el('allentries').checked ? 't' : 'nil'})`);
+  out.push(`(setq diogenes-old-pdf-fit ${el('fitwidth').checked ? "'width" : 'nil'})`);
+  out.push(`(setq diogenes-old-open-quietly ${el('quietly').checked ? 't' : 'nil'})`);
+
+  if (!el('scaling').checked)
+    out.push("(with-eval-after-load 'pdf-view\n  (setq pdf-view-use-scaling nil))");
+  const key = el('escapekey').value.trim();
+  const evilBits = [];
+  if (!el('evilstate').checked) evilBits.push('(setq diogenes-evil-manage-initial-states nil)');
+  if (!key) evilBits.push('(setq diogenes-evil-normal-state-key nil)');
+  else if (key !== '<escape>')
+    evilBits.push(`(setq diogenes-evil-normal-state-key ${esc(key)})`);
+  if (evilBits.length) { out.push(''); out.push(';; Under evil.'); out.push(...evilBits); }
+  out.push('');
+  out.push(`;;; ${name}.el ends here`);
+  return out.join('\n');
+}
+
+function initSnippet() {
+  const name = el('presetname').value.trim() || 'my-preset';
+  const dir = el('presetdir').value.trim();
+  if (!dir) return [
+    ';; No folder, so no file: the four behaviours are presets already and are',
+    ';; offered with nothing set.  Put this in your init file instead, or reach',
+    ';; the same thing with  M-x diogenes-load-preset RET split RET',
+    '',
+    ';; ... the preset above, pasted straight into your init file ...',
+  ].join('\n');
+  return [
+    ';; In your init file, where the dictionary paths already are.  Both in',
+    ';; `:init\', so that the name is set before the package reads it.',
+    `(setq diogenes-preset-directory ${esc(dir)})`,
+    `(setq diogenes-preset ${esc(name)})`,
+    '',
+    `;; Or leave \`diogenes-preset\' unset and choose when you want to:`,
+    `;;   M-x diogenes-load-preset RET ${name} RET`,
+  ].join('\n');
+}
+
+function whereTo() {
+  const dir = el('presetdir').value.trim();
+  const name = (el('presetname').value.trim() || 'my-preset') + '.el';
+  el('whereto').innerHTML = dir
+    ? `<b>Where to put it.</b> Save it as <code>${dir.replace(/\/?$/, '/')}${name}</code>. ` +
+      `Then <code>M-x diogenes-load-preset</code> whenever you want it, or leave ` +
+      `<code>diogenes-preset</code> set and it loads at startup.`
+    : `<b>No folder.</b> Leave it empty and there is nothing to save: paste the ` +
+      `preset into your init file, and use the builtin names — ` +
+      `<code>defer</code>, <code>reuse</code>, <code>split</code>, ` +
+      `<code>frames</code> — which <code>M-x diogenes-load-preset</code> offers ` +
+      `whether a folder is set or not.`;
+}
+
+function describe() {
+  const u = uniform();
+  const bits = [u ? u : Object.entries(kind).map(([k, v]) => `${k}:${v}`).join(' ')];
+  if (el('direction').value) bits.push(el('direction').value);
+  if (!el('allentries').checked) bits.push('first entry only');
+  if (el('scanplace').value === 'own') bits.push('scans apart');
+  return bits.join(', ');
+}
+
+el('download').addEventListener('click', () => {
+  const name = (el('presetname').value.trim() || 'my-preset') + '.el';
+  const blob = new Blob([preset()], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name; a.click();
+  URL.revokeObjectURL(a.href);
+});
+el('copy').addEventListener('click', async () => {
+  try {
+    await navigator.clipboard.writeText(preset());
+    el('copied').textContent = 'copied';
+    setTimeout(() => el('copied').textContent = '', 1600);
+  } catch { el('copied').textContent = 'select the text and copy it'; }
+});
+
+// ---------- the Configuration tab ----------
+el('c-dicts').innerHTML = DICTS.map(d => `
+  <div class="dictrow">
+    <div>
+      <div class="name">
+        ${d.shipped ? '' :
+          `<input type="checkbox" data-declare="${d.id}"
+                  id="decl-${d.id}" title="Declare this dictionary">`}
+        <label for="decl-${d.id}">${d.name}</label>
+        <em>&mdash; ${d.lang}${d.shipped ? ', ships with Diogenes' : ''}</em>
+      </div>
+      ${d.fields.map(([v, label]) => `
+        <div class="field">
+          <span><code>${v}</code> &mdash; ${label}</span>
+          <input type="text" data-path="${v}" placeholder="/path/to/..."
+                 data-drop="1">
+        </div>`).join('') ||
+        '<p class="note" style="margin:0">No path: it is part of the installation.</p>'}
+    </div>
+    <div class="keycol">
+      <span>key</span>
+      <div class="keybox">
+        <input type="text" data-dictkey="${d.id}" placeholder="${d.key}"
+               data-context="lookup">
+        <button data-record="1" title="Press the keys instead of typing them">\u2328</button>
+      </div>
+      <div data-warnfor="${d.id}"></div>
+    </div>
+  </div>`).join('');
+
+el('c-keys-lookup').innerHTML =
+  LOOKUP_KEYS.map((k, i) => `
+    <div class="keyrow">
+      <div class="what"><code>${k[0]}</code><em>${k[2]}</em></div>
+      <div class="keybox">
+        <input type="text" data-lookupkey="${i}" placeholder="${k[1]}"
+               data-context="lookup">
+        <button data-record="1" title="Press the keys instead of typing them">\u2328</button>
+      </div>
+      <div data-warnfor="lk${i}" class="warnline"></div>
+    </div>`).join('');
+
+el('c-keys-focus').innerHTML =
+  DICTIONARY_KEY.map(k => `
+    <div class="keyrow">
+      <div class="what"><code>${k[0]}</code><em>${k[2]}</em></div>
+      <div class="keybox">
+        <input type="text" data-singlekey="${k[0]}" placeholder="${k[1]}"
+               data-context="lookup">
+        <button data-record="1" title="Press the keys instead of typing them">\u2328</button>
+      </div>
+      <div data-warnfor="${k[0]}" class="warnline"></div>
+    </div>`).join('') +
+  FOCUS_KEYS.map(k => `
+    <div class="keyrow">
+      <div class="what"><code>${k[0]}</code><em>${k[2]}</em></div>
+      <div class="keybox">
+        <input type="text" data-focuskey="${k[0]}" placeholder="${k[1]}"
+               data-context="lookup">
+        <button data-record="1" title="Press the keys instead of typing them">\u2328</button>
+      </div>
+      <div data-warnfor="${k[0]}" class="warnline"></div>
+    </div>`).join('');
+
+const singleKeyRow = k => `
+    <div class="keyrow">
+      <div class="what"><code>${k[0]}</code><em>${k[2]}</em></div>
+      <div class="keybox">
+        <input type="text" data-singlekey="${k[0]}" placeholder="${k[1]}"
+               data-context="${SCAN_KEYS.some(s => s[0] === k[0])
+                               ? 'document' : 'lookup'}">
+        <button data-record="1" title="Press the keys instead of typing them">\u2328</button>
+      </div>
+      <div data-warnfor="${k[0]}" class="warnline"></div>
+    </div>`;
+
+el('c-keys-scan').innerHTML = SCAN_KEYS.map(singleKeyRow).join('');
+el('c-keys-evil').innerHTML = EVIL_KEYS.map(singleKeyRow).join('');
+
+el('c-distro').innerHTML = `
+  <div class="distro">
+    ${[['vanilla', 'Plain Emacs'], ['doom', 'Doom'], ['spacemacs', 'Spacemacs']]
+      .map(([v, label], i) => `
+      <label class="${i === 0 ? 'on' : ''}" data-distro="${v}">
+        <input type="radio" name="distro" value="${v}"${i === 0 ? ' checked' : ''}>
+        ${label}
+      </label>`).join('')}
+  </div>`;
+
+// DOOM presumes evil and plain Emacs presumes not.  Spacemacs presumes
+// nothing: it asks at first start -- vim, emacs, or hybrid -- so the box is
+// left as the reader set it and a line below says what the answer decides.
+document.addEventListener('change', e => {
+  if (e.target.name === 'distro') {
+    const distro = e.target.value;
+    document.querySelectorAll('.distro label').forEach(l =>
+      l.classList.toggle('on', l.dataset.distro === distro));
+    if (distro === 'doom') el('c-evil').checked = true;
+    else if (distro === 'vanilla') el('c-evil').checked = false;
+    renderConfig();
+  }
+  if (e.target.id === 'c-evil') renderConfig();
+});
+
+// The evil group is shown only where evil is in use.  A key for leaving Emacs
+// state is meaningless without evil, and offering it would invite a reader to
+// set something that can never fire -- the same reasoning that keeps an
+// unconfigured dictionary out of an entry's banner.
+// The box for a number appears only where the menu asks for one.
+// The second gesture is offered only once a first is chosen, and it is for
+// whichever command the first did not take -- so the label says which.
+function renderMouseSecond() {
+  const row = el('mousesecondrow');
+  if (!row) return;
+  const first = el('mousegesture') ? el('mousegesture').value : '';
+  row.hidden = !first;
+  const what = el('mousesecondwhat');
+  if (what) {
+    const chosen = el('mousecommand') ? el('mousecommand').value : '';
+    what.textContent = (chosen === 'diogenes-browser-lookup')
+      ? 'asking which dictionary first'
+      : 'analysing the word and showing the entry';
+  }
+}
+
+// The other command: what a second gesture will run.
+function mouseOtherCommand() {
+  const chosen = el('mousecommand') ? el('mousecommand').value : '';
+  return (chosen === 'diogenes-browser-lookup')
+    ? 'diogenes-lookup-in-dictionary'
+    : 'diogenes-browser-lookup';
+}
+
+function renderAddHow() {
+  const how = el('addhow') ? el('addhow').value : '0.5';
+  const fractionRow = el('addfractionrow');
+  const linesRow = el('addlinesrow');
+  if (fractionRow) fractionRow.hidden = (how !== 'fraction');
+  if (linesRow) linesRow.hidden = (how !== 'lines');
+}
+
+// What to write for `diogenes-browser-add-lines': a FLOAT is a share of a page
+// and an INTEGER a count, which is how the option tells them apart -- so a
+// fraction keeps its point and a line count must not have one.
+function addLinesValue() {
+  const how = el('addhow') ? el('addhow').value : '0.5';
+  if (how === 'fraction') {
+    const raw = (el('addfraction') ? el('addfraction').value : '').trim();
+    const n = parseFloat(raw);
+    if (!isFinite(n) || n <= 0) return null;
+    // A point, always: `1' would mean one line where `1.0' means a page.
+    return Number.isInteger(n) ? n.toFixed(1) : String(n);
+  }
+  if (how === 'lines') {
+    const raw = (el('addlines') ? el('addlines').value : '').trim();
+    if (!/^[0-9]+$/.test(raw) || raw === '0') return null;
+    return raw;
+  }
+  return how;                   // `0.5' or `1.0', straight from the menu.
+}
+
+function renderEvilGroup() {
+  const group = el('c-keys-evil-group');
+  if (group) group.hidden = !el('c-evil').checked;
+}
+
+function renderEvilNote() {
+  const distro = (document.querySelector('input[name=distro]:checked') || {}).value
+                 || 'vanilla';
+  const evil = el('c-evil').checked;
+  const note = el('c-evilnote');
+  if (!note) return;
+  if (distro === 'spacemacs')
+    note.innerHTML = 'Spacemacs asks which editing style you want when you ' +
+      'first start it. <b>vim</b> or <b>hybrid</b> means evil; <b>emacs</b> ' +
+      'does not, and then the leader is <code>M-m</code> rather than ' +
+      '<code>SPC</code>.';
+  else if (distro === 'doom')
+    note.innerHTML = 'Doom turns evil on unless you remove <code>:editor evil</code> ' +
+      'from your <code>init.el</code>.';
+  else
+    note.innerHTML = evil
+      ? 'With evil in a plain Emacs the leader is whatever you have bound, ' +
+        'so the leader warnings below do not apply.'
+      : '';
+}
+
+// The four builtins, each with a drawing of what it does.  A preset is
+// reached BY NAME, so the picker writes `diogenes-preset'; the builtins need
+// no directory, one of your own needs both.
+const PRESETS = [
+  { id: '', name: 'None',
+    blurb: 'Nothing loaded at startup; M-x diogenes-load-preset when you want one.',
+    mini: '<div class="mini"></div>' },
+  { id: 'defer', name: 'defer',
+    blurb: 'Whatever you have installed decides \u2014 window-purpose, a popup manager, plain Emacs.',
+    mini: '<div class="mini"><div class="mf"><div class="mw browser"></div></div></div>' },
+  { id: 'reuse', name: 'reuse',
+    blurb: 'One window for entries, each replacing the last.',
+    mini: '<div class="mini"><div class="mf"><div class="mw entry"></div></div></div>' },
+  { id: 'split', name: 'split',
+    blurb: 'An entry beside the text, and later entries share that window.',
+    mini: '<div class="mini"><div class="mf"><div class="mw browser"></div><div class="mw entry"></div></div></div>' },
+  { id: 'frames', name: 'frames',
+    blurb: 'Each kind in a frame of its own, entries gathered into the lookup frame.',
+    mini: '<div class="mini"><div class="mf"><div class="mw browser"></div></div>' +
+          '<div class="mf"><div class="mw entry"></div></div>' +
+          '<div class="mf"><div class="mw dict"></div></div></div>' },
+  { id: 'other', name: 'Other\u2026',
+    blurb: 'A preset of your own, by name. Make one on the Presets tab.',
+    mini: '<div class="mini"><div class="mf col"><div class="mw entry"></div><div class="mw dict"></div></div></div>' },
+];
+
+el('c-presets').innerHTML = '<div class="presets">' + PRESETS.map((pr, i) => `
+  <label class="presetrow${i === 0 ? ' on' : ''}" data-preset="${pr.id}">
+    <input type="radio" name="preset" value="${pr.id}"${i === 0 ? ' checked' : ''}>
+    ${pr.mini}
+    <div><b>${pr.name}</b><span>${pr.blurb}</span></div>
+  </label>`).join('') + '</div>';
+
+document.addEventListener('change', e => {
+  if (e.target.name === 'preset') {
+    document.querySelectorAll('.presetrow').forEach(r =>
+      r.classList.toggle('on', r.dataset.preset === e.target.value));
+    el('c-preset-other').hidden = e.target.value !== 'other';
+    renderConfig();
+  }
+});
+
+// A box left blank means the default, and `-' means bind nothing.  So three
+// states, and the generated block must distinguish them: absent, a key, nil.
+function keyValue(input) {
+  const v = input.value.trim();
+  if (!v) return undefined;          // default: say nothing
+  if (v === '-') return null;        // nil: bind nothing
+  return v;
+}
+
+function configText() {
+  const out = [];
+  const paths = [];
+  document.querySelectorAll('#c-dicts input[data-path]').forEach(i => {
+    // Normalised on the way out as well as on the way in: a reader who TYPES a
+    // Windows path types backslashes, and a backslash in an Emacs string is an
+    // escape -- `"C:\dir"' is `C:dir' with a tab in it, or worse.  Forward
+    // slashes work on every platform Emacs runs on.
+    const v = normalisePath(i.value) || i.value.trim();
+    if (v) paths.push(`  (setq ${i.dataset.path} ${JSON.stringify(v)})`);
+  });
+  const dpath = (normalisePath(el('c-path').value) || '');
+  const morph = (normalisePath(el('c-morpheus').value) || '');
+
+  // HOW a package is installed differs by distribution, and writing
+  // `use-package''s `:vc' for all three was wrong for two of them: Doom
+  // installs through straight from `packages.el', where `:vc' is an
+  // unrecognised keyword and an error; Spacemacs has its own list.  Only a
+  // plain Emacs uses `:vc', and only from version 30.
+  const distro = (document.querySelector('input[name=distro]:checked') || {}).value
+                 || 'vanilla';
+  if (distro === 'doom') {
+    out.push(';; ---- in ~/.config/doom/packages.el ----');
+    out.push('(package! diogenes');
+    out.push('  :recipe (:host github');
+    out.push('           :repo "VictorSousa92/diogenes.el"');
+    out.push('           :branch "modular-customizable"))');
+    out.push('');
+    out.push(';; ---- in ~/.config/doom/config.el ----');
+    out.push('(use-package! diogenes');
+    out.push('  :init');
+  } else if (distro === 'spacemacs') {
+    out.push(';; ---- in dotspacemacs/layers, under dotspacemacs-additional-packages ----');
+    out.push(';;   (diogenes :location (recipe :fetcher github');
+    out.push(';;                              :repo "VictorSousa92/diogenes.el"');
+    out.push(';;                              :branch "modular-customizable"))');
+    out.push('');
+    out.push(';; ---- in dotspacemacs/user-config ----');
+    out.push('(use-package diogenes');
+    out.push('  :init');
+  } else {
+    out.push('(use-package diogenes');
+    out.push('  :vc (:url "https://github.com/VictorSousa92/diogenes.el"');
+    out.push('       :branch "modular-customizable")   ; Emacs 30 and later');
+    out.push('  :init');
+  }
+  out.push(`  (setq diogenes-path ${JSON.stringify(dpath || "/path/to/diogenes")})`);
+  if (morph) out.push(`  (setq diogenes-morpheus-directory ${JSON.stringify(morph)})`);
+  if (paths.length) { out.push(''); out.push('  ;; The dictionaries you have.'); out.push(...paths); }
+
+  // Declared dictionaries: offered whatever their paths say, so that pressing
+  // a key says what to configure rather than nothing happening.
+  const declared = [];
+  document.querySelectorAll('input[data-declare]:checked').forEach(i =>
+    declared.push(i.dataset.declare));
+  if (declared.length) {
+    out.push('');
+    out.push('  ;; Offered on every entry of their language, whatever the paths');
+    out.push('  ;; say -- so a key explains what to set rather than doing nothing.');
+    out.push(`  (setq diogenes-declared-dictionaries '(${declared.join(' ')}))`);
+  }
+
+  // Reading, only where it differs from the default.
+  const reading = [];
+  if (el('c-viewer').value !== 'auto')
+    reading.push(`  (setq diogenes-old-pdf-viewer '${el('c-viewer').value})`);
+  if (!el('c-allentries').checked)
+    reading.push('  (setq diogenes-lookup-show-all-entries nil)');
+  if (el('c-alwaysask').checked)
+    reading.push('  (setq diogenes-lookup-always-ask-dictionary t)');
+  if (reading.length) { out.push(''); out.push('  ;; Reading.'); out.push(...reading); }
+
+  // The dictionary letters, only those moved or unbound.
+  const dictKeys = [];
+  document.querySelectorAll('input[data-dictkey]').forEach(i => {
+    const v = keyValue(i);
+    if (v === undefined) return;
+    dictKeys.push(`        (${i.dataset.dictkey.padEnd(10)} . ${v === null ? 'nil' : JSON.stringify(v)})`);
+  });
+  if (dictKeys.length) {
+    out.push('');
+    out.push('  ;; Dictionary keys you have moved; the banner follows these.');
+    out.push("  (setq diogenes-lookup-dictionary-keys\n        '(" +
+             dictKeys.join('\n').trimStart() + '))');
+  }
+
+  // The lookup table is all-or-nothing: it is one option, so a change to one
+  // key means writing the others too, or they would be unbound.
+  const changed = LOOKUP_KEYS.some((k, i) => {
+    const input = document.querySelector(`input[data-lookupkey="${i}"]`);
+    return keyValue(input) !== undefined;
+  });
+  if (changed) {
+    const rows = LOOKUP_KEYS.map((k, i) => {
+      const v = keyValue(document.querySelector(`input[data-lookupkey="${i}"]`));
+      const key = v === undefined ? k[1] : v;
+      return `        (${k[0].padEnd(32)} . ${key === null ? 'nil' : JSON.stringify(key)})`;
+    });
+    out.push('');
+    out.push('  ;; The whole table: it is one option, so the keys you have not');
+    out.push('  ;; changed are written too rather than left unbound.');
+    out.push("  (setq diogenes-lookup-keys\n        '(" + rows.join('\n').trimStart() + '))');
+  }
+
+  // `diogenes-focus-keys' is one option, so any change writes the whole table
+  // -- the keys not changed included, or they would be unbound.  The scanned
+  // page is absent from it on purpose: `C-c C-e' reaches that, and giving the
+  // focus command a key of its own would be a second way to do one thing.
+  const focusChanged = FOCUS_KEYS.some(k =>
+    keyValue(document.querySelector(`input[data-focuskey="${k[0]}"]`)) !== undefined);
+  if (focusChanged) {
+    const rows = FOCUS_KEYS.map(k => {
+      const v = keyValue(document.querySelector(`input[data-focuskey="${k[0]}"]`));
+      const key = v === undefined ? k[1] : v;
+      return `        (${k[0].padEnd(26)} . ${key === null ? 'nil' : JSON.stringify(key)})`;
+    });
+    rows.push('        (diogenes-focus-dictionary   . nil)');
+    out.push('');
+    out.push('  ;; Going from one Diogenes window to another.  Bound in the');
+    out.push('  ;; Diogenes buffers, not globally.  The whole table, since it is');
+    out.push('  ;; one option and the keys left out of it would be unbound.');
+    out.push("  (setq diogenes-focus-keys\n        '(" + rows.join('\n').trimStart() + '))');
+  }
+
+  const singles = [];
+  SINGLE_KEYS.concat(DICTIONARY_KEY).filter(k =>
+    !(EVIL_KEYS.some(e => e[0] === k[0]) && !el('c-evil').checked)
+  ).forEach(k => {
+    const v = keyValue(document.querySelector(`input[data-singlekey="${k[0]}"]`));
+    if (v !== undefined)
+      singles.push(`  (setq ${k[0]} ${v === null ? 'nil' : JSON.stringify(v)})`);
+  });
+  if (singles.length) { out.push(''); out.push('  ;; And these keys.'); out.push(...singles); }
+
+  if (el('c-pixelwise').checked) {
+    out.push('');
+    out.push('  ;; So a frame fills its tile rather than rounding down to whole');
+    out.push('  ;; character cells.');
+    out.push('  (setq frame-resize-pixelwise t');
+    out.push('        window-resize-pixelwise t)');
+  }
+
+  // A preset at startup, and its folder where one is needed.  Both in
+  // `:init', so the name is set before the package reads it.
+  const chosen = (document.querySelector('input[name=preset]:checked') || {}).value || '';
+  if (chosen === 'other') {
+    const name = el('c-preset-name').value.trim();
+    const dir = (normalisePath(el('c-preset-dir').value) || '');
+    if (name) {
+      out.push('');
+      out.push('  ;; A preset of your own, loaded at startup.');
+      if (dir) out.push(`  (setq diogenes-preset-directory ${JSON.stringify(dir)})`);
+      else out.push('  ;; ...and set diogenes-preset-directory to where it lives.');
+      out.push(`  (setq diogenes-preset ${JSON.stringify(name)})`);
+    }
+  } else if (chosen) {
+    out.push('');
+    out.push('  ;; One of the four behaviours, as a preset. No folder needed.');
+    out.push(`  (setq diogenes-preset ${JSON.stringify(chosen)})`);
+  }
+
+  out.push('');
+  out.push('  :bind ("C-c d" . diogenes))');
+
+  // Turning a page.  Only what differs from the default: a page as long as the
+  // first Diogenes sent, half a page added by the keys, and C-c C-<right> and
+  // C-c C-<left> for turning -- the arrows, which every keyboard has.
+  const pageLines = el('pagelines') ? el('pagelines').value.trim() : '';
+  const addLines  = addLinesValue();
+  const turnFwd   = el('turnforward') ? el('turnforward').value.trim() : '';
+  const turnBack  = el('turnback') ? el('turnback').value.trim() : '';
+  const pagingBits = [];
+  if (pageLines && /^[0-9]+$/.test(pageLines))
+    pagingBits.push(`(setq diogenes-browser-page-lines ${pageLines})`);
+  // Only where it differs from half a page, which is the default.
+  if (addLines && addLines !== '0.5')
+    pagingBits.push(`(setq diogenes-browser-add-lines ${addLines})`);
+  if (turnFwd !== 'C-c C-<right>' || turnBack !== 'C-c C-<left>') {
+    const pairs = [];
+    if (turnFwd)  pairs.push(`("${turnFwd}" . diogenes-browser-page-forward)`);
+    if (turnBack) pairs.push(`("${turnBack}" . diogenes-browser-page-backward)`);
+    pagingBits.push(pairs.length
+      ? `(setq diogenes-browser-turn-keys '(${pairs.join(' ')}))`
+      : '(setq diogenes-browser-turn-keys nil)');
+    pagingBits.push("(with-eval-after-load 'diogenes-browser");
+    pagingBits.push('  (diogenes-browser-install-turn-keys))');
+  }
+  if (pagingBits.length) {
+    out.push('');
+    out.push(';; Turning a page, where C-c C-n and C-c C-p add to it.');
+    out.push(...pagingBits);
+  }
+
+  // A click that looks a word up.  After the use-package form, not inside it:
+  // the keys are bound when `diogenes-browser' loads, so the installer has to
+  // be called once the option has its value -- which is why the option alone
+  // does nothing, and why this writes both.
+  const clickGesture = el('mousegesture') ? el('mousegesture').value.trim() : '';
+  if (clickGesture) {
+    const clickPairs = [`("${clickGesture}" . ${el('mousecommand').value})`];
+    // And a second gesture, where one was given, for the other command.
+    const second = el('mousegesture2') ? el('mousegesture2').value.trim() : '';
+    if (second && second !== clickGesture)
+      clickPairs.push(`("${second}" . ${mouseOtherCommand()})`);
+    out.push('');
+    out.push(';; A click looks a word up in the browser.');
+    out.push(`(setq diogenes-browser-mouse-keys '(${clickPairs.join(' ')}))`);
+    out.push("(with-eval-after-load 'diogenes-browser");
+    out.push('  (diogenes-browser-install-mouse-keys))');
+  }
+  const changedKeys = out.some(l => /diogenes-lookup-keys|dictionary-keys|-key /.test(l));
+  if (changedKeys) {
+    out.push('');
+    out.push(';; Keys are worth checking in your own Emacs: open an entry, press');
+    out.push(';; C-h k and then the key, and Emacs will name whatever holds it.');
+    out.push(';; A scanned dictionary answers differently, being a viewer\'s buffer.');
+  }
+  return out.join('\n');
+}
+
+// ---------- what a key is called, and who else wants it ----------
+// A key typed rather than described: the box listens, and the chord pressed is
+// written the way Emacs writes it.  `C-o' is easier to press than to spell.
+const SPECIAL = {
+  Enter: 'RET', Tab: 'TAB', ' ': 'SPC', Escape: '<escape>',
+  Backspace: 'DEL', Delete: '<delete>', ArrowLeft: '<left>',
+  ArrowRight: '<right>', ArrowUp: '<up>', ArrowDown: '<down>',
+  Home: '<home>', End: '<end>', PageUp: '<prior>', PageDown: '<next>',
+  Insert: '<insert>',
+};
+
+function chordOf(ev) {
+  // A modifier on its own is not a chord.
+  if (['Control', 'Meta', 'Alt', 'Shift', 'OS'].includes(ev.key)) return null;
+  let base = SPECIAL[ev.key];
+  if (!base) {
+    if (ev.key.length === 1) base = ev.key;
+    else if (/^F\d+$/.test(ev.key)) base = '<' + ev.key.toLowerCase() + '>';
+    else base = '<' + ev.key.toLowerCase() + '>';
+  }
+  let out = '';
+  if (ev.ctrlKey) out += 'C-';
+  if (ev.altKey || ev.metaKey) out += 'M-';
+  // Shift is implicit in a capital or a shifted symbol; it is written only for
+  // a named key, where `S-<left>' is meaningful and `S-A' is not.
+  if (ev.shiftKey && base.startsWith('<')) out += 'S-';
+  return out + base;
+}
+
+// Who else wants a key.  Curated rather than exhaustive: the aim is to catch
+// the choices a reader would regret, not to model every binding.
+//
+// CONTEXT matters more than the distribution.  A Diogenes lookup buffer is in
+// evil's Emacs state, so a single letter is free there however much evil wants
+// it elsewhere; a scanned page is in normal state, where evil's keys do apply;
+// and a global binding must dodge whatever the distribution has taken.
+// What a document viewer takes for itself.  This matters more than the
+// distribution's keys do, because a scanned dictionary IS one of these buffers:
+// `L' was chosen for the lookup because most of the alphabet is already spoken
+// for here.
+const VIEWERS = {
+  'pdf-tools': [
+    [/^[np]$/, 'the next or previous page in pdf-tools'],
+    [/^[gG]$/, 'the first or last page in pdf-tools'],
+    [/^o$/, '`pdf-outline\u2019, the bookmark tree'],
+    [/^b$/, 'a bookmark in pdf-tools'],
+    [/^[WPh]$/, 'fit width, page or height in pdf-tools'],
+    [/^r$/, 'revert, in pdf-tools'],
+    [/^s/, 'a prefix in pdf-tools \u2014 slicing and scrolling'],
+    [/^[+=-]$/, 'zoom in pdf-tools'],
+    [/^SPC$/, 'scroll forward in pdf-tools'],
+    [/^DEL$/, 'scroll back in pdf-tools'],
+    [/^m$/, 'the midnight and other display commands in pdf-tools'],
+    [/^C-c C-[ade]$/, 'an annotation command in pdf-tools'],
+  ],
+  'doc-view': [
+    [/^[np]$/, 'the next or previous page in doc-view'],
+    [/^[<>]$/, 'shrink or enlarge in doc-view'],
+    [/^[WPHK]$/, 'fit or kill, in doc-view'],
+    [/^SPC$/, 'scroll forward in doc-view'],
+    [/^DEL$/, 'scroll back in doc-view'],
+    [/^[+=-]$/, 'zoom in doc-view'],
+    [/^r$/, 'revert, in doc-view'],
+    [/^C-c C-c$/, 'toggle between the text and the page in doc-view'],
+    [/^C-c C-t$/, 'a conversion command in doc-view'],
+  ],
+  'emacs-reader': [
+    [/^[np]$/, 'the next or previous page in the Emacs Reader'],
+    [/^[gG]$/, 'the first or last page in the Emacs Reader'],
+    [/^[WPh]$/, 'fitting the page in the Emacs Reader'],
+    [/^[+=-]$/, 'zoom in the Emacs Reader'],
+    [/^o$/, 'the outline in the Emacs Reader'],
+    [/^r$/, 'rotate, in the Emacs Reader'],
+    [/^SPC$/, 'scroll forward in the Emacs Reader'],
+  ],
+};
+
+// `auto' means pdf-tools where it is installed and doc-view otherwise, so a key
+// wanted by either is worth warning about: the reader may not know which they
+// will get, and the answer can change when they install a package.
+function viewerTables() {
+  const chosen = el('c-viewer') ? el('c-viewer').value : 'auto';
+  if (chosen === 'auto') return [['pdf-tools', VIEWERS['pdf-tools']],
+                                 ['doc-view', VIEWERS['doc-view']]];
+  return [[chosen, VIEWERS[chosen] || []]];
+}
+
+const CLASHES = {
+  emacs: [
+    [/^C-x/, 'a prefix in Emacs: `C-x\u2019 opens the whole file and buffer map'],
+    [/^C-h/, 'the help prefix'],
+    [/^C-g$/, 'quit, and never worth taking'],
+    [/^M-x$/, 'the command prompt'],
+    [/^C-c$/, 'a prefix, not a key'],
+    [/^C-[svwykaefbnpdlqzt]$/, 'an ordinary Emacs editing key, though harmless in a read-only buffer'],
+    [/^C-o$/, '`open-line\u2019, though harmless in a read-only buffer'],
+    [/^C-u$/, 'the prefix argument'],
+  ],
+  evilNormal: [
+    [/^[hjkl]$/, 'a motion in evil\u2019s normal state'],
+    [/^[ibcdopPGVvxXsSrRuU]$/, 'an evil command in normal state'],
+    [/^[wea0$^]$/, 'an evil motion in normal state'],
+    [/^g$/, 'a prefix in evil, and one Doom hangs a great deal from'],
+    [/^[/?nN*]$/, 'evil\u2019s search'],
+    [/^C-[oidufbev]$/, 'an evil scrolling or jump key in normal state'],
+  ],
+  doom: [
+    [/^,/, 'the local leader in Doom'],
+    [/^C-c$/, 'used by Doom for its own chords'],
+  ],
+  // `SPC' is the leader only in an evil state, so in Spacemacs's emacs style
+  // it is free and `M-m' is the leader instead.  `M-m' is the leader either
+  // way, which is what makes it the safe one to avoid.
+  spacemacsLeader: [
+    [/^,/, 'the local leader in Spacemacs'],
+  ],
+  spacemacs: [
+    [/^M-m/, 'the leader in Spacemacs, and the only one in its emacs style'],
+  ],
+};
+
+// The first key after the leader, where the distribution is known to use it.
+// Not exhaustive -- which of these exist depends on the modules one has
+// enabled -- so an unlisted letter is reported as worth checking rather than
+// as free or as taken.
+const LEADER_KEYS = {
+  doom: {
+    leader: 'SPC',
+    taken: {
+      b: 'buffers', c: 'code', f: 'files', g: 'git', h: 'help', i: 'insert',
+      n: 'notes', o: 'open', p: 'project', q: 'quit', r: 'remote', s: 'search',
+      t: 'toggles', w: 'windows', y: 'snippets', m: 'the local leader',
+      TAB: 'workspaces', ':': 'M-x', '.': 'find file', ',': 'switch buffer',
+      '<': 'switch buffer', "'": 'resume the last search', X: 'org capture',
+      u: 'the prefix argument', x: 'the scratch buffer', SPC: 'find a file in the project',
+      RET: 'a bookmark',
+    },
+  },
+  spacemacs: {
+    leader: 'SPC',
+    taken: {
+      a: 'applications', b: 'buffers', c: 'comments', d: 'debug', e: 'errors',
+      f: 'files', g: 'git', h: 'help', i: 'insertion', j: 'jump', k: 'lisp',
+      l: 'layouts', m: 'the major-mode leader', n: 'narrow', p: 'projects',
+      q: 'quit', r: 'registers', s: 'search', t: 'toggles', u: 'the prefix argument',
+      v: 'expand region', w: 'windows', x: 'text', z: 'zoom',
+      SPC: 'M-x', TAB: 'the last buffer', "'": 'a shell',
+    },
+  },
+};
+
+// A key beginning with the leader is three different situations, and saying
+// `the leader in Doom' to all three was wrong for two of them.
+function leaderReasons(key, distro, evil) {
+  const spec = LEADER_KEYS[distro];
+  if (!spec) return [];
+  // Under Spacemacs the leader is `SPC' only in an evil state; in the emacs
+  // style it is `M-m', and `SPC' is free.
+  if (distro === 'spacemacs' && !evil) return [];
+  const chords = key.split(/\s+/).filter(Boolean);
+  if (chords[0] !== spec.leader) return [];
+  const name = distro === 'doom' ? 'Doom' : 'Spacemacs';
+  // The leader itself.
+  if (chords.length === 1)
+    return [`the leader in ${name} \u2014 taking it would shadow everything under it`];
+  const first = chords[1];
+  const known = spec.taken[first];
+  // DEPTH FIRST: `SPC f p' is not `SPC f'.  A prefix being taken says nothing
+  // about what is free under it -- a sequence of two or more is exactly how
+  // one binds something without disturbing anything, so answering `SPC f p'
+  // with `SPC f is the files prefix' told the reader the opposite of what they
+  // needed.
+  if (chords.length > 2) {
+    const second = chords[2];
+    const deeper = (LEADER_2[distro] || {})[first];
+    if (deeper && deeper[second])
+      return [`<code>${spec.leader} ${first} ${second}</code> is ${name}\u2019s ` +
+              `${deeper[second]}`];
+    if (deeper)
+      return [`under ${name}\u2019s <code>${spec.leader} ${first}</code> ` +
+              `(${known || 'a prefix'}), and <code>${second}</code> is not one ` +
+              `this tool knows of there \u2014 press ` +
+              `<code>${spec.leader} ${first}</code> and which-key will list what ` +
+              `is taken`];
+    return [`under ${name}\u2019s leader \u2014 press ` +
+            `<code>${spec.leader} ${first}</code> and which-key will list what is ` +
+            `taken there`];
+  }
+  if (known)
+    return [`under ${name}\u2019s leader, and <code>${spec.leader} ${first}</code> ` +
+            `is its ${known} prefix \u2014 a longer sequence under it, such as ` +
+            `<code>${spec.leader} ${first} d</code>, may well be free`];
+  // Not among the ones we know of.  Which is not the same as free: it depends
+  // on the modules enabled, and only the reader's own Emacs can say.
+  return [`under ${name}\u2019s leader, and <code>${spec.leader} ${first}</code> is ` +
+          `not one this tool knows of \u2014 press ${spec.leader} in your Emacs and ` +
+          `check that ${first} is unused before settling on it`];
+}
+
+// SECOND-LEVEL keys, for the prefixes where they are worth knowing.  A modest
+// set: which exist depends on the modules enabled and the release, so an
+// unlisted one is handed to which-key rather than guessed at.
+const LEADER_2 = {
+  doom: {
+    f: { f: 'find file', s: 'save', S: 'save as', r: 'recent files',
+         R: 'rename', d: 'find directory', y: 'yank the path',
+         p: 'find file in your private config', P: 'browse your private config',
+         e: 'find file in the Emacs directory', c: 'copy this file',
+         D: 'delete this file', u: 'sudo find file', l: 'locate' },
+    b: { b: 'switch buffer', B: 'switch buffer anywhere', k: 'kill buffer',
+         i: 'imenu', n: 'next buffer', p: 'previous buffer', s: 'save',
+         r: 'revert', z: 'save all', N: 'a new buffer' },
+    p: { p: 'switch project', f: 'find file in project', a: 'add a project',
+         c: 'compile', i: 'invalidate the cache', r: 'recent project files',
+         t: 'todos', '!': 'a shell command' },
+    w: { w: 'other window', v: 'split right', s: 'split below',
+         c: 'close', o: 'close the others', h: 'left', j: 'down',
+         k: 'up', l: 'right', '=': 'balance' },
+    h: { h: 'help for a key', f: 'describe function', v: 'describe variable',
+         k: 'describe key', m: 'describe mode', r: 'reload' },
+    g: { g: 'magit status', b: 'blame', c: 'create', f: 'find file at revision',
+         '/': 'search the history' },
+    o: { o: 'open externally', p: 'the project sidebar', t: 'a terminal',
+         '-': 'dired here' },
+    t: { t: 'a theme', f: 'flycheck', l: 'line numbers', s: 'spelling',
+         w: 'soft wrap', z: 'zen mode' },
+  },
+  spacemacs: {
+    f: { f: 'find file', s: 'save', S: 'save all', r: 'recent files',
+         R: 'rename', d: 'delete', y: 'yank the path', c: 'copy',
+         e: 'the Spacemacs files prefix', b: 'bookmarks', j: 'dired here',
+         t: 'the file tree', o: 'open externally', v: 'variables' },
+    b: { b: 'switch buffer', d: 'kill buffer', n: 'next', p: 'previous',
+         s: 'the scratch buffer', h: 'home', m: 'messages', R: 'revert',
+         w: 'read only', Y: 'copy the whole buffer' },
+    p: { p: 'switch project', f: 'find file in project', d: 'directories',
+         b: 'project buffers', r: 'recent project files', t: 'the file tree',
+         '!': 'a shell command' },
+    w: { w: 'other window', '/': 'split right', '-': 'split below',
+         d: 'close', m: 'maximise', h: 'left', j: 'down', k: 'up', l: 'right',
+         '=': 'balance', o: 'other frame' },
+    h: { d: 'describe', k: 'the key bindings', i: 'search the info manuals',
+         m: 'the Spacemacs manual', SPC: 'the Spacemacs help' },
+    g: { s: 'magit status', b: 'blame', c: 'commit', f: 'the file history',
+         m: 'the git submodes' },
+  },
+};
+
+// `C-c' and `C-x', which have a rule and a map rather than a module list.
+const CC_RESERVED = /^C-c ([^C]|C-)?/;   // shape only; the tests are below
+
+function chordRules(key) {
+  const out = [];
+  const chords = key.split(/\s+/).filter(Boolean);
+  if (chords[0] === 'C-c') {
+    if (chords.length === 1)
+      return ['a prefix rather than a key: `C-c\u2019 begins a sequence'];
+    const second = chords[1];
+    // The Emacs conventions RESERVE `C-c' plus an unmodified letter for users,
+    // and no package may take it.  That is a rule rather than an observation,
+    // so it is worth saying as one -- it is the one place a reader can bind
+    // freely and know they are safe.
+    if (/^[A-Za-z]$/.test(second) && chords.length === 2)
+      return [`safe by convention: <code>C-c</code> and a plain letter is ` +
+              `reserved for you, and no package may take it`];
+    if (/^C-[A-Za-z]$/.test(second))
+      return [`<code>C-c ${second}</code> belongs to the major mode by ` +
+              `convention, so it depends on the buffer and may be taken`];
+    return [];
+  }
+  if (chords[0] === 'C-x') {
+    const map = {
+      f: 'set fill column', s: 'save some buffers', b: 'switch buffer',
+      k: 'kill buffer', o: 'other window', '0': 'delete window',
+      '1': 'delete other windows', '2': 'split below', '3': 'split right',
+      h: 'mark the whole buffer', u: 'undo', d: 'dired', 'C-f': 'find file',
+      'C-s': 'save', 'C-c': 'exit Emacs', 'C-e': 'evaluate the last sexp',
+      'C-b': 'list buffers', r: 'the register and rectangle prefix',
+      v: 'the version-control prefix', '4': 'the other-window prefix',
+      '5': 'the other-frame prefix', n: 'the narrowing prefix',
+      a: 'the abbrev prefix', '8': 'insert a character',
+    };
+    if (chords.length === 1) return ['a prefix rather than a key'];
+    const what = map[chords[1]];
+    return what
+      ? [`<code>C-x ${chords[1]}</code> is Emacs\u2019s own \u2014 ${what}`]
+      : [`under <code>C-x</code>, which is Emacs\u2019s own map \u2014 press ` +
+         `<code>C-x C-h</code> to see what is free there`];
+  }
+  return out;
+}
+
+// Where a key lives decides which tables apply.
+function clashesFor(key, context) {
+  if (!key) return [];
+  const distro = (document.querySelector('input[name=distro]:checked') || {}).value
+                 || 'vanilla';
+  const evil = el('c-evil').checked;
+  const out = [];
+  const test = table => (CLASHES[table] || []).forEach(([re, why]) => {
+    if (re.test(key)) out.push(why);
+  });
+  // `C-c' and `C-x' first: where one of those has a rule, it is the answer and
+  // the general Emacs table below would only add noise.
+  const chord = chordRules(key);
+  if (chord.length) return chord;
+  test('emacs');
+  leaderReasons(key, distro, evil).forEach(r => out.push(r));
+  if (distro === 'doom') test('doom');
+  if (distro === 'spacemacs') {
+    test('spacemacs');
+    if (evil) test('spacemacsLeader');
+  }
+  // A scanned dictionary is a viewer's own buffer, so its keys apply there.
+  if (context === 'document') {
+    viewerTables().forEach(([, table]) =>
+      table.forEach(([re, why]) => { if (re.test(key)) out.push(why); }));
+  }
+  // Evil's own keys matter in a document buffer, which stays in normal state,
+  // and in a global binding -- not in a lookup buffer, which is Emacs state.
+  if (evil && context !== 'lookup') test('evilNormal');
+  return out;
+}
+
+function warnFor(key, context) {
+  const found = clashesFor(key, context);
+  if (!key) return '';
+  if (!found.length)
+    return '<span class="kwarn fine">Nothing known wants it \u2014 check with ' +
+           '<code>C-h k</code> in your own Emacs.</span>';
+  const soft = found.every(w => /harmless in a read-only buffer/.test(w));
+  return `<span class="kwarn ${soft && context === 'lookup' ? 'fine' : 'clash'}">` +
+         (soft && context === 'lookup' ? '' : '\u26a0 ') + found.join('; ') +
+         '.</span>';
+}
+
+// ---------- finding a path without typing it ----------
+// A browser is not allowed to tell a page where a chosen file lives: an
+// `<input type=file>' gives the name and hides the rest.  Two ways round it,
+// and the first is the good one.
+//
+// DRAGGING from a file manager sets `text/uri-list' to a real `file://' URI,
+// so the full path arrives.  Nautilus, Dolphin, Thunar and the Finder all do
+// this.  Nothing is uploaded and nothing is read -- the page is handed a
+// string.
+//
+// BROWSING can only give the path RELATIVE to the folder chosen, so it is
+// composed with the base folder typed once above.  Where that is empty the
+// relative path is offered with a note, which is better than a bare filename.
+// A path from a clipboard or a drop, on any of the three platforms.
+//
+// WINDOWS is the awkward one.  A file URI there is `file:///C:/dir/x.pdf', with
+// a slash before the drive letter that is not part of the path; a UNC share is
+// `file://server/share/x'.  Explorer's `Copy as path' gives no URI at all but a
+// QUOTED backslash path, `"C:\dir\x.pdf"'.  And a backslash inside an Emacs
+// string is an escape, so a path is written with forward slashes -- which Emacs
+// accepts on Windows and which spares the reader a line full of doubled
+// backslashes.
+function normalisePath(raw) {
+  if (!raw) return null;
+  let s = String(raw).trim();
+  // Quotes of every kind that a `copy as path' produces: Explorer's double,
+  // the Finder's single, and the curly pair that macOS and several editors
+  // substitute for straight ones.
+  s = s.replace(/^["'\u2018\u2019\u201c\u201d`]+/, '')
+       .replace(/["'\u2018\u2019\u201c\u201d`]+$/, '');
+  if (!s) return null;
+  // A BACKSLASH-ESCAPED SPACE is a shell's quoting, not a separator: dragging
+  // into a Terminal gives `/Users/x/Diogenes\ Data', and turning that
+  // backslash into a slash made `Diogenes/ Data' -- a path that does not exist,
+  // produced silently.  Unescape those before anything else touches a
+  // backslash.
+  s = s.replace(/\\([ ()'\u0022&])/g, '$1');
+  // What remains is a Windows separator.  Forward slashes work everywhere Emacs
+  // runs, and spare an Emacs string a line of doubled backslashes.
+  s = s.replace(/\\/g, '/');
+  // `/C:/...' from a URI: the slash before a drive letter is not the path.
+  s = s.replace(/^\/([A-Za-z]:)/, '$1');
+  return s;
+}
+
+function looksLikePath(s) {
+  if (!s) return false;
+  const p = normalisePath(s);
+  return !!p && (p.startsWith('/') || p.startsWith('~') ||
+                 /^[A-Za-z]:\//.test(p) || p.startsWith('//'));
+}
+
+function uriToPath(text) {
+  if (!text) return null;
+  try {
+    // The first line that IS a URI, not simply the first line.  A file manager
+    // may put its own word in front -- GNOME's copied-files format begins with
+    // `copy' or `cut' on a line of its own -- a drag may carry several files, of
+    // which the first is the one meant, and `#' lines are comments in the
+    // `text/uri-list' format.
+    for (const line of String(text).split(/[\r\n]+/)) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+      if (/^file:\/\//i.test(trimmed)) {
+        // `file://host/path' keeps the host as a UNC share; `file:///path' has
+        // an empty host and the path begins at the third slash.
+        const rest = decodeURI(trimmed).replace(/^file:\/\//i, '');
+        return normalisePath(rest.startsWith('/') ? rest : '//' + rest);
+      }
+    }
+    return null;
+  } catch { return null; }
+}
+
+
+function installPathHelpers() {
+  document.querySelectorAll('#panel-config input[data-drop], #panel-config input[data-path]')
+    .forEach(input => {
+      if (input.dataset.wired) return;
+      input.dataset.wired = '1';
+      // `dragenter' as well as `dragover': some browsers decide whether a drop
+      // is allowed at the first of those, and refuse it thereafter whatever
+      // `dragover' says.
+      ['dragenter', 'dragover'].forEach(kind =>
+        input.addEventListener(kind, ev => {
+          ev.preventDefault();
+          ev.stopPropagation();
+          if (ev.dataTransfer) ev.dataTransfer.dropEffect = 'copy';
+          input.classList.add('dropping');
+        }));
+      input.addEventListener('dragleave', () => input.classList.remove('dropping'));
+      // PASTING is the route that works everywhere.  Copy the file in your
+      // file manager and the clipboard holds a `file://' URI; browsers hand
+      // that over, where they withhold the path of a DROPPED file.
+      input.addEventListener('paste', ev => {
+        const text = (ev.clipboardData || window.clipboardData).getData('text');
+        const path = uriToPath(text) ||
+                     (looksLikePath(text) ? normalisePath(text) : null);
+        if (path) {
+          ev.preventDefault();
+          input.value = path;
+          renderConfig();
+        }
+        // Anything else -- a plain path, most likely -- is left to paste
+        // itself, which does the right thing already.
+      });
+      input.addEventListener('drop', ev => {
+        ev.preventDefault();
+        input.classList.remove('dropping');
+        const uris = ev.dataTransfer.getData('text/uri-list');
+        const plain = ev.dataTransfer.getData('text/plain');
+        const path = uriToPath(uris) || uriToPath(plain) ||
+                     (looksLikePath(plain) ? normalisePath(plain) : null);
+        if (path) { input.value = path; renderConfig(); }
+        else if (ev.dataTransfer.files && ev.dataTransfer.files.length) {
+          // A file dropped from an application rather than a file manager: the
+          // name is all there is, so say what is missing rather than filling
+          // the box with something that will not work.
+          // The browser withheld the path and gave only the file: Chrome and
+          // recent Firefox strip `text/uri-list' for local files, the same
+          // privacy rule that hides the path in a file chooser.  Nothing here
+          // can recover it, so say what does work rather than blaming the
+          // reader's aim.
+          const name = ev.dataTransfer.files[0].name;
+          el('c-copied').innerHTML =
+            'Your browser will not reveal where <b>' + name + '</b> lives. ' +
+            'Copy the file in your file manager and paste here instead, or type ' +
+            'the path.';
+          setTimeout(() => el('c-copied').textContent = '', 7000);
+        }
+      });
+    });
+
+}
+
+// Recording: the button puts its box in capture mode, every chord pressed is
+// appended, and pressing it again -- or leaving the box -- stops.  Appending
+// rather than replacing, so a sequence like `C-c C-o' can be pressed as one.
+function installKeyCapture() {
+  document.querySelectorAll('#panel-config button[data-record]').forEach(button => {
+    if (button.dataset.wired) return;
+    button.dataset.wired = '1';
+    const input = button.parentElement.querySelector('input');
+    if (!input) return;
+    const stop = () => {
+      button.classList.remove('recording');
+      input.classList.remove('capturing');
+      input.placeholder = input.dataset.was || input.placeholder;
+      renderConfig();
+    };
+    button.addEventListener('click', () => {
+      const on = button.classList.toggle('recording');
+      input.classList.toggle('capturing', on);
+      if (on) {
+        input.dataset.was = input.placeholder;
+        input.placeholder = 'press the keys\u2026';
+        input.value = '';
+        input.focus();
+      } else stop();
+    });
+    input.addEventListener('keydown', ev => {
+      if (!button.classList.contains('recording')) return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      const chord = chordOf(ev);
+      if (!chord) return;
+      input.value = input.value ? input.value + ' ' + chord : chord;
+      // Setting `value' by hand fires no `input' event, so the box has to
+      // announce itself: without this `lastTouched' stayed null and a key
+      // RECORDED rather than typed produced a warning and no prompt.
+      lastTouched = slotOf(input);
+      renderConfig();
+    });
+    input.addEventListener('blur', () => {
+      if (button.classList.contains('recording')) stop();
+    });
+  });
+}
+
+// `field-sizing: content' is recent, so the width is also set by hand: a key
+// like `C-c C-o C-f' should be readable in its box rather than scrolling
+// inside it.
+function fitKeyBoxes() {
+  document.querySelectorAll('#panel-config .keybox input').forEach(input => {
+    const text = input.value || input.placeholder || '';
+    input.style.width = Math.max(4.5, text.length + 2.5) + 'ch';
+  });
+}
+
+// What each key EFFECTIVELY is: the box if filled, the default otherwise, and
+// nothing where the reader typed `-'.  Two keys are in conflict when they are
+// the same key in the same buffer -- so a dictionary letter and a lookup key
+// clash with each other, while `L' in a scan and `l' in an entry do not.
+function effectiveKeys() {
+  const out = [];
+  const readBox = (input, fallback) => {
+    if (!input) return fallback;
+    const v = input.value.trim();
+    if (!v) return fallback;
+    return v === '-' ? null : v;
+  };
+  DICTS.forEach(d => {
+    const box = document.querySelector(`input[data-dictkey="${d.id}"]`);
+    const key = readBox(box, d.key);
+    if (key) out.push({ key, where: 'lookup', slot: d.id, lang: d.lang,
+                        what: d.name + ' (' + d.lang + ')' });
+  });
+  LOOKUP_KEYS.forEach((k, i) => {
+    const key = readBox(document.querySelector(`input[data-lookupkey="${i}"]`), k[1]);
+    // OWNS names the dictionaries this command dispatches between: it is
+    // their binding, not a rival for it, so sharing a key with them is no
+    // conflict.
+    if (key) out.push({ key, where: 'lookup', slot: 'lk' + i, what: k[0],
+                        owns: k[3] || [] });
+  });
+  // DICTIONARY_KEY is read here too: it is a single option, and only its place
+  // on the page moved.
+  SINGLE_KEYS.concat(DICTIONARY_KEY).forEach(k => {
+    // A key whose group is hidden is not in play: without evil there is no
+    // Emacs state to leave, so `<escape>' can collide with nothing.
+    if (EVIL_KEYS.some(e => e[0] === k[0]) && !el('c-evil').checked) return;
+    const input = document.querySelector(`input[data-singlekey="${k[0]}"]`);
+    const key = readBox(input, k[1]);
+    const where = (input && input.dataset.context) || 'lookup';
+    if (!key) return;
+    out.push({ key, where, slot: k[0], what: k[0] });
+    // The dictionary key is bound in the entries AND in the scans, since it
+    // cycles through the scans when pressed inside one -- so it can collide in
+    // either.
+    if (k[0] === 'diogenes-old-visit-dictionary-key')
+      out.push({ key, where: 'document', slot: k[0], what: k[0] });
+  });
+  FOCUS_KEYS.forEach(k => {
+    const key = readBox(document.querySelector(`input[data-focuskey="${k[0]}"]`),
+                        k[1]);
+    // In BOTH contexts, because these are bound in both: in our own modes for
+    // the entries and the text, and in `diogenes-pdf-search-mode' for the
+    // scans.  Listed once per context, so a collision with `L' -- which lives
+    // only in a scan -- is found as well as one with a dictionary letter.
+    if (key) {
+      out.push({ key, where: 'lookup', slot: k[0], what: k[0] });
+      out.push({ key, where: 'document', slot: k[0], what: k[0] });
+    }
+  });
+  return out;
+}
+
+// A REAL conflict, and nothing else.  Two dictionaries of different languages
+// sharing a key are not in conflict: the package binds a command that chooses
+// between them by the language of the entry being read, so `t' is the TLL in
+// Latin and the TGL in Greek, and Gaffiot and Bailly may both sit on `g'.
+//
+// What IS a conflict: two dictionaries of the SAME language on one key, since
+// there is nothing to choose them by; and a dictionary sharing a key with a
+// command that is not a dictionary, `q' or `RET' having no language to dispatch
+// on either.
+function internalClashes() {
+  const groups = {};
+  effectiveKeys().forEach(k => {
+    const id = k.where + ' ' + k.key;
+    (groups[id] = groups[id] || []).push(k);
+  });
+  const related = (a, b) =>
+    (a.owns || []).includes(b.slot) || (b.owns || []).includes(a.slot);
+  // Two entries collide unless a language tells them apart, or one is the
+  // dispatcher for the other.  PAIRWISE, and symmetrically: an earlier version
+  // walked the group asking each member which OTHERS it clashed with, and for
+  // a non-dictionary that list came out empty -- so the dictionary knew about
+  // the collision and the command sharing its key did not, which is a warning
+  // on one box and none on the other.
+  const clashes = {};
+  Object.values(groups).forEach(group => {
+    for (let i = 0; i < group.length; i++) {
+      for (let j = i + 1; j < group.length; j++) {
+        const a = group[i], b = group[j];
+        if (related(a, b)) continue;
+        // A language apart is not a conflict: the package binds a command that
+        // chooses by the language of the entry being read.
+        if (a.lang && b.lang && a.lang !== b.lang) continue;
+        (clashes[a.slot] = clashes[a.slot] || []).push({ slot: b.slot, what: b.what });
+        (clashes[b.slot] = clashes[b.slot] || []).push({ slot: a.slot, what: a.what });
+      }
+    }
+  });
+  return clashes;
+}
+
+
+// Which box the reader last set, so a prompt appears where they are looking
+// rather than on both sides of every collision at once.
+let lastTouched = null;
+
+// The reverse of `inputForSlot': which slot a box belongs to.
+function slotOf(input) {
+  const d = input.dataset;
+  if (d.dictkey) return d.dictkey;
+  if (d.singlekey) return d.singlekey;
+  if (d.focuskey) return d.focuskey;
+  if (d.lookupkey !== undefined) return 'lk' + d.lookupkey;
+  return null;
+}
+
+function inputForSlot(slot) {
+  return document.querySelector(`input[data-dictkey="${slot}"]`) ||
+         document.querySelector(`input[data-singlekey="${slot}"]`) ||
+         document.querySelector(`input[data-focuskey="${slot}"]`) ||
+         (String(slot).startsWith('lk')
+          ? document.querySelector(`input[data-lookupkey="${String(slot).slice(2)}"]`)
+          : null);
+}
+
+// Take the reader to a box, empty it, and start recording -- so answering the
+// prompt puts them straight into pressing the replacement.  Whatever they
+// press is checked in turn, so if it collides with something else the prompt
+// appears there, naming this box among the things it now clashes with.
+function takeMeTo(slot) {
+  const input = inputForSlot(slot);
+  if (!input) return;
+  input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  input.value = '';
+  lastTouched = slot;
+  const button = input.parentElement.querySelector('button[data-record]');
+  if (button && !button.classList.contains('recording')) button.click();
+  else input.focus();
+  renderConfig();
+}
+
+// A prompt button needed clicking twice, and the reason is worth recording.
+// `mousedown' blurs whichever box is recording; its blur handler stops the
+// recording and re-renders, which rebuilds the warning HTML -- so the button
+// being clicked was destroyed before `click' could fire, and the second click
+// landed on the freshly built one.
+//
+// `preventDefault' on `mousedown' keeps the focus where it is, so nothing
+// blurs, nothing re-renders, and the first click arrives at the button it was
+// aimed at.
+document.addEventListener('mousedown', ev => {
+  if (ev.target.closest && ev.target.closest('button[data-goto]'))
+    ev.preventDefault();
+});
+document.addEventListener('click', ev => {
+  const goto = ev.target.closest && ev.target.closest('button[data-goto]');
+  if (goto) { ev.preventDefault(); takeMeTo(goto.dataset.goto); }
+});
+
+function renderWarnings() {
+  const mine = internalClashes();
+  const show = (slot, input) => {
+    const box = document.querySelector(`[data-warnfor="${slot}"]`);
+    if (!box || !input) return;
+    const key = input.value.trim() === '-' ? '' : input.value.trim();
+    const clashes = mine[slot] || [];
+    // ONE answer.  A key that another of our own commands already has is not
+    // `free', and saying both was telling the reader two things at once.
+    if (clashes.length) {
+      const names = clashes.map(c => c.what).join(' and ');
+      let html = `<span class="kwarn clash">\u26a0 ${key || 'this'} is already ` +
+                 `${names}.</span>`;
+      if (slot === lastTouched) {
+        html += '<span class="kwarn prompt">Change ' +
+          clashes.map(c => `<button data-goto="${c.slot}">${c.what}</button>`)
+                 .join(' or ') +
+          `, or <button data-goto="${slot}">choose another here</button>.</span>`;
+      }
+      box.innerHTML = html;
+      return;
+    }
+    box.innerHTML = warnFor(key, input.dataset.context || 'lookup');
+  };
+  DICTS.forEach(d =>
+    show(d.id, document.querySelector(`input[data-dictkey="${d.id}"]`)));
+  LOOKUP_KEYS.forEach((k, i) =>
+    show('lk' + i, document.querySelector(`input[data-lookupkey="${i}"]`)));
+  SINGLE_KEYS.concat(DICTIONARY_KEY).forEach(k =>
+    show(k[0], document.querySelector(`input[data-singlekey="${k[0]}"]`)));
+  FOCUS_KEYS.forEach(k =>
+    show(k[0], document.querySelector(`input[data-focuskey="${k[0]}"]`)));
+}
+
+function renderWhereNote() {
+  const distro = (document.querySelector('input[name=distro]:checked') || {}).value
+                 || 'vanilla';
+  const note = el('c-wherenote');
+  if (!note) return;
+  note.innerHTML =
+    distro === 'doom'
+      ? 'Doom installs packages from <code>packages.el</code> and configures ' +
+        'them in <code>config.el</code>, so the block is in two parts and each ' +
+        'says which file it belongs to. <code>doom sync -u</code> after editing ' +
+        '<code>packages.el</code>.'
+      : distro === 'spacemacs'
+      ? 'Spacemacs installs from <code>dotspacemacs-additional-packages</code> ' +
+        'and configures in <code>dotspacemacs/user-config</code>, so the recipe ' +
+        'is shown commented for you to paste into the list.'
+      : '<code>:vc</code> needs Emacs 30 or later. On an earlier Emacs, install ' +
+        'with <code>package-vc-install</code> or clone the repository and use ' +
+        '<code>:load-path</code>.';
+}
+
+function renderConfig() {
+  el('c-out').textContent = configText();
+  renderWhereNote();
+  installPathHelpers();
+  installKeyCapture();
+  renderWarnings();
+  fitKeyBoxes();
+  renderEvilNote();
+  renderEvilGroup();
+  renderAddHow();
+  renderMouseSecond();
+}
+
+// A tab is reachable by its own URL, so the README can link to whichever half
+// it is talking about: `...html#configuration' or `...html#presets'.
+function showTab(which) {
+  const wanted = which === 'preset' ? 'preset' : 'config';
+  document.querySelectorAll('.tab').forEach(x =>
+    x.classList.toggle('on', x.dataset.tab === wanted));
+  el('panel-config').hidden = wanted !== 'config';
+  el('panel-preset').hidden = wanted !== 'preset';
+  if (wanted === 'preset') render(); else renderConfig();
+}
+
+function tabFromHash() {
+  let h = '';
+  try { h = (location.hash || '').replace('#', '').toLowerCase(); } catch (e) { h = ''; }
+  if (['preset', 'presets'].includes(h)) return 'preset';
+  if (['config', 'configuration'].includes(h)) return 'config';
+  return null;
+}
+
+// A file dropped anywhere but on a box would otherwise make the browser open
+// it, losing whatever has been filled in.  Prevented, with a word about where
+// the drop was meant to go.
+['dragover', 'drop'].forEach(kind =>
+  document.addEventListener(kind, ev => {
+    if (ev.target.closest && ev.target.closest('input')) return;
+    ev.preventDefault();
+    if (kind === 'drop' && el('c-copied')) {
+      el('c-copied').textContent = 'Drop it on one of the path boxes';
+      setTimeout(() => el('c-copied').textContent = '', 3000);
+    }
+  }));
+
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    const which = tab.dataset.tab;
+    showTab(which);
+    // `replaceState' rather than assigning to `location.hash', which would
+    // scroll the page to an element of that name if one existed.  And guarded,
+    // because a document with no URL of its own to write against -- an
+    // `about:srcdoc' preview, a sandboxed iframe -- refuses it with a
+    // SecurityError, and an exception here would stop the tab from switching
+    // at all.  The URL is a convenience; the switch is not.
+    try {
+      history.replaceState(null, '',
+        location.pathname + location.search +
+        '#' + (which === 'preset' ? 'presets' : 'configuration'));
+    } catch (e) {
+      /* no addressable URL; the tab still changed, which is what matters */
+    }
+  });
+});
+window.addEventListener('hashchange', () => {
+  const which = tabFromHash();
+  if (which) showTab(which);
+});
+document.addEventListener('input', e => {
+  if (!e.target.closest('#panel-config')) return;
+  const slot = slotOf(e.target);
+  if (slot) lastTouched = slot;
+  renderConfig();
+});
+el('c-copy').addEventListener('click', async () => {
+  try {
+    await navigator.clipboard.writeText(configText());
+    el('c-copied').textContent = 'copied';
+    setTimeout(() => el('c-copied').textContent = '', 1600);
+  } catch { el('c-copied').textContent = 'select the text and copy it'; }
+});
+el('c-download').addEventListener('click', () => {
+  const blob = new Blob([configText()], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = 'diogenes-config.el'; a.click();
+  URL.revokeObjectURL(a.href);
+});
+
+renderConfig();
+reset();
+render();
+// The fragment decides which tab opens; Configuration otherwise, being where
+// one starts.
+showTab(tabFromHash() || 'config');
+</script>
+</body>
+</html>

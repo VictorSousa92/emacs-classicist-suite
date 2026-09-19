@@ -1,0 +1,630 @@
+;;; diogenes-gaffiot.el --- Look up a Latin word in Gaffiot -*- lexical-binding: t -*-
+
+;; Copyright (C) 2026 Victor Gonçalves de Sousa
+;;
+;; Author: Victor Gonçalves de Sousa <victor2971@gmail.com>
+
+;; This program is free software; you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation, either version 3 of the License, or
+;; (at your option) any later version.
+
+;; This program is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+
+;; You should have received a copy of the GNU General Public License
+;; along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+;;; Commentary:
+
+;; Show the entry of Félix Gaffiot's _Dictionnaire illustré latin-français_
+;; for the Latin word you are reading -- in a Diogenes lookup buffer, not a
+;; PDF.  From a Latin entry (Lewis & Short), press `g' or click the
+;; "[Gaffiot]" link.
+;;
+;; ---------------------------------------------------------------------
+;; WHY THIS IS NOT LIKE THE PRINT-DICTIONARY MODULES
+;; ---------------------------------------------------------------------
+;;
+;; `diogenes-old.el' and its siblings jump a scanned PDF to a page.  Gaffiot
+;; comes as TEI XML instead, entry by entry, exactly the kind of thing
+;; `classicist-lookup-mode' already displays for the LSJ and Lewis & Short.  So
+;; this module adds no display machinery of its own: it hands Gaffiot to
+;; `classicist--search-dict' as one more dictionary file, and everything the
+;; lookup buffer can do comes with it --
+;;
+;;   * `C-c C-n' / `C-c C-p' walk to the next and previous entry;
+;;   * `C-c C-c' on a word looks it up: a Latin word goes to Lewis & Short,
+;;     so you can step from Gaffiot back into the electronic Latin
+;;     dictionary, and Greek inside an entry (Gaffiot quotes plenty) goes to
+;;     the LSJ;
+;;   * the print dictionaries are one keystroke away, since the entry carries
+;;     the usual "[OLD] [TLL]" banner;
+;;   * every entry opens in a fresh buffer, so the Lewis & Short entry you
+;;     came from stays live and reachable.
+;;
+;; Either source will do on its own, and together they divide the work:
+;;
+;;   * XML only -- entries for whatever the file covers, and a word it does
+;;     not have reports that the file goes no further;
+;;   * PDF only (`diogenes-gaffiot-pdf-file\') -- Gaffiot behaves like the
+;;     other print dictionaries, opening the page for any word;
+;;   * both -- the XML entry where there is one, the printed page otherwise.
+;;
+;; ---------------------------------------------------------------------
+;; THE DICTIONARY FILE
+;; ---------------------------------------------------------------------
+;;
+;; Diogenes looks a word up by binary search over a file of ONE ENTRY PER
+;; LINE, sorted by an ASCII `key' attribute (see `classicist--binary-search'
+;; and `classicist--ascii-sort-function').  The Gaffiot TEI is a single
+;; document with entries spread over many lines and headwords full of
+;; macrons, so it has to be converted once:
+;;
+;;   (setq diogenes-gaffiot-source-file "/path/to/gaffiot-unicode.xml")
+;;   M-x diogenes-gaffiot-build-dictionary
+;;
+;; which writes `gaffiot.xml' beside the other Diogenes dictionaries.  Each
+;; entry becomes one line, its first <orth> becomes the <head> the formatter
+;; recognises as a headword, and its key is that headword reduced to ASCII
+;; letters -- macrons and breves stripped, æ and œ expanded, the homograph
+;; numeral of \"1 ăbactus\" dropped -- so that the keys Lewis & Short sends
+;; us match.  Offered automatically the first time you press `g' with no
+;; dictionary file present.
+;;
+;; ---------------------------------------------------------------------
+;; COVERAGE
+;; ---------------------------------------------------------------------
+;;
+;; Mind which Gaffiot you have; there are two, and they trade completeness
+;; against the work of getting there.
+;;
+;;   * The FDB database published at Zurich
+;;     (https://www.iaka.uzh.ch/de/klph/it/mls.html) is COMPLETE, A to Z,
+;;     but is a database rather than TEI, so it has to be converted before
+;;     it can be converted again into the one-entry-per-line form here.
+;;   * The TEI at https://digital-gaffiot.sourceforge.net/ is ALREADY TEI
+;;     and needs no such step, but is proofread as far as F only (some
+;;     28 000 entries).
+;;
+;; Nothing here assumes either.  A word the file does not have is not
+;; missing from Gaffiot, merely from the file, so rather than show the
+;; nearest entry and call it a near miss this module asks whether the key is
+;; there exactly (`diogenes-gaffiot--entry-exists-p') and, failing that,
+;; sends the word to the printed dictionary or says the file goes no
+;; further.  With the complete database converted, the question never
+;; arises.
+
+;;; Code:
+(require 'cl-lib)
+(require 'diogenes-dict-faces)
+(require 'diogenes-lisp-utils)          ; classicist--path-usable-p
+(require 'seq)
+(require 'subr-x)
+(require 'ucs-normalize)
+
+(declare-function classicist--search-dict "classicist-lookup"
+                  (word lang sort-fn key-fn &optional file))
+(declare-function classicist--ascii-sort-function "classicist-lexicon" (a b))
+(declare-function classicist--xml-key-fn "classicist-lexicon" (buf))
+(declare-function classicist--binary-search "classicist-lexicon"
+                  (dict-file comp-fn key-fn word &optional start stop))
+(declare-function classicist--lookup-headword-at-point "classicist-lookup"
+                  (&optional pos))
+(declare-function classicist--lookup-assert-lang "classicist-lookup"
+                  (expected dict-name))
+(declare-function diogenes--perseus-path "classicist" ())
+(declare-function classicist-lookup-register-dictionary "classicist-lookup" t)
+(declare-function diogenes-lookup-open-gaffiot-pdf "diogenes-gaffiot-pdf"
+                  (&optional word))
+(defvar diogenes-gaffiot-pdf-fallback)
+(defvar diogenes-gaffiot-pdf-file)
+
+(defvar diogenes--lookup-headword)
+(defvar diogenes--lookup-file)
+(defvar classicist--lookup-same-window)
+(defvar diogenes--dict-xml-handlers-extra)
+
+;;;; --------------------------------------------------------------------
+;;;; CUSTOMIZATION
+;;;; --------------------------------------------------------------------
+
+(defcustom diogenes-gaffiot-file nil
+  "Path to the converted Gaffiot dictionary, one entry per line.
+Nil means `gaffiot.xml' among the other Diogenes dictionaries, which is
+where \\[diogenes-gaffiot-build-dictionary] writes it.  This is NOT the
+TEI file you downloaded -- see `diogenes-gaffiot-source-file'."
+  :type '(choice (const :tag "gaffiot.xml beside the other dictionaries" nil)
+                 file)
+  :group 'diogenes)
+
+(defcustom diogenes-gaffiot-source-file nil
+  "Path to the Gaffiot TEI XML, as distributed (e.g. `gaffiot-unicode.xml').
+Read by \\[diogenes-gaffiot-build-dictionary] to produce
+`diogenes-gaffiot-file'; not used for lookups afterwards, so it may live
+anywhere and be deleted once converted."
+  :type '(choice (const :tag "Not set" nil) file)
+  :group 'diogenes)
+
+(defcustom diogenes-gaffiot-display-in-same-window t
+  "Whether a Gaffiot entry replaces the entry it was called from.
+Non-nil reuses the window, as a dictionary consulted about the entry in
+front of you should; nil opens it as `display-buffer' sees fit.
+
+Either way this applies only when there IS an entry in front of you --
+when the lookup was made from a lookup buffer.  Asked for from a browser,
+or from anywhere else, the entry never takes the window it was called
+from: the text being read would be the thing replaced.  Where it goes
+then is `display-buffer''s to decide, which is what `pop-up-frames' and
+`diogenes-purpose' are for.
+
+Left as it is, and not folded into `diogenes-window-behaviour\=': this says
+whether THIS dictionary replaces the entry it was consulted from, which is a
+different question from where a lookup goes in general.  It applies only from
+a lookup buffer -- asked for from a browser, an entry never takes the window
+the text is in -- and where it says nil, `diogenes-lookup-display-action\=' and
+`diogenes-window-behaviour\=' decide as they do for anything else."
+  :type 'boolean
+  :group 'diogenes)
+
+;;;; --------------------------------------------------------------------
+;;;; FORMATTING OF GAFFIOT'S OWN ELEMENTS
+;;;; --------------------------------------------------------------------
+
+(defconst diogenes-gaffiot--xml-handlers
+  '()
+  "Faces peculiar to Gaffiot, over and above `diogenes-dict-tei-faces'.
+Empty, and kept only so a future Gaffiot-only element has somewhere to go.
+
+It once held `latin', `auth' and `refno', the elements of the partial TEI
+this module was written against.  The converted Dictan base uses ordinary
+TEI instead -- <quote>, <author>, <title>, <biblScope>, <mentioned>,
+<etym>, <gram> -- which `diogenes-dict-faces.el' colours for every
+dictionary that shares them, so there is nothing left to declare here.")
+
+(defun diogenes-gaffiot--install-xml-handlers ()
+  "Teach the dictionary formatter about Gaffiot's elements.  Idempotent.
+Gaffiot's own additions first, so they win, then the shared TEI faces."
+  (dolist (handler diogenes-gaffiot--xml-handlers)
+    (unless (assq (car handler) diogenes--dict-xml-handlers-extra)
+      (push handler diogenes--dict-xml-handlers-extra)))
+  (diogenes-dict-install-faces))
+
+;;;; --------------------------------------------------------------------
+;;;; THE KEY A HEADWORD SORTS UNDER
+;;;; --------------------------------------------------------------------
+
+(defconst diogenes-gaffiot--ligatures
+  '((?æ . "ae") (?Æ . "Ae") (?œ . "oe") (?Œ . "Oe")
+    ;; The 2016 typeset edition writes y-breve with a CYRILLIC у (U+0443),
+    ;; which decomposes to a letter no ASCII rule would keep, so Cўdōnēa
+    ;; would key as \"cdonea\" and sort away from cydonea.  Only its PDF
+    ;; bookmarks do this; the TEI has none.
+    (?у . "y") (?У . "Y"))
+  "Letters spelt out or transliterated, since a key holds ASCII letters only.")
+
+(defun diogenes-gaffiot--key (headword)
+  "Return the ASCII key HEADWORD is filed under.
+`classicist--ascii-sort-function' compares keys after discarding everything
+but ASCII letters, so a key must survive that: macrons and breves are
+stripped by NFD decomposition, ligatures spelt out, and case folded.  A
+leading homograph numeral (\"1 ăbactus\") is not part of the word, and
+where an entry gives several spellings (\"ā, ăb, abs\") the first is the
+one to file it under.
+
+Wrapped in `save-match-data\': this does its own matching, and a caller
+that has just located something with `string-match\' would otherwise find
+its `match-beginning\' quietly redirected here."
+  (save-match-data
+   (let* ((word (replace-regexp-in-string "\\`[[:space:]]*[0-9]+[[:space:]]*" ""
+                                         (or headword "")))
+         (word (car (split-string word "," t "[[:space:]]+")))
+         ;; Decompose FIRST: a ligature may itself carry an accent (ǽ), and
+         ;; only after NFD is the bare æ there to be spelt out.
+         (decomposed (ucs-normalize-NFD-string (or word "")))
+         (letters nil))
+    (dolist (c (string-to-list decomposed))
+      (let ((spelt (cdr (assq c diogenes-gaffiot--ligatures))))
+        (cond (spelt (dolist (l (string-to-list spelt)) (push (downcase l) letters)))
+              ((or (<= ?a c ?z) (<= ?A c ?Z)) (push (downcase c) letters)))))
+     (apply #'string (nreverse letters)))))
+
+;;;; --------------------------------------------------------------------
+;;;; BUILDING THE DICTIONARY FILE
+;;;; --------------------------------------------------------------------
+
+(defun diogenes-gaffiot--dictionary-file ()
+  "Return the path of the converted dictionary, whether or not it exists."
+  (or diogenes-gaffiot-file
+      (file-name-concat (diogenes--perseus-path) "gaffiot.xml")))
+
+(defconst diogenes-gaffiot--language-codes
+  '(("la" . "latin") ("lat" . "latin") ("grc" . "greek")
+    ("fr" . "french") ("en" . "english"))
+  "How a TEI language tag maps onto the languages Diogenes knows.
+`diogenes--dict-handle-elt' reads the attribute `lang' and nothing in
+Diogenes reads `xml:lang', which is the only one TEI has.  Only `greek' and
+`latin' do anything, being the two languages a lookup can be made in;
+`french' is here to say positively that the definitions are NOT Latin, so
+that `C-c C-c' on a French word does not go looking for it in Lewis &
+Short.")
+
+(defun diogenes-gaffiot--rewrite-entry (body)
+  "Return BODY, the inside of one <entryFree>, as the formatter wants it.
+Two rewritings, both of them what `diogenes-bailly.el' does and for the same
+reasons.
+
+`xml:lang' becomes `lang', which is the attribute the formatter actually
+reads.  And <bibl> becomes <cit>: the shared <bibl> handler builds a
+clickable citation out of an `n' attribute holding a Perseus reference, and
+a conversion of a Dictan base has none, so every one of them would be drawn
+as a link with nothing behind it and clicking one would fail inside
+`classicist--lookup-parse-bibl-string'.  Their <author>, <title> and
+<biblScope> keep their own faces, so a citation still looks like one.
+
+A no-op on TEI that has neither -- the partial edition this module was
+written against, or fdb2tei's `--flavour diogenes' -- so every vintage of
+the source builds alike."
+  (let ((body body))
+    (dolist (code diogenes-gaffiot--language-codes)
+      (setq body (replace-regexp-in-string
+                  (concat "xml:lang=\"" (car code) "\"")
+                  (concat "lang=\"" (cdr code) "\"")
+                  body t t)))
+    (setq body (replace-regexp-in-string "<bibl\\([ >]\\)" "<cit\\1" body))
+    (replace-regexp-in-string "</bibl>" "</cit>" body t t)))
+
+;;;###autoload
+(defun diogenes-gaffiot-build-dictionary (&optional source target)
+  "Convert the Gaffiot TEI XML into a dictionary Diogenes can search.
+SOURCE defaults to `diogenes-gaffiot-source-file', TARGET to
+`diogenes-gaffiot-file'.  Each <entryFree> becomes one line: its first
+<orth> is renamed <head> (the element the formatter treats as a headword),
+the whole entry is flattened, and it is given the ASCII `key' attribute
+that `classicist--binary-search' sorts on -- see `diogenes-gaffiot--key'.
+Entries keep their printed order within a key, so \"1 a\", \"2 ā\" and
+\"3 ā, ăb, abs\" stay in sequence.
+
+Run once, after setting `diogenes-gaffiot-source-file'.  Takes a few
+seconds for the 11 MB file."
+  (interactive)
+  (let ((source (or source diogenes-gaffiot-source-file
+                    (read-file-name "Gaffiot TEI XML: " nil nil t)))
+        (target (or target (diogenes-gaffiot--dictionary-file)))
+        (rows nil)
+        (skipped 0))
+    (unless (file-readable-p source)
+      (user-error "Cannot read the Gaffiot source at %s" source))
+    (when (and (file-exists-p target)
+               (string= (file-truename source) (file-truename target)))
+      (user-error "Refusing to convert %s onto itself: \
+`diogenes-gaffiot-file' must differ from `diogenes-gaffiot-source-file'"
+                  (abbreviate-file-name source)))
+    (message "Converting %s ..." (file-name-nondirectory source))
+    (with-temp-buffer
+      (insert-file-contents source)
+      (goto-char (point-min))
+      (while (re-search-forward "<entryFree\\(?:[[:space:]][^>]*\\)?>" nil t)
+        (let ((start (point))
+              (end (save-excursion
+                     (when (search-forward "</entryFree>" nil t)
+                       (match-beginning 0)))))
+          (if (null end)
+              (cl-incf skipped)
+            (let ((body (buffer-substring-no-properties start end)))
+              (goto-char end)
+              (if (not (string-match
+                       "<orth\\([^>]*\\)>\\(\\(?:.\\|\n\\)*?\\)</orth>" body))
+                  (cl-incf skipped)
+                ;; Read the whole match out FIRST.  Anything that matches in
+                ;; between -- `diogenes-gaffiot--key\' used to -- would move
+                ;; these offsets, and the <head> would be spliced into the
+                ;; middle of the <orth> tag.
+                (let* ((orth-start (match-beginning 0))
+                       (orth-end (match-end 0))
+                       ;; The attributes come across onto the <head>: a
+                       ;; conformant edition puts xml:lang on the headword,
+                       ;; and `diogenes-gaffiot--rewrite-entry' turns that
+                       ;; into the `lang' the formatter reads.
+                       (attrs (match-string 1 body))
+                       (orth (match-string 2 body))
+                       (plain (replace-regexp-in-string "<[^>]*>" "" orth))
+                       (key (diogenes-gaffiot--key plain))
+                       (rest (substring body orth-end))
+                       (line (concat (substring body 0 orth-start)
+                                     "<head" attrs ">" orth "</head>"
+                                     (if (diogenes-gaffiot--space-after-head-p
+                                          rest)
+                                         " "
+                                       "")
+                                     rest)))
+                  (if (string-empty-p key)
+                      (cl-incf skipped)
+                    ;; <hi rend="..."> becomes i / b / sc / sup: the
+                    ;; formatter keys faces on element names and cannot see
+                    ;; attributes, so italic, bold and small capitals would
+                    ;; otherwise all be drawn alike.
+                    (setq line (diogenes-gaffiot--rewrite-entry line))
+                    (setq line (diogenes-dict-flatten-hi line))
+                    (setq line (replace-regexp-in-string
+                                "[[:space:]]*\n[[:space:]]*" " " line))
+                    (push (cons key (format "<entryFree key=\"%s\">%s</entryFree>"
+                                            key (string-trim line)))
+                          rows)))))))))
+    (setq rows (nreverse rows))
+    ;; `sort' on a list is stable, so entries sharing a key keep the order
+    ;; the dictionary prints them in.
+    (setq rows (sort rows (lambda (a b) (string< (car a) (car b)))))
+    (unless rows
+      (user-error "Found no entries in %s: is it the Gaffiot TEI file?" source))
+    (make-directory (file-name-directory target) t)
+    (let ((coding-system-for-write 'utf-8))
+      (with-temp-file target
+        (dolist (row rows)
+          (insert (cdr row) "\n"))))
+    (message "Gaffiot: wrote %d entries (%s-%s) to %s%s"
+             (length rows) (car (car rows)) (car (car (last rows)))
+             (abbreviate-file-name target)
+             (if (zerop skipped) "" (format "; skipped %d" skipped)))
+    target))
+
+;;;; --------------------------------------------------------------------
+;;;; IS THE WORD IN THERE AT ALL?
+;;;; --------------------------------------------------------------------
+
+(defun diogenes-gaffiot--space-after-head-p (rest)
+  "Whether a space belongs between the headword and REST, what follows it.
+Gaffiot keeps the inflections of a headword in an element of their own, so
+nothing in the source separates them from it and the two come out run
+together: \"dicodixi, dictum, ere\".  Lewis & Short has no such trouble, the
+comma and space there being text in the entry itself.
+
+A space is wanted only when what follows begins with a letter or a digit.
+Tags are looked through to find out -- the separation that matters is the
+one the reader sees, not the one in the markup -- and punctuation is left
+alone, so an entry whose inflections do begin with a comma does not gain a
+space before it."
+  (string-match-p "\\`[[:alnum:]]"
+		  (replace-regexp-in-string "<[^>]*>" "" (or rest ""))))
+
+(defun diogenes-gaffiot--entry-exists-p (key file)
+  "Non-nil if FILE holds an entry whose key is exactly KEY.
+The question a lookup has to answer, and it cannot be answered by the
+range the file spans: this dictionary ends on an entry filed under P
+\(\"pertinates\", printed inside F), so every word from g to p looks as
+though it were covered, and asking for one would show the nearest entry --
+the last of F -- as if it were a near miss.
+
+`classicist--binary-search' reports an exact hit as the fourth element of
+its result, so ask it first and let the caller send a word it does not
+have to the printed dictionary instead."
+  (nth 3 (classicist--binary-search file
+                                  #'classicist--ascii-sort-function
+                                  #'classicist--xml-key-fn
+                                  key)))
+
+;;;; --------------------------------------------------------------------
+;;;; THE LOOKUP
+;;;; --------------------------------------------------------------------
+
+(defun diogenes-gaffiot--pdf-available-p ()
+  "Non-nil if the printed Gaffiot may be used to supplement the XML.
+True when `diogenes-gaffiot-pdf-fallback\' is set, `diogenes-gaffiot-pdf.el\'
+can be loaded, and `diogenes-gaffiot-pdf-file\' names a readable PDF.  The
+XML is proofread only to F, so beyond it the printed dictionary is all
+there is."
+  (and (or (not (boundp 'diogenes-gaffiot-pdf-fallback))
+           diogenes-gaffiot-pdf-fallback)
+       (require 'diogenes-gaffiot-pdf nil t)
+       (boundp 'diogenes-gaffiot-pdf-file)
+       diogenes-gaffiot-pdf-file
+       (file-readable-p diogenes-gaffiot-pdf-file)))
+
+;;;###autoload
+(defun diogenes-gaffiot-xml-available-p ()
+  "Non-nil if Gaffiot's XML is here, or could be built without asking twice.
+True when the converted dictionary exists, and also when it does not but
+`diogenes-gaffiot-source-file' names a readable TEI file -- because then
+pressing `g' offers to build it, which is a real destination for the link.
+Never signals: `diogenes-path' may itself be unset, and this is asked while
+an entry is being drawn."
+  (let ((file (ignore-errors (diogenes-gaffiot--dictionary-file))))
+    (or (and file (file-readable-p file))
+        (classicist--source-set-p diogenes-gaffiot-source-file))))
+
+;;;###autoload
+(defun diogenes-gaffiot-available-p ()
+  "Non-nil if Gaffiot can be reached at all, as XML or as a printed page.
+Either half is enough, `diogenes-lookup-gaffiot' dispatching on which is
+actually there: with only the TEI converted the link opens the entry, with
+only `diogenes-gaffiot-pdf-file' set it opens the page, and with both the
+entry as far as F and the page beyond it.  With neither the link is not
+offered."
+  (or (diogenes-gaffiot-xml-available-p)
+      (diogenes-gaffiot--pdf-available-p)))
+
+(defun diogenes-gaffiot--file ()
+  "Return the converted dictionary file, or nil if there is none.
+Builds it, with the user\'s agreement, when `diogenes-gaffiot-source-file'
+names a TEI file and no converted dictionary exists yet.
+
+Returns NIL rather than signalling when nothing is converted: with only
+`diogenes-gaffiot-pdf-file' set, Gaffiot works like the other print
+dictionaries and no XML is wanted.  The caller decides what to do with
+nil -- see `diogenes-lookup-gaffiot'."
+  (let ((file (diogenes-gaffiot--dictionary-file)))
+    (cond
+     ((file-readable-p file)
+      (diogenes-gaffiot--assert-converted file)
+      file)
+     ((and diogenes-gaffiot-source-file
+           (file-readable-p diogenes-gaffiot-source-file)
+           (y-or-n-p (format "Gaffiot is not converted yet; build %s now? "
+                             (abbreviate-file-name file))))
+      (diogenes-gaffiot-build-dictionary diogenes-gaffiot-source-file file))
+     (t nil))))
+
+(defun diogenes-gaffiot--assert-converted (file)
+  "Signal a user-error unless FILE is a converted Gaffiot dictionary.
+The lookup wants one entry per line, each with a `key\' attribute; handed
+the TEI file instead it would fail deep inside
+`classicist--xml-key-fn\' with an unhelpful message.  `diogenes-gaffiot-file\'
+is the CONVERTED file; the TEI belongs in
+`diogenes-gaffiot-source-file\'."
+  (with-temp-buffer
+    (insert-file-contents file nil 0 400)
+    (goto-char (point-min))
+    (unless (looking-at "<entry[^>]*[[:space:]]key=\"")
+      (user-error "%s is not a converted Gaffiot dictionary (no key= on its \
+first entry).  If this is the TEI file, set it as \
+`diogenes-gaffiot-source-file\' instead and run \
+M-x diogenes-gaffiot-build-dictionary"
+                  (abbreviate-file-name file)))))
+
+(defun diogenes-gaffiot-lookup-buffer-p ()
+  "Non-nil if the current lookup buffer is showing Gaffiot.
+Read from the buffer-local `diogenes--lookup-file\', which records the
+dictionary the entries were read from.  Used by
+`classicist--lookup-insert-dict-links\' to offer \"[Lewis & Short]\" here and
+\"[Gaffiot]\" in a Lewis & Short entry, so the link always leads to the
+other Latin dictionary rather than the one you are reading."
+  (and (boundp 'diogenes--lookup-file)
+       diogenes--lookup-file
+       (let ((gaffiot (diogenes-gaffiot--dictionary-file)))
+         (and (file-exists-p gaffiot)
+              (file-exists-p diogenes--lookup-file)
+              (string= (file-truename diogenes--lookup-file)
+                       (file-truename gaffiot))))))
+
+(defun diogenes-gaffiot--current-headword ()
+  "Return the headword to look up: the one of the entry point is in.
+Resolved on every call, so the command acts on the entry the cursor is
+currently in, including entries appended by `classicist-lookup-next'."
+  (or (and (fboundp 'classicist--lookup-headword-at-point)
+           (classicist--lookup-headword-at-point))
+      (get-text-property (point) 'orth)
+      (and (boundp 'diogenes--lookup-headword) diogenes--lookup-headword)
+      (thing-at-point 'word t)
+      (user-error "No headword found at point")))
+
+;;;###autoload
+(defun diogenes-lookup-gaffiot (&optional word)
+  "Show Gaffiot's entry for WORD in a Diogenes lookup buffer.
+Interactively, WORD defaults to the headword of the Latin entry at point;
+with a prefix argument, prompt for it.  The entry behaves like any other
+lookup: `C-c C-n' and `C-c C-p' walk the dictionary, `C-c C-c' on a Latin
+word returns to Lewis & Short and on a Greek one goes to the LSJ, and the
+\"[OLD] [TLL]\" banner opens the print dictionaries.
+
+A word the XML does not cover -- it is proofread only as far as F --
+opens the printed dictionary instead, when `diogenes-gaffiot-pdf-file' is
+set; see `diogenes-gaffiot-pdf-fallback'.  Pressed a second time, from
+INSIDE the entry it has just shown, it opens that word's page in the
+printed Gaffiot -- as `B' does in Bailly and `G' in Georges -- and `C-u g'
+looks another word up in the XML from there.  The two sources then cover the
+whole alphabet between them.
+
+Requires a converted dictionary file; see
+\\[diogenes-gaffiot-build-dictionary]."
+  (interactive
+   (progn
+     (classicist--lookup-assert-lang "latin" "Gaffiot")
+     (list (if current-prefix-arg
+               (read-string "Look up in Gaffiot: ")
+             (diogenes-gaffiot--current-headword)))))
+  ;; Already reading Gaffiot: this key's other job is the printed page, as
+  ;; `B' is Bailly's and `G' Georges' -- the same key twice, from inside an
+  ;; article, is how every dictionary that has a printed companion reaches
+  ;; it.  `P' leads there too, being the Latin half of
+  ;; `diogenes-lookup-pape-or-gaffiot-pdf', and works from anywhere.
+  ;;
+  ;; Checked here rather than in the `interactive' form so that the banner
+  ;; link, which calls us with a word, dispatches the same way.
+  (if (and (null current-prefix-arg) (diogenes-gaffiot-lookup-buffer-p))
+      (if (diogenes-gaffiot--pdf-available-p)
+          (diogenes-lookup-open-gaffiot-pdf
+           (string-trim (or word (diogenes-gaffiot--current-headword))))
+        (user-error "This entry is Gaffiot already; set \
+`diogenes-gaffiot-pdf-file' to reach the printed page from here, `l' \
+returns to Lewis & Short, `C-u g' looks up another word here"))
+  (let* ((word (string-trim (or word (diogenes-gaffiot--current-headword))))
+         (file (diogenes-gaffiot--file))
+         (key (diogenes-gaffiot--key word)))
+    (when (string-empty-p key)
+      (user-error "Nothing to look up in \"%s\"" word))
+    (cond
+     ;; The converted XML has this word: show the entry.
+     ((and file (diogenes-gaffiot--entry-exists-p key file))
+      (let ((classicist--lookup-same-window
+             (and diogenes-gaffiot-display-in-same-window
+                  (derived-mode-p 'classicist-lookup-mode))))
+        (classicist--search-dict key "latin"
+                               #'classicist--ascii-sort-function
+                               #'classicist--xml-key-fn
+                               file)))
+     ;; It does not -- because the file is proofread only as far as F, or
+     ;; because there is no converted XML here at all, or because the word
+     ;; asked for is not a headword.  The printed dictionary has the whole
+     ;; alphabet, so send it there; but SAY SO, because these are different
+     ;; reasons and the reader cannot tell them apart from a page of a scan
+     ;; appearing.  `frugalitatis' opened the printed page for a third
+     ;; reason again -- an inflected form reached the dictionary because the
+     ;; parse had failed to give `frugalitas' -- and nothing on screen
+     ;; distinguished that from a word past F.
+     ((diogenes-gaffiot--pdf-available-p)
+      (message "Gaffiot: no entry for \"%s\"%s; opening the printed page"
+               word
+               (if file (format " in %s" (abbreviate-file-name file)) ""))
+      (diogenes-lookup-open-gaffiot-pdf word))
+     (file
+      (user-error "Gaffiot: no entry for \"%s\" in %s.  If that file is the \
+sourceforge TEI it is proofread to F only, and the Zurich FDB database is \
+complete; or set `diogenes-gaffiot-pdf-file' to a PDF of the printed \
+dictionary to reach the rest"
+                  word (abbreviate-file-name file)))
+     (t
+      (user-error "Gaffiot is not set up yet: set `diogenes-gaffiot-pdf-file' \
+to a PDF of the printed dictionary, or `diogenes-gaffiot-source-file' to the \
+TEI XML and run M-x diogenes-gaffiot-build-dictionary.  \
+Either in your init file before Diogenes loads, or through \
+M-x customize-variable"))))))
+
+;;;; --------------------------------------------------------------------
+;;;; REGISTRATION
+;;;; --------------------------------------------------------------------
+
+(defconst diogenes-gaffiot--declared-at-load (classicist--declared-at-load-p)
+  "Whether Gaffiot was asked for, rather than bundled with the rest.
+Computed when this file is read: a `require' in an init file means the
+user wants this dictionary, and it is then offered whatever its paths
+say.  See `classicist--loading-bundle'.")
+
+(defun diogenes-gaffiot--register ()
+  "Announce Gaffiot to the lookup banner.  Idempotent.
+`g' is Latin-only, so `:bind t' can put it on `diogenes-lookup-gaffiot'
+from here: the key belongs to this module, and an installation that does
+not load it leaves `g' unbound rather than bound to a command that is not
+defined.  `:available-p' hides the link when the user has neither the
+converted XML nor a PDF of the printed edition; with only one of them,
+`diogenes-lookup-gaffiot' takes the word to whichever it is.  Lewis &
+Short, the way back, is registered by `diogenes-perseus.el' itself, being
+the dictionary Diogenes searches by default."
+  (classicist-lookup-register-dictionary
+   'gaffiot :lang "latin" :name "Gaffiot" :key "g" :order 60
+   :command #'diogenes-lookup-gaffiot
+   :show 'unless-current
+   :buffer-p #'diogenes-gaffiot-lookup-buffer-p
+   :available-p #'diogenes-gaffiot-available-p
+   :declared diogenes-gaffiot--declared-at-load
+   :paths '(diogenes-gaffiot-file diogenes-gaffiot-source-file diogenes-gaffiot-pdf-file)
+   :bind t
+   :help "Show Gaffiot's entry for \"%s\""))
+
+(with-eval-after-load 'classicist-lookup
+  (diogenes-gaffiot--install-xml-handlers)
+  (diogenes-gaffiot--register))
+
+(provide 'diogenes-gaffiot)
+;;; diogenes-gaffiot.el ends here
