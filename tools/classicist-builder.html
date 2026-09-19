@@ -13,10 +13,16 @@
      relative to the root and not to body -- so the body's own absolute 15px
      was a second origin nobody could see. Change this one number and
      everything moves together. */
-  html { font-size: 17px; }
+  /* THE ROOT TAKES THE HEIGHT TOO.  body height:100vh with overflow:hidden
+     does nothing while html is still the scroller -- the body is 100vh tall
+     inside a root that grows past it, so the page scrolls and every rail
+     sticks to a pane top that has moved.  Five layout edits and none of them
+     was the layout. */
+  html { font-size: 17px; height: 100%; overflow: hidden; }
   * { box-sizing: border-box; }
   body {
     margin: 0; background: var(--paper); color: var(--ink);
+    height: 100vh; display: flex; flex-direction: column; overflow: hidden;
     font: 1rem/1.58 "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
   }
   header { padding: 1.5rem 2rem 1rem; border-bottom: 1px solid var(--rule); }
@@ -24,6 +30,24 @@
   header p { margin: .4rem 0 0; color: var(--quiet); max-width: 70ch; }
   .tabs { display: flex; align-items: baseline; gap: .25rem; padding: 0 2rem;
           border-bottom: 1px solid var(--rule); background: #f2eee6; }
+  /* THE TABS STAY ON TOP, above the rails: two sticky layers, the outer one
+     with the higher z-index.  A rail then has to start BELOW the tab bar --
+     top is measured from the scrollport and not from whatever is already
+     stuck there, so the offset is written out rather than inferred.  The bar
+     is .55rem of padding each side of a .92rem line, so 2.5rem and a hair. */
+  .tabs { position: sticky; top: 0; z-index: 8; }
+  /* THE LEFT RAIL clears the tab bar, the page being what scrolls under it.
+     THE RIGHT ONE sticks at 0 inside .pane.watch, which has its own overflow
+     and is already offset below the tabs -- a sticky child of an overflow box
+     scrolls within that box, so 2.55rem there would put it under the tabs. */
+  /* FLUSH WITH THE TOP OF ITS PANE.  The pane has 1.4rem of padding above,
+     which a sticky child does not clear -- so the rail stuck 1.4rem down with
+     content showing above it.  A negative top pulls it to the edge and its own
+     padding gives the room back. */
+  /* THE OFFSET LIVES IN THE .rail BLOCK BELOW, and nowhere else.  Two rules
+     here set top as well -- one for both rails and one more specific for the
+     right -- and being later or more specific they won, which is why five
+     attempts at editing the block below changed nothing at all. */
   .tab { font: inherit; font-size: .92rem; padding: .55rem 1rem; cursor: pointer;
          border: 1px solid transparent; border-bottom: 0; background: none;
          color: var(--quiet); border-radius: 4px 4px 0 0; position: relative; top: 1px; }
@@ -147,8 +171,21 @@
      is what made the feature rows look wrong. */
   .rail {
     display: flex; gap: .15rem; flex-wrap: wrap; align-items: center;
-    margin: 0 0 1.1rem; padding: 0 0 .7rem;
+    margin: 0 0 1.1rem; padding: .7rem 0;
     border-bottom: 1px solid var(--rule);
+    /* AT THE TOP OF ITS COLUMN AS ONE SCROLLS.  Sticky and not fixed: fixed
+       would take it out of the column and leave it over whichever pane the
+       page happened to scroll past.  The paper colour is needed because the
+       content scrolls UNDER it. */
+    position: sticky; z-index: 20; background: #f3ece2;
+    box-shadow: 0 1px 0 var(--rule);
+    /* ABOVE THE PANE EDGE AND NOT AT IT.  The pane has 1.4rem of padding
+       above and sits below the tab bar, so a rail at top:0 sat 1.4rem down
+       and the gap was where content showed through as one scrolled.  A
+       negative top pulls it flush; the padding gives the room back.
+       Six attempts went to scroll containers before the answer turned out to
+       be the distance it kept from the tabs. */
+    top: -1.4rem; margin-top: -1.4rem; padding-top: 1.4rem;
   }
   .rail a {
     font-size: .8rem; color: var(--quiet); text-decoration: none;
@@ -205,15 +242,29 @@
   .keyrow .what { font-size: .88rem; }
   .keyrow .what em { font-style: normal; color: var(--quiet); font-size: .8rem; display: block; }
   main {
+    /* MAIN MUST NOT SCROLL, only its panes.  It was the scroller: a flex item
+       with min-height:0 that grows past its box, so each pane's top edge moved
+       up inside it and a rail stuck to an edge that was no longer at the top.
+       overflow:hidden here makes the panes the only scrollers there are. */
+    flex: 1 1 auto; min-height: 0; overflow: hidden;
     display: grid; grid-template-columns: minmax(19rem, 24rem) minmax(0, 1fr);
-    align-items: start; max-width: 106rem;
+    /* STRETCH AND NOT START, now that each pane scrolls itself: start made
+       every item only as tall as its content, so overflow-y had nothing to
+       overflow and neither column got a scrollbar. */
+    align-items: stretch; max-width: 106rem;
   }
-  .pane { padding: 1.4rem 1.8rem 2.5rem; min-width: 0; }
+  /* EACH COLUMN SCROLLS ITSELF, so each rail has a container to stick in.
+     align-items: start already kept the panes at their own height -- which
+     was the trouble: the left pane is shorter than the page, so once one
+     scrolled past its foot its rail had nothing left to slide against and
+     went with it.  The right one stayed only because it is the taller. */
+  .pane { padding: 1.4rem 1.8rem 2.5rem; min-width: 0;
+          overflow-y: auto; min-height: 0; }
   .pane + .pane { border-left: 1px solid var(--rule); }
   /* The right-hand pane holds the two things one watches while changing the
      left-hand one, so it stays put rather than scrolling away. */
   .pane.watch {
-    position: sticky; top: 0; max-height: 100vh; overflow-y: auto;
+    position: sticky; top: calc(var(--tabh, 2.55rem) * 2);
   }
   @media (max-width: 1000px) {
     main { grid-template-columns: 1fr; }
@@ -836,6 +887,14 @@
       <input type="checkbox" id="r-idxbar" checked>
       <label for="r-idxbar">The index opens beside the text
         <em><code>diogenes-roam-index-sidebar</code> &mdash; on by default; off for an ordinary window</em></label>
+    </div>
+    <div class="row">
+      <input type="checkbox" id="r-idxdefer">
+      <label for="r-idxdefer">Let a preset place the index
+        <em>sets <code>diogenes-roam-index-side</code> to <code>defer</code>,
+        so the index is displayed like any other buffer and a preset decides
+        where. The two rows below are then not used &mdash; the whole side
+        window is given up, size and all.</em></label>
     </div>
     <div class="field">
       <span>Which edge it sits on
@@ -3000,9 +3059,20 @@ function configText() {
       rblock.push('  (setq diogenes-roam-index-by-book nil)');
     if (!el('r-idxbar').checked)
       rblock.push('  (setq diogenes-roam-index-sidebar nil)');
-    if (el('r-idxside').value !== 'right')
+    // THE BOX WINS, and greys what it makes irrelevant: deferring drops the
+    // whole side-window action, so the edge and the size are not used.
+    const idxdefer = el('r-idxdefer') && el('r-idxdefer').checked;
+    [el('r-idxside'), el('r-idxsize')].forEach(b => {
+      if (!b) return;
+      b.disabled = idxdefer;
+      const f = b.closest('.field');
+      if (f) f.style.opacity = idxdefer ? '.45' : '';
+    });
+    if (idxdefer)
+      rblock.push("  (setq diogenes-roam-index-side 'defer)");
+    else if (el('r-idxside').value !== 'right')
       rblock.push(`  (setq diogenes-roam-index-side '${el('r-idxside').value})`);
-    if (el('r-idxsize').value.trim()
+    if (!idxdefer && el('r-idxsize').value.trim()
         && el('r-idxsize').value.trim() !== '0.35')
       rblock.push(`  (setq diogenes-roam-index-size ${el('r-idxsize').value.trim()})`);
     if (!el('r-idxselect').checked)
@@ -4100,6 +4170,17 @@ document.addEventListener('click', e => {
 showSections();
 syncFeatureRows();
 drawKinds();
+// THE TAB BAR'S HEIGHT, measured rather than guessed: it depends on the font
+// size, the padding and the border, and a rail told the wrong number slides
+// under it.  Re-measured on resize, the font scaling with the window.
+function measureTabs() {
+  const bar = document.querySelector('.tabs');
+  if (bar) document.documentElement.style.setProperty(
+    '--tabh', bar.getBoundingClientRect().height + 'px');
+}
+measureTabs();
+window.addEventListener('resize', measureTabs);
+
 renderConfig();
 reset();
 render();
