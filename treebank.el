@@ -64,20 +64,20 @@
 ;; than any particular implementation, so it takes whichever is there.
 (declare-function diogenes--parse-word "diogenes-perseus" (word lang))
 
-(defgroup tei-treebank nil
-  "Searching the treebank of lemmatised Greek.
+(defgroup treebank nil
+  "Annotating a Diorisis sentence as a dependency tree.
 
-Its own group and not a child of `tei\\=', so that this file stands alone: a
-reader who wants the search and not the TEI reader loads one file, and the
-group exists whichever loaded first."
+Its own group and not a child of diorisis, though this file requires that
+one: a reader looking for the tree options should not have to know that the
+corpus search is where they hang from."
   :group 'tools
-  :prefix "tei-treebank-")
+  :prefix "treebank-")
 
 (defcustom treebank-directory
   (expand-file-name "diorisis-treebank/" user-emacs-directory)
   "Where exported sentences are written."
   :type 'directory
-  :group 'tei-diorisis)
+  :group 'treebank)
 
 (defun treebank--conllu-features (morph)
   "MORPH, the corpus's first analysis, as UD features.
@@ -205,7 +205,7 @@ where each token really stood, without which nothing could be sent back."
   :type '(choice (const :tag "Perseus treebank XML (Arethusa)" aldt)
                  (const :tag "CoNLL-U (Universal Dependencies)" conllu)
                  (const :tag "Both" both))
-  :group 'tei-diorisis)
+  :group 'treebank)
 
 (defconst treebank--postag-places
   '((("noun" . "n") ("verb" . "v") ("adjective" . "a") ("adverb" . "d")
@@ -593,7 +593,7 @@ another; either may ask for the redraw, and both mean the same window.")
 Dependency Treebank 2.0: the authority for everything the help says, and
 fuller than it by two hundred pages."
   :type 'string
-  :group 'tei-diorisis)
+  :group 'treebank)
 
 (defconst treebank-relation-notes
   '(("PRED"
@@ -966,7 +966,7 @@ Wide enough for what the corpus holds: a Greek form runs to twenty characters
 in the compounds, a lemma is shorter, and a postag is nine and fixed.  The
 head and the relation follow, and are what a reader is here to change."
   :type '(repeat integer)
-  :group 'tei-diorisis)
+  :group 'treebank)
 
 (defcustom treebank-tree-diagram t
   "Whether the tree is drawn under the table of tokens.
@@ -979,7 +979,7 @@ will look it up.
 `treebank-tree-widget' is the other way of seeing a tree, and draws it as
 the printed diagrams do."
   :type 'boolean
-  :group 'tei-diorisis)
+  :group 'treebank)
 
 (defcustom treebank-viewer
   "http://localhost:8087/?doc=%n&chunk=1"
@@ -1002,7 +1002,7 @@ diagram.  There is no default because there is no viewer to default to: both
 of those are JavaScript that has to be served from somewhere, and where that
 somewhere is, is yours to say."
   :type '(choice (const :tag "The file itself" nil) string)
-  :group 'tei-diorisis)
+  :group 'treebank)
 
 (defconst treebank-viewers
   '(("The viewer this package serves, on its own port"
@@ -1044,7 +1044,7 @@ with it and would rather not again."
   :type '(choice (const :tag "Here if this Emacs can, else the browser" auto)
                  (const :tag "Always here" t)
                  (const :tag "Always the browser" nil))
-  :group 'tei-diorisis)
+  :group 'treebank)
 
 (defcustom treebank-tree-graph-side 'ask
   "Where the drawn tree appears beside the table.
@@ -1063,7 +1063,7 @@ not asked again.  A prefix argument to `D\=' asks whatever this says."
                  (const :tag "Above" above)
                  (const :tag "Below" below)
                  (const :tag "Wherever display-buffer puts it" other))
-  :group 'tei-diorisis)
+  :group 'treebank)
 
 (defcustom treebank-tree-graph-size 0.45
   "How much of the frame the drawn tree takes, as a fraction.
@@ -1071,7 +1071,7 @@ not asked again.  A prefix argument to `D\=' asks whatever this says."
 Its width where it is to the left or the right, its height where it is above
 or below."
   :type 'number
-  :group 'tei-diorisis)
+  :group 'treebank)
 
 (defun treebank--graph-action (side)
   "The `display-buffer\=' action for showing the drawing at SIDE.
@@ -1179,7 +1179,7 @@ Nil is the ordinary answer: see `treebank--svg-greek-family', which
 prefers the font this Emacs itself uses for Greek and falls back on the fonts
 made for polytonic."
   :type '(choice (const :tag "Work it out" nil) string)
-  :group 'tei-diorisis)
+  :group 'treebank)
 
 (defcustom treebank-svg-greek-fonts
   '("New Athena Unicode" "Brill" "GFS Porson")
@@ -1195,7 +1195,7 @@ families and fontconfig uses the first it has, which is the same question
 answered by the thing that actually knows which fonts are installed.  Adding
 to this list costs nothing."
   :type '(repeat string)
-  :group 'tei-diorisis)
+  :group 'treebank)
 
 (defun treebank--emacs-greek-family ()
   "The family this Emacs uses for Greek, or nil.
@@ -1236,7 +1236,7 @@ classicists -- GFS Porson and its relations -- carry Greek and little else,
 and `PRED\\=' set in one of them is a row of boxes or a row of Greek letters
 that happen to share the shapes."
   :type 'string
-  :group 'tei-diorisis)
+  :group 'treebank)
 
 (defcustom treebank-svg-metrics '(120 90 20 13)
   "The drawing's measurements: column, row, Greek size, label size."
@@ -1244,7 +1244,7 @@ that happen to share the shapes."
                (integer :tag "Row height")
                (integer :tag "Greek size")
                (integer :tag "Label size"))
-  :group 'tei-diorisis)
+  :group 'treebank)
 
 (defcustom treebank-svg-contrast 3.5
   "How far a word's colour must stand out from the background to be left alone.
@@ -1261,7 +1261,7 @@ what makes the drawing legible on a background nobody anticipated.
 
 Nil, or a number below 1, uses every colour exactly as it is given."
   :type '(choice (const :tag "Leave the colours alone" nil) number)
-  :group 'tei-diorisis)
+  :group 'treebank)
 
 (defun treebank--luminance (colour)
   "COLOUR's relative luminance, as WCAG computes it, or nil.
@@ -1335,7 +1335,7 @@ follows the theme exactly -- for a reader whose theme is already vivid, or who
 would rather the drawing matched their buffers than be legible at a glance."
   :type '(choice (const :tag "A palette made to be distinct" distinct)
                  (const :tag "The theme's own faces" faces))
-  :group 'tei-diorisis)
+  :group 'treebank)
 
 (defconst treebank-svg-palettes
   '((dark
@@ -1426,7 +1426,7 @@ A string is taken as a colour, for a reader who wants one exactly; a letter
 left out is drawn in the frame\='s own foreground."
   :type '(alist :key-type character
                 :value-type (choice face (string :tag "A colour")))
-  :group 'tei-diorisis)
+  :group 'treebank)
 
 (defcustom treebank-svg-artificial-root t
   "Whether a node marked ROOT is drawn above the words.
@@ -1440,7 +1440,7 @@ with two of them is visibly a tree with two of them.
 
 Nil draws the head-0 words at the top rank with nothing above them."
   :type 'boolean
-  :group 'tei-diorisis)
+  :group 'treebank)
 
 (defun treebank--postag-colour (word ink)
   "The colour WORD is drawn in, or INK where its part of speech is unknown.
@@ -1980,7 +1980,7 @@ kills it when Emacs exits.
 Nil leaves the serving to the reader, which is right for a viewer deployed
 somewhere else, or one run as a service, or one behind a real web server."
   :type 'boolean
-  :group 'tei-diorisis)
+  :group 'treebank)
 
 (defcustom treebank-viewer-port 8087
   "The port the viewer's server listens on.
@@ -1989,7 +1989,7 @@ NOT 8080, which is everybody's: a reader with a development server of their
 own would find this one had taken it, or -- worse -- would find their own
 answering the viewer's requests and wonder why the tree was a page of theirs."
   :type 'integer
-  :group 'tei-diorisis)
+  :group 'treebank)
 
 (defcustom treebank-viewer-directory nil
   "Where the viewer's page and Arethusa's files are.
@@ -1997,7 +1997,7 @@ answering the viewer's requests and wonder why the tree was a page of theirs."
 Nil looks for `tools/viewer' beside this file, which is where the package
 keeps it.  Set this where the viewer has been put somewhere else."
   :type '(choice (const :tag "Beside this file" nil) directory)
-  :group 'tei-diorisis)
+  :group 'treebank)
 
 (defcustom treebank-arethusa-directory nil
   "Arethusa\='s own source tree, where you have it.
@@ -2022,7 +2022,7 @@ panel:
 Nil serves the embedded panel alone, which works, with stubs for those
 templates."
   :type '(choice (const :tag "Not installed" nil) directory)
-  :group 'tei-diorisis)
+  :group 'treebank)
 
 (defvar treebank--server nil
   "The viewer's server process, where we started one.")
@@ -2412,7 +2412,7 @@ in the viewer, and the same ALDT between them.
 
 Nil watches nothing, for a reader who would rather reread by hand with `g'."
   :type 'boolean
-  :group 'tei-diorisis)
+  :group 'treebank)
 
 (defvar-local treebank--tree-watcher nil
   "The file notification this buffer is listening on.")
@@ -3377,7 +3377,7 @@ Non-nil restores the old behaviour and is reasonable once
 `diorisis-index-forms\=' has been run: with an index on the form a lookup
 is immediate, and filling twenty of them costs nothing."
   :type 'boolean
-  :group 'tei-diorisis)
+  :group 'treebank)
 
 (defun treebank--region-tokens (start end)
   "The words and marks between START and END, in order.
@@ -3540,7 +3540,7 @@ says nothing."
   (expand-file-name "diorisis-workbooks/" user-emacs-directory)
   "Where exported workbooks are written."
   :type 'directory
-  :group 'tei-diorisis)
+  :group 'treebank)
 
 (defcustom treebank-workbook-analyses nil
   "Whether a workbook shows each form's lemma and analysis by default.
@@ -3550,7 +3550,7 @@ Non-nil for a gloss list or an appendix, where the morphology is the point.  A
 prefix argument to `treebank-workbook-export' gives the other one, so a
 handout and a gloss list are one collection exported twice."
   :type 'boolean
-  :group 'tei-diorisis)
+  :group 'treebank)
 
 (defcustom treebank-workbook-emphasis 'bold
   "How the word searched for is marked in the workbook.
@@ -3560,7 +3560,7 @@ exports to.  Nil leaves the sentence plain, for a workbook that someone else
 will typeset."
   :type '(choice (const :tag "Bold" bold) (const :tag "Italic" italic)
                  (const :tag "Unmarked" nil))
-  :group 'tei-diorisis)
+  :group 'treebank)
 
 (defvar treebank--collection nil
   "The hits collected for a workbook, in the order they were collected.")

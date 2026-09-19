@@ -80,7 +80,7 @@ file:
 Nothing here works until it is set, and everything says so rather than failing
 obscurely."
   :type '(choice (const :tag "None" nil) file)
-  :group 'tei-diorisis)
+  :group 'diorisis)
 
 (defcustom diorisis-corpus "tlg"
   "Which Diogenes corpus the numbers in the database belong to.
@@ -91,7 +91,7 @@ opened in Diogenes' browser.  A defcustom rather than a constant because
 `classicist-open-passage\\=' takes the corpus as an argument and a reader with a
 custom corpus of the same texts may want to say so."
   :type 'string
-  :group 'tei-diorisis)
+  :group 'diorisis)
 
 (defcustom diorisis-open-with '(diogenes diorisis)
   "Where a hit opens, tried in order.
@@ -111,7 +111,7 @@ Diogenes not being installed, and by its failing to open the passage.  Put
 `diorisis' first to read here always; leave one out to have only the other."
   :type '(repeat (choice (const :tag "Diogenes' browser" diogenes)
                          (const :tag "The Diorisis text" diorisis)))
-  :group 'tei-diorisis)
+  :group 'diorisis)
 
 (defcustom diorisis-limit 200
   "How many hits to fetch at once.
@@ -121,7 +121,7 @@ does not hide how common a word is.  `+\\=' in the results buffer doubles it and
 searches again, which is cheaper than reading four thousand sentences nobody
 asked for."
   :type 'integer
-  :group 'tei-diorisis)
+  :group 'diorisis)
 
 (defcustom diorisis-snippet-width 150
   "How much of a sentence to show against a hit, in characters.
@@ -130,7 +130,7 @@ A window around the hit rather than the head of the sentence: some sentences
 in the corpus run to three hundred characters and the word searched for may be
 anywhere in them, so showing the beginning would often not show the word."
   :type 'integer
-  :group 'tei-diorisis)
+  :group 'diorisis)
 
 (defcustom diorisis-lookup-from 'lemma
   "Where a lookup of a word in a snippet starts.
@@ -151,7 +151,7 @@ Either way the other is one prefix argument away: `C-u C-c C-c' takes the
 route this is not set to."
   :type '(choice (const :tag "The lemma the corpus records" lemma)
                  (const :tag "Parse the form" form))
-  :group 'tei-diorisis)
+  :group 'diorisis)
 
 (defcustom diorisis-show-beta-code nil
   "Whether to show the corpus's beta code as it stands, rather than Greek.
@@ -162,7 +162,7 @@ is not available -- it lives in Diogenes\\=' `diogenes-utils.el\\=', and without
 Diogenes there is nothing to convert with and the beta code is shown either
 way."
   :type 'boolean
-  :group 'tei-diorisis)
+  :group 'diorisis)
 
 (defvar diorisis--connection nil
   "The database as last opened: (FILE . HANDLE).
@@ -196,7 +196,7 @@ costs a gigabyte and settles nothing prematurely.
 `diorisis-use-merged\=' chooses between them and
 `diorisis-switch-database\=' toggles it."
   :type '(choice (const :tag "None" nil) file)
-  :group 'tei-diorisis)
+  :group 'diorisis)
 
 (defcustom diorisis-use-merged nil
   "Whether to work with `diorisis-merged-database\=' rather than the plain one.
@@ -205,7 +205,7 @@ Nil where there is no merged database, and nil by default where there is: the
 plain corpus is what this has been tested against, and a reader should meet
 the extra columns because they asked for them."
   :type 'boolean
-  :group 'tei-diorisis)
+  :group 'diorisis)
 
 (defun diorisis-switch-database ()
   "Work with the other database, and forget what was read from this one.
@@ -704,7 +704,7 @@ NIL LISTS EVERY OCCURRENCE, which is the honest concordance reading and what a
 one-element search does regardless: there, every instance of the word is the
 whole point."
   :type 'boolean
-  :group 'tei-diorisis)
+  :group 'diorisis)
 
 (defun diorisis-count (spec)
   "How many occurrences SPEC has in the corpus.
@@ -1573,7 +1573,7 @@ says."
                  (const :tag "As an analysis" morphology)
                  (const :tag "None of them" nil)
                  symbol)
-  :group 'tei-diorisis)
+  :group 'diorisis)
 
 (defcustom diorisis-display-action nil
   "Where the hits appear, as a `display-buffer' action, or nil.
@@ -1588,7 +1588,7 @@ outranks all of it:
             (window-width . 0.4)))"
   :type '(choice (const :tag "Follow the kind" nil)
                  (sexp :tag "A display-buffer action"))
-  :group 'tei-diorisis)
+  :group 'diorisis)
 
 (defcustom diorisis-aside-display-kind 'morphology
   "Which kind the sentence and the distribution count as.
@@ -1601,13 +1601,13 @@ about, and a sentence shown from the hit list must not replace the hit list."
                  (const :tag "Its own category" diorisis)
                  (const :tag "None of them" nil)
                  symbol)
-  :group 'tei-diorisis)
+  :group 'diorisis)
 
 (defcustom diorisis-aside-display-action nil
   "Where the sentence and the distribution appear, or nil for the kind."
   :type '(choice (const :tag "Follow the kind" nil)
                  (sexp :tag "A display-buffer action"))
-  :group 'tei-diorisis)
+  :group 'diorisis)
 
 (defun diorisis--display (buffer &optional aside)
   "Show BUFFER, ASIDE for the sentence and the distribution.
@@ -1946,7 +1946,7 @@ leaves the theme's own colours alone underneath it.
 
 No background also means nothing to fight the form's green, which sits inside
 this and must stay legible."
-  :group 'tei-diorisis)
+  :group 'diorisis)
 
 (defface diorisis-form-face
   '((((class color) (background dark))
@@ -1967,7 +1967,7 @@ them with \\[customize-face] if you have the app open beside this.
 
 `match' where there is no colour to be had, which is what the results buffer
 marks the same word with."
-  :group 'tei-diorisis)
+  :group 'diorisis)
 
 (defcustom diorisis-highlight 'both
   "What to mark in the browser when a hit is opened.
@@ -1979,7 +1979,7 @@ the browser as the browser leaves it."
                  (const :tag "The sentence" passage)
                  (const :tag "The form" form)
                  (const :tag "Nothing" nil))
-  :group 'tei-diorisis)
+  :group 'diorisis)
 
 (defcustom diorisis-highlight-lasts 'escape
   "How long the marking stays.
@@ -1997,7 +1997,7 @@ reading around it."
   :type '(choice (const :tag "Until escape or C-g" escape)
                  (const :tag "Until cleared" until-cleared)
                  (const :tag "Until the next command" next-command))
-  :group 'tei-diorisis)
+  :group 'diorisis)
 
 (defcustom diorisis-highlight-clear-commands
   '(keyboard-quit minibuffer-keyboard-quit
@@ -2017,7 +2017,7 @@ has bound escape to: the hook looks at what is about to run.  Add to this
 list for a setup of your own.  Nothing here requires evil -- the evil
 commands are named in case it is there."
   :type '(repeat symbol)
-  :group 'tei-diorisis)
+  :group 'diorisis)
 
 (defcustom diorisis-highlight-wait 6.0
   "How long to wait for the browser to deliver the passage, in seconds.
@@ -2029,7 +2029,7 @@ returns -- there is nothing there yet -- and is tried again until the line it
 wants exists.  Given up after this long, silently: a reader who has already
 started reading does not want a message about a highlight."
   :type 'number
-  :group 'tei-diorisis)
+  :group 'diorisis)
 
 (defvar-local diorisis--overlays nil
   "The overlays marking a hit in this buffer.")
@@ -2609,7 +2609,7 @@ Call `diorisis-install-mouse-keys' after changing this, or restart."
                  (const :tag "None" nil)
                  (alist :key-type (string :tag "Gesture")
                         :value-type (function :tag "Command")))
-  :group 'tei-diorisis)
+  :group 'diorisis)
 
 (defun diorisis--at-click (command)
   "COMMAND wrapped so that it acts on the word clicked.
@@ -2696,7 +2696,7 @@ citation column with -- `classicist--browser-format-citation' -- so a Diorisis
 text and a TLG text look alike down the left-hand side.  It began as `shadow',
 which several themes render as grey text on grey and which is also the face
 used for asides in the hit list: two different things in one appearance."
-  :group 'tei-diorisis)
+  :group 'diorisis)
 
 (defcustom diorisis-citation-style 'column
   "How a passage's citation is set off from the text.
@@ -2710,7 +2710,7 @@ indent wastes half the line, and for anyone who finds a column of numbers hard
 to tell from the words beside it."
   :type '(choice (const :tag "In a column at the left" column)
                  (const :tag "On a line of its own" line))
-  :group 'tei-diorisis)
+  :group 'diorisis)
 
 (defcustom diorisis-citation-width 12
   "How wide the citation column is, in characters.
@@ -2720,7 +2720,7 @@ citation that overran its column pushed the text of that one passage out of
 line with every other, which is exactly the confusion the column exists to
 prevent."
   :type 'integer
-  :group 'tei-diorisis)
+  :group 'diorisis)
 
 (defvar-local diorisis--text nil
   "What this buffer is showing, as (AUTHOR-ID WORK-ID AUTHOR WORK).")
@@ -3259,7 +3259,7 @@ different times; a reader who saved one and looked for it among the other was
 right to be annoyed.  Set this to a file and the old file is still read, so
 nothing saved is lost."
   :type '(choice (const :tag "Use the directory" nil) file)
-  :group 'tei-diorisis)
+  :group 'diorisis)
 
 (defvar-local diorisis--query nil
   "The elements this buffer is composing.")
@@ -3941,7 +3941,7 @@ being made and not a thing to change when reading one: a Latin tree opened in
 a session of Greek reads its postags by the Latin table without being told."
   :type '(choice (const :tag "Greek, the AGDT's scheme" greek)
                  (const :tag "Latin, the LDT's scheme" latin))
-  :group 'tei-diorisis)
+  :group 'diorisis)
 
 (defcustom diorisis-postag-style 'words
   "How a postag is shown in the editor: as words, as its code, or both.
@@ -3957,7 +3957,7 @@ code after them, for a reader learning to read the code."
   :type '(choice (const :tag "As words" words)
                  (const :tag "As the nine-place code" code)
                  (const :tag "Both" both))
-  :group 'tei-diorisis)
+  :group 'diorisis)
 
 (defconst diorisis-relations
   '(("PRED" . "the predicate: the verb the sentence hangs from")
@@ -4012,7 +4012,7 @@ INTERACTIVE FORM only, and the command receives the same kind of string it
 always did.  Nil, or `diorisis-complete-off\\=', restores the plain
 prompts."
   :type 'boolean
-  :group 'tei-diorisis)
+  :group 'diorisis)
 
 (defcustom diorisis-lemma-source 'diogenes
   "Which lemmata Diogenes\\=' commands complete on.
@@ -4029,7 +4029,7 @@ and is here for completeness rather than because it is wise."
   :type '(choice (const :tag "Diogenes' whole word list" diogenes)
                  (const :tag "The lemmata Diorisis attests" diorisis)
                  (const :tag "Both" both))
-  :group 'tei-diorisis)
+  :group 'diorisis)
 
 (defun diorisis--diogenes-lemmata ()
   "Every lemma in Diogenes\\=' Greek word list, as beta code.
@@ -4161,7 +4161,7 @@ A DIRECTORY AND NOT A FILE, so that a search can be moved, copied into a
 project, or kept under version control with the notes it belongs to.  Each is
 an `.eld\\=': a plist with the search in it, readable and editable by hand."
   :type 'directory
-  :group 'tei-diorisis)
+  :group 'diorisis)
 
 (defun diorisis--saved-file (name)
   "The file a search called NAME is kept in."
@@ -4272,7 +4272,7 @@ at all.
 Add it if you would rather have its `n', `p', `g' and `w' than evil's
 motions."
   :type '(repeat symbol)
-  :group 'tei-diorisis)
+  :group 'diorisis)
 
 (defcustom diorisis-evil-manage-initial-states t
   "Whether to put `diorisis-evil-emacs-state-modes' into Emacs state.
@@ -4281,7 +4281,7 @@ Nil leaves evil's defaults alone, for a reader who would rather bind the keys
 into normal state themselves -- which in the results buffer costs `d', `l',
 `n', `p', `s', `v' and `w', and in the builder costs everything."
   :type 'boolean
-  :group 'tei-diorisis)
+  :group 'diorisis)
 
 (defun diorisis--evil-enter-state ()
   "Put THIS buffer into Emacs state, where that is what its mode wants.
@@ -4389,7 +4389,7 @@ leaves the menu alone, for a reader who would rather bind
 
 The entry appears only where both packages are present."
   :type 'boolean
-  :group 'tei-diorisis)
+  :group 'diorisis)
 
 (defun diorisis--add-browse-to-diogenes-menu ()
   "Put our other entries in Diogenes\=' menu: the texts and the trees.
