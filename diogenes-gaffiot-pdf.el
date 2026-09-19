@@ -73,6 +73,7 @@
 (require 'subr-x)
 (require 'diogenes-old)                 ; reuse the PDF display driver
 (require 'diogenes-gaffiot)             ; reuse the collation key
+(require 'classicist-installation) ; is this set up, and if not what to say
 
 ;; Called across files that cannot be required from here without a
 ;; cycle, and -- where the name is one of this package's own caches --

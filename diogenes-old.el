@@ -50,6 +50,8 @@
 (require 'seq)
 (require 'ucs-normalize)
 (require 'diogenes-lisp-utils)          ; classicist--require-path, --path-usable-p
+(require 'classicist-installation) ; is this set up, and if not what to say
+(require 'classicist-windows)      ; where a buffer goes
 
 ;; Called across files that cannot be required from here without a
 ;; cycle, and -- where the name is one of this package's own caches --

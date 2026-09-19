@@ -53,6 +53,7 @@
 (require 'cl-lib)
 (require 'seq)
 (require 'diogenes-old)                 ; sort-key, diacritics, PDF display
+(require 'classicist-installation) ; is this set up, and if not what to say
 
 (declare-function classicist--lookup-assert-lang "classicist-lookup"
                   (expected dict-name))

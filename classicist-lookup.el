@@ -42,7 +42,10 @@
 (require 'cl-lib)
 (require 'seq)
 (require 'classicist-groups)
+(require 'text-property-search)  ; prop-match-value, and searching backward
 (require 'classicist-lexicon)
+(require 'classicist-installation) ; is this set up, and if not what to say
+(require 'classicist-windows)      ; where a buffer goes
 
 
 ;; the dispatcher's two, run when a reader follows a link

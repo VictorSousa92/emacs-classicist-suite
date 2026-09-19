@@ -79,6 +79,7 @@
 (require 'subr-x)
 (require 'diogenes-old)                 ; PDF display driver
 (require 'diogenes-cambridge)           ; monotone backbone over OCR'd headwords
+(require 'classicist-installation) ; is this set up, and if not what to say
 
 (declare-function pdf-info-outline "pdf-info" (&optional file-or-buffer))
 (declare-function classicist-lookup-register-dictionary "classicist-lookup" t)

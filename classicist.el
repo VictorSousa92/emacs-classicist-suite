@@ -117,6 +117,8 @@
 (diogenes-pdf-search-setup-keys)
 ;(require 'diogenes-window)
 (require 'diogenes-legacy)
+(require 'classicist-installation) ; is this set up, and if not what to say
+(require 'classicist-windows)      ; where a buffer goes
 
 (defgroup diogenes nil
   "Interface to P. Heslin's Diogenes."

@@ -70,6 +70,7 @@
 
 (require 'cl-lib)
 (require 'diogenes-lisp-utils)          ; classicist--sole-home-window-p
+(require 'classicist-windows)      ; where a buffer goes
 
 (defgroup diogenes-doom nil
   "Showing Diogenes buffers in frames of their own."
@@ -77,18 +78,18 @@
 
 ;; The three options that named the buffers, and the switch for reusing a
 ;; frame, are the core's now.  A configuration that set them still works:
-;; `diogenes-role-regexps' is the list of name-to-role rules, and adding a
+;; `classicist-role-regexps' is the list of name-to-role rules, and adding a
 ;; dictionary PDF to it is what `diogenes-doom-dictionary-regexps' was for.
 
 (defun diogenes-doom--claim-dictionary-regexps ()
-  "Fold any `diogenes-doom-dictionary-regexps' into `diogenes-role-regexps'.
+  "Fold any `diogenes-doom-dictionary-regexps' into `classicist-role-regexps'.
 For a configuration written against the older option: naming a dictionary
 PDF there gave the scans a frame of their own, and it still does."
   (dolist (regexp (bound-and-true-p diogenes-doom-dictionary-regexps))
-    (add-to-list 'diogenes-role-regexps (cons regexp 'dictionary))))
+    (add-to-list 'classicist-role-regexps (cons regexp 'dictionary))))
 
 (defvar diogenes-doom-dictionary-regexps nil
-  "Obsolete; add to `diogenes-role-regexps' instead.
+  "Obsolete; add to `classicist-role-regexps' instead.
 Kept because a configuration may set it, and
 `diogenes-doom--claim-dictionary-regexps' still reads it.")
 

@@ -197,6 +197,7 @@
 (require 'seq)
 (require 'diogenes-old)                 ; reuse the PDF display driver
 (require 'diogenes-montanari)           ; reuse the Greek collation key
+(require 'classicist-installation) ; is this set up, and if not what to say
 
 (declare-function evil-make-overriding-map "evil-core" (keymap &optional state copy))
 (declare-function evil-normalize-keymaps "evil-core" (&optional state))

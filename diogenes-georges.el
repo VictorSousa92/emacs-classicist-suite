@@ -68,6 +68,7 @@
 (require 'subr-x)
 (require 'ucs-normalize)
 (require 'diogenes-lisp-utils)          ; classicist--path-usable-p
+(require 'classicist-installation) ; is this set up, and if not what to say
 
 (declare-function classicist-lookup-register-dictionary "classicist-lookup" t)
 (declare-function classicist--search-dict "classicist-lookup"

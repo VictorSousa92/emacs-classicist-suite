@@ -72,6 +72,7 @@
 ;; `classicist--home-buffer-p' and the list behind it: shared with the core,
 ;; so that Doom's dashboard and Emacs's splash are recognised here too.
 (require 'diogenes-lisp-utils)
+(require 'classicist-windows)      ; where a buffer goes
 
 ;; Defined in diogenes-old.el and diogenes-perseus.el, which this module does
 ;; not require: it is loaded from a Spacemacs user-config hook, possibly before

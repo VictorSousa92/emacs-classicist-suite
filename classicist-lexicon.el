@@ -43,6 +43,14 @@
 (require 'cl-lib)
 (require 'seq)
 (require 'diogenes-perl-interface)      ; --perl-script, perl-executable
+;; IN THE EXPANSION OF diogenes--perl-script, and not in this file's own
+;; code.  That macro's body names both, so its expansion lands here and the
+;; compiler sees free variables; the base defines them, as a defcustom and a
+;; defconst in diogenes-perl-interface.el.  No require satisfies this -- a
+;; macro carries its free variables into every file that uses it.
+(defvar diogenes-perl-min-version)
+(defvar diogenes-perl-executable)
+
 (require 'classicist-groups)
 (require 'classicist-variants)
 

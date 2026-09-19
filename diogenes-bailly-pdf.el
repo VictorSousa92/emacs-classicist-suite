@@ -147,6 +147,7 @@
 (require 'subr-x)
 (require 'ucs-normalize)
 (require 'diogenes-old)                 ; reuse the PDF display driver
+(require 'classicist-installation) ; is this set up, and if not what to say
 
 (declare-function pdf-info-gettext "pdf-info"
                   (page edges &optional selection-style file-or-buffer))

@@ -58,6 +58,7 @@
 (require 'seq)
 (require 'diogenes-old)                 ; reuse PDF display + cache pattern
 (require 'diogenes-montanari)           ; reuse the Greek collation key
+(require 'classicist-installation) ; is this set up, and if not what to say
 
 (declare-function classicist--lookup-assert-lang "classicist-lookup"
                   (expected dict-name))

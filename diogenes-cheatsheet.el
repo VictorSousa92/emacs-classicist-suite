@@ -41,6 +41,7 @@
 ;;; Code:
 
 (require 'cl-lib)
+(require 'classicist-windows)      ; where a buffer goes
 
 ;; Defined by `diogenes-perseus.el', which this module does not require: the
 ;; cheatsheet reads whatever keymaps and registry happen to be loaded and

@@ -106,6 +106,7 @@
 (require 'seq)
 (require 'subr-x)
 (require 'diogenes-utils)
+(require 'classicist-installation) ; is this set up, and if not what to say
 
 (declare-function classicist--search-dict "classicist-lookup"
                   (word lang sort-fn key-fn &optional file))

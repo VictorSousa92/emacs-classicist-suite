@@ -33,6 +33,7 @@
 (require 'classicist-lookup)    ; the buffer an entry is read in
 (require 'diogenes-utils)
 (require 'diogenes-perl-interface)
+(require 'classicist-windows)      ; where a buffer goes
 
 ;; Called across files that cannot be required from here without a
 ;; cycle, and -- where the name is one of this package's own caches --
