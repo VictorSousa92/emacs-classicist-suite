@@ -97,7 +97,7 @@ answer.
               (const :tag "Treebank annotation" treebank)
               (const :tag "Editions as TEI" tei-corpora)
               (const :tag "Notes in org" notes)
-              (const :tag "Where the buffers go" windows))
+              (const :tag "Frame, window and buffer managing" windows))
   :group 'classicist)
 
 (defun classicist-feature-p (feature)

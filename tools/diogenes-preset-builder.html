@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Diogenes configuration &amp; preset builder</title>
+<title>The classicist suite for Emacs: configuration and presets</title>
 <style>
   :root {
     --ink: #1c1a17; --paper: #f7f4ee; --rule: #d8d2c6; --quiet: #6f6a61;
@@ -78,6 +78,24 @@
   }
   .distro label.on { border-color: var(--accent); box-shadow: inset 2px 0 0 var(--accent); }
   .distro input { display: none; }
+
+  /* THE THREE STARTING POINTS.  Not `.distro label' with a browser button
+     inside it, which is what they were: a default grey button in a hand-drawn
+     pill, neither belonging to the other. */
+  .starts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: .4rem; margin: .4rem 0 .5rem; }
+  .startcard {
+    display: block; text-align: left; font: inherit; cursor: pointer;
+    background: #fff; border: 1px solid var(--rule); border-radius: 3px;
+    padding: .55rem .65rem; color: var(--ink);
+  }
+  .startcard:hover { border-color: var(--quiet); }
+  .startcard:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .startcard.on { border-color: var(--accent); box-shadow: inset 2px 0 0 var(--accent); }
+  .startcard b { display: block; font-weight: 600; font-size: .9rem; }
+  .startcard span { display: block; color: var(--quiet); font-size: .8rem;
+                    margin-top: .15rem; }
+  @media (max-width: 820px) { .starts { grid-template-columns: 1fr; } }
   .uploadrow { display: flex; gap: .6rem; align-items: baseline; flex-wrap: wrap;
                margin: .4rem 0 .2rem; }
   .uploadrow input[type=file] { font: inherit; font-size: .84rem; }
@@ -94,6 +112,50 @@
   .presetrow input { display: none; }
   .presetrow b { font-weight: 600; font-size: .9rem; }
   .presetrow span { display: block; color: var(--quiet); font-size: .84rem; }
+
+  /* THE FEATURE PICKER, and not `.presetrow': that one keeps a 4.2rem column
+     for a drawing and hides its checkbox, a preset being clicked as a whole.
+     Here the checkbox is the point. */
+  .features { display: grid; gap: .25rem; margin: .3rem 0 .6rem; }
+  .featurerow {
+    display: grid; grid-template-columns: 1.1rem 1fr; gap: .6rem;
+    padding: .4rem .5rem; border-radius: 3px; cursor: pointer;
+    align-items: baseline; border: 1px solid transparent;
+  }
+  .featurerow:hover { background: #f6f5f1; }
+  .featurerow.on { border-color: var(--rule); background: #fff; }
+  .featurerow input { margin: 0; }
+  .featurerow b { font-weight: 600; font-size: .9rem; }
+  .featurerow span { display: block; color: var(--quiet); font-size: .84rem; }
+  /* A CHILD IS INDENTED AND HAS A STEM, so that what wants what is visible
+     without reading: the rule at its left runs up to the parent above. */
+  .featurerow.child { margin-left: 1.5rem; border-left: 1px solid var(--rule);
+                      border-radius: 0 3px 3px 0; }
+  /* AND CANNOT BE TICKED BEFORE ITS PARENT.  Greyed and not hidden: a feature
+     you cannot yet have should still be visible, or you will not know to want
+     it. */
+  .featurerow.blocked { opacity: .45; cursor: not-allowed; }
+  .featurerow.blocked:hover { background: transparent; }
+
+  /* THE RAILS, one per column.  Their own class: `.distro' is a radio group
+     and `.presetrow' reserves a column for a drawing, and borrowing either
+     is what made the feature rows look wrong. */
+  .rail {
+    display: flex; gap: .15rem; flex-wrap: wrap; align-items: center;
+    margin: 0 0 1.1rem; padding: 0 0 .7rem;
+    border-bottom: 1px solid var(--rule);
+  }
+  .rail a {
+    font-size: .8rem; color: var(--quiet); text-decoration: none;
+    padding: .22rem .5rem; border-radius: 3px; white-space: nowrap;
+    border: 1px solid transparent;
+  }
+  .rail a:hover { color: var(--ink); background: #fff; border-color: var(--rule); }
+  .rail a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .rail a[hidden] { display: none; }
+  /* THE ONE YOU ARE IN, by where the page is scrolled to. */
+  .rail a.here { color: var(--ink); background: #fff; border-color: var(--rule);
+                 box-shadow: inset 2px 0 0 var(--accent); }
   /* a small drawing of what each does */
   .mini { display: flex; gap: 2px; height: 2.4rem; }
   .mf { flex: 1; border: 1px solid var(--ink); border-radius: 2px; display: flex;
@@ -352,13 +414,17 @@
 </head>
 <body>
 <header>
-  <h1>Diogenes configuration &amp; preset builder</h1>
+  <h1>The classicist suite for Emacs</h1>
+  <p>Tools for reading Greek and Latin: Diogenes&rsquo; corpora and lexica, the
+     printed dictionaries, the Diorisis corpus of lemmatised Greek, treebank
+     annotation, editions published as TEI, and notes in org.</p>
   <p>Two things, on two tabs. <b>Configuration</b> is what is true of this
-     machine &mdash; where Diogenes and your dictionaries are, which viewer opens
-     a scan, which keys you want &mdash; and it writes the block for your init
-     file. <b>Presets</b> is what varies with what you are doing: where the
-     windows go, how much room each gets, how much of an entry to show. It
-     writes a file you can load and change without touching your init file.</p>
+     machine &mdash; which features you want awake, where the corpora and
+     dictionaries are, which viewer opens a scan, which keys you want &mdash;
+     and it writes the block for your init file. <b>Presets</b> is what varies
+     with what you are doing: where the windows go, how much room each gets,
+     how much of an entry to show. It writes a file you can load and change
+     without touching your init file.</p>
 </header>
 
 <nav class="tabs">
@@ -369,7 +435,13 @@
 
 <main id="panel-config" class="half">
 <section class="pane">
-  <h2>What you run</h2>
+  <nav class="rail" id="c-rail-left" aria-label="The parts of this column">
+    <a href="#s-run">Your Emacs</a>
+    <a href="#s-start">Where to start</a>
+    <a href="#s-features">The features</a>
+    <a href="#s-settings">The settings</a>
+  </nav>
+  <h2 id="s-run">What you run</h2>
   <p class="note">So that the key boxes below can warn you about a key your
      configuration already uses.</p>
   <div id="c-distro"></div>
@@ -382,15 +454,73 @@
   </div>
   <p class="note" id="c-evilnote"></p>
 
-  <h2>Where to start</h2>
-  <p class="note">Two starting points, and everything below stays yours to
-     change. Neither installs less than the other: the whole suite is there
-     either way, and these decide what it does out of the box.</p>
-  <div class="distro" id="c-start">
-    <label data-start="fixes"><button type="button" data-start="fixes">Fixes only</button></label>
-    <label data-start="rec"><button type="button" data-start="rec">Recommended</button></label>
+  <h2 id="s-start">Where to start</h2>
+  <p class="note">The whole suite is installed either way; these decide what it
+     <em>does</em>. Everything not chosen is loaded and asleep: no keys, no
+     menu entries, nothing offered.</p>
+  <div class="starts" id="c-start">
+    <button type="button" class="startcard" data-start="fixes">
+      <b>Fixes only</b><span>the corrections, and nothing that changes how it looks</span>
+    </button>
+    <button type="button" class="startcard" data-start="all">
+      <b>Everything</b><span>every feature awake, and the windows arranged</span>
+    </button>
+    <button type="button" class="startcard" data-start="pick">
+      <b>Pick your features</b><span>choose below, and set only what you chose</span>
+    </button>
   </div>
   <p class="note" id="c-startnote">&nbsp;</p>
+  <p class="note"><b>Fixes only</b> is the corrections this package makes, and
+     nothing that changes how Diogenes looks: a word hyphenated across a line
+     can be looked up, the lemma prompt completes on the corpus's own lemmata,
+     every entry of a homograph is shown rather than the first, the windows
+     stay wherever you have arranged them, and a Diogenes buffer is claimed by
+     the perspective it appears in so that <code>previous-buffer</code> can
+     reach it. It is not Diogenes as it was &mdash; it is Diogenes without its
+     rough edges.</p>
+
+  <h2 id="s-features">The features</h2>
+  <p class="note">What is awake. <code>classicist-features</code> &mdash; and
+     three of the eight want another: the printed dictionaries are a banner on
+     a lexicon entry, the treebank annotates Diorisis sentences, and a note is
+     about a passage in some browser. Ticking one ticks what it wants.</p>
+  <p class="note"><b>No Diogenes CD-ROMs?</b> The Diorisis corpus and the TEI
+     editions want none of that data &mdash; both read their own. Tick those
+     two, set two paths below, and leave <code>diogenes-path</code> empty.</p>
+  <div class="features" id="c-features">
+    <label class="featurerow" data-feature="texts">
+      <input type="checkbox" id="f-texts" data-feature="texts">
+      <div><b>Diogenes&rsquo; corpora</b><span>browsing and searching the TLG, the PHI, the papyri and the inscriptions</span></div>
+    </label>
+    <label class="featurerow" data-feature="lexica">
+      <input type="checkbox" id="f-lexica" data-feature="lexica">
+      <div><b>The LSJ and Lewis &amp; Short</b><span>a word looked up, parsed, and every form it is attested in</span></div>
+    </label>
+    <label class="featurerow child" data-feature="dictionaries" data-wants="lexica">
+      <input type="checkbox" id="f-dictionaries" data-feature="dictionaries">
+      <div><b>The printed dictionaries</b><span>Bailly, the OLD, the TLL, Montanari, the DGE and the rest, offered from the head of an entry</span></div>
+    </label>
+    <label class="featurerow" data-feature="diorisis">
+      <input type="checkbox" id="f-diorisis" data-feature="diorisis">
+      <div><b>The Diorisis corpus</b><span>ten million lemmatised words of Greek, searched by lemma, form, morphology and date. Wants no Diogenes data</span></div>
+    </label>
+    <label class="featurerow child" data-feature="treebank" data-wants="diorisis">
+      <input type="checkbox" id="f-treebank" data-feature="treebank">
+      <div><b>Treebank annotation</b><span>one of its sentences as a dependency tree, written as ALDT or CoNLL-U</span></div>
+    </label>
+    <label class="featurerow" data-feature="tei-corpora">
+      <input type="checkbox" id="f-tei-corpora" data-feature="tei-corpora">
+      <div><b>Editions as TEI</b><span>CSEL, the Patrologia Latina, Corpus Corporum. Wants no Diogenes data</span></div>
+    </label>
+    <label class="featurerow" data-feature="notes" data-wants="texts tei-corpora">
+      <input type="checkbox" id="f-notes" data-feature="notes">
+      <div><b>Notes in org</b><span>a note on the passage in hand, and what has been said about these lines. Wants a browser &mdash; Diogenes&rsquo; corpora or the TEI editions, either will do</span></div>
+    </label>
+    <label class="featurerow" data-feature="windows">
+      <input type="checkbox" id="f-windows" data-feature="windows">
+      <div><b>Frame, window and buffer managing</b><span>which frame a buffer lands in, whether a window is split or reused, and whether a perspective claims it</span></div>
+    </label>
+  </div>
 
   <h2>Your own keys</h2>
   <p class="note">Optional, and it makes the warnings below far better: add the
@@ -402,7 +532,7 @@
   </div>
   <p class="note" id="c-dothelp"></p>
 
-  <h2>Diogenes itself</h2>
+  <h2 id="s-settings" data-feature="texts">Diogenes itself</h2>
   <div class="field">
     <span><code>diogenes-path</code> &mdash; the root of your installation; everything inside is found from here</span>
     <input type="text" id="c-path" placeholder="/usr/local/diogenes" data-drop="1">
@@ -424,7 +554,7 @@
      Nothing here depends on anything else <em>here</em>: no setting below
      turns another one off.</p>
 
-  <h2>Dictionaries</h2>
+  <h2 data-feature="dictionaries">Dictionaries</h2>
   <p class="note">A dictionary appears when its path is set and the file is
      there; an empty path means one fewer dictionary rather than a broken one.
      The key box shows the default &mdash; fill it only to change it, or type
@@ -453,7 +583,7 @@
      configuration readable.</p>
   <div id="c-dicts"></div>
 
-  <h2>Reading</h2>
+  <h2 data-feature="lexica">Reading</h2>
   <div class="field">
     <span>Which viewer opens a scanned dictionary &mdash;
       <code>diogenes-old-pdf-viewer</code>. The keys it takes for itself are
@@ -476,7 +606,7 @@
       <em><code>classicist-lookup-always-ask-dictionary</code> &mdash; off by default; on prompts rather than choosing by language.</em></label>
   </div>
 
-  <h2>How it behaves</h2>
+  <h2 data-feature="texts">How it behaves</h2>
   <p class="note">All seven are on. The first three change what you see the
   moment you open a text; the rest are fixes, or are invisible until used.</p>
   <div class="row">
@@ -516,14 +646,14 @@
   </div>
 
 
-  <h2>The corpora published as TEI</h2>
+  <h2 data-feature="tei-corpora">The corpora published as TEI</h2>
   <div class="field">
     <span>Where the editions are
       <em><code>tei-directory</code> &mdash; the directory tei-index.py wrote its index into, and where the editions themselves are. CSEL, the Patrologia Latina, the Corpus Corporum and anything else published as TEI XML with a citation scheme this can read.</em></span>
     <input type="text" id="c-teidir" placeholder="/path/to/TEI" data-drop="1">
   </div>
 
-  <h2>The Diorisis corpus</h2>
+  <h2 data-feature="diorisis">The Diorisis corpus</h2>
   <div class="field">
     <span>The database
       <em><code>diorisis-database</code> &mdash; diorisis.db, made by diorisis-index.py from the corpus's own XML. Ten million lemmatised words of Greek literary prose and verse.</em></span>
@@ -550,7 +680,7 @@
     <input type="text" id="c-diosaved" placeholder="~/.emacs.d/diorisis-searches/" data-drop="1">
   </div>
 
-  <h2>The treebank</h2>
+  <h2 data-feature="treebank">The treebank</h2>
   <div class="field">
     <span>Where the trees are written
       <em><code>treebank-directory</code> &mdash; one file per sentence, as ALDT or CoNLL-U.</em></span>
@@ -582,7 +712,7 @@
       <em><code>treebank-serve-viewer</code> &mdash; on by default, and it opens the port above. Off if you serve the page some other way.</em></label>
   </div>
 
-  <h2>Notes in org</h2>
+  <h2 data-feature="notes">Notes in org</h2>
   <div class="field">
     <span>The link type a passage gets
       <em><code>diogenes-org-link-type</code> &mdash; classicist by default, so a note's ROAM_REFS reads classicist:tlg:0086:...</em></span>
@@ -604,7 +734,7 @@
     <input type="text" id="c-orgnote">
   </div>  <div class="warnline" id="c-mergedwarn"></div>
 
-  <h2>A preset at startup</h2>
+  <h2 data-feature="windows">A preset at startup</h2>
   <p class="note">Optional. The four below need nothing else set; for one of
      your own, name it and say where the presets live. Make one on the
      <b>Presets</b> tab.</p>
@@ -623,7 +753,31 @@
 </section>
 
 <section class="pane watch">
-  <h2>Keys</h2>
+  <nav class="rail" id="c-rail-right" aria-label="The parts of this column">
+    <a href="#s-config">Your configuration</a>
+    <a href="#s-keys">Keys</a>
+  </nav>
+  <h2 data-feature="windows">Frames</h2>
+  <div class="row">
+    <input type="checkbox" id="c-pixelwise">
+    <label for="c-pixelwise"><code>frame-resize-pixelwise</code>
+      <em>Wanted under a tiling window manager: without it a frame rounds its
+      size down to whole character cells and leaves part of its tile empty.
+      Harmless otherwise, and needed only if you use frames.</em></label>
+  </div>
+
+  <h2 id="s-config">Your configuration</h2>
+  <pre id="c-out"></pre>
+  <div class="actions">
+    <button id="c-copy">Copy</button>
+    <button class="ghost" id="c-download">Download</button>
+    <span class="note" id="c-copied"></span>
+  </div>
+  <p class="note">Only what differs from the default is written, so the block
+     says what is particular about your installation and nothing else.</p>
+  <p class="note" id="c-wherenote"></p>
+
+  <h2 id="s-keys">Keys</h2>
   <p class="note">Blank keeps the default. <code>-</code> binds nothing, and the
      keyboard button records the keys you press.</p>
   <p class="caveat"><b>Check every key in your own Emacs before you settle on
@@ -636,12 +790,12 @@
      or says it is undefined. In a scanned dictionary do the same &mdash; the
      answer differs there. For a sequence under a leader, press the leader and
      let which-key list what is taken.</p>
-  <h3>Inside an entry</h3>
+  <h3 data-feature="lexica">Inside an entry</h3>
   <p class="note">What the keys of a lookup buffer do. One table, so changing
      any of them writes all of them.</p>
   <div id="c-keys-lookup"></div>
 
-  <h3>Going between the windows and frames</h3>
+  <h3 data-feature="windows">Going between the windows and frames</h3>
   <p class="note"><b>These four are frame navigation.</b> They matter most with
      <em>frames</em>, where each kind is in a frame of its own and
      <code>C-x o</code> cannot reach it &mdash; the key raises that frame and
@@ -654,12 +808,12 @@
      here regardless, since what you mean by the key is the same.</p>
   <div id="c-keys-focus"></div>
 
-  <h3>Inside a print dictionary</h3>
+  <h3 data-feature="dictionaries">Inside a print dictionary</h3>
   <p class="note">Pressed on a scanned page, and bound there through a minor
      mode of Diogenes' own, so an unrelated PDF keeps its own keys.</p>
   <div id="c-keys-scan"></div>
 
-  <h3>Turning a page</h3>
+  <h3 data-feature="texts">Turning a page</h3>
   <p class="note">Two ways to read on. <code>C-c C-n</code> and
      <code>C-c C-p</code> <b>add</b> text and keep what is there, for reading a
      little further without losing your place. The keys below, and the header's
@@ -706,7 +860,7 @@
     </div>
   </div>
 
-  <h3>Clicking a word</h3>
+  <h3 data-feature="texts">Clicking a word</h3>
   <p class="note">Heslin&rsquo;s Diogenes looks a word up when you click it, and
      the browser can too. Off unless you choose a gesture, an Emacs buffer
      ordinarily placing point when it is clicked.</p>
@@ -754,25 +908,6 @@
     <div id="c-keys-evil"></div>
   </div>
 
-  <h2>Frames</h2>
-  <div class="row">
-    <input type="checkbox" id="c-pixelwise">
-    <label for="c-pixelwise"><code>frame-resize-pixelwise</code>
-      <em>Wanted under a tiling window manager: without it a frame rounds its
-      size down to whole character cells and leaves part of its tile empty.
-      Harmless otherwise, and needed only if you use frames.</em></label>
-  </div>
-
-  <h2>Your configuration</h2>
-  <pre id="c-out"></pre>
-  <div class="actions">
-    <button id="c-copy">Copy</button>
-    <button class="ghost" id="c-download">Download</button>
-    <span class="note" id="c-copied"></span>
-  </div>
-  <p class="note">Only what differs from the default is written, so the block
-     says what is particular about your installation and nothing else.</p>
-  <p class="note" id="c-wherenote"></p>
 </section>
 </main>
 
@@ -1956,7 +2091,11 @@ baseNote();
 document.addEventListener('change', e => {
   if (e.target.name === 'distro') {
     const distro = e.target.value;
-    document.querySelectorAll('.distro label').forEach(l =>
+    // '[data-distro]' AND NOT '.distro label': the base-source radios are
+    // labels in a .distro div too, and this cleared their 'on' class every
+    // time the distribution changed -- so the patched base stayed checked
+    // and stopped looking it.
+    document.querySelectorAll('[data-distro]').forEach(l =>
       l.classList.toggle('on', l.dataset.distro === distro));
     if (distro === 'doom') el('c-evil').checked = true;
     else if (distro === 'vanilla') el('c-evil').checked = false;
@@ -2364,6 +2503,20 @@ function configText() {
       ? 'You have named a merged database and not turned it on: '
         + 'tick the box above, or the path does nothing.'
       : '';
+
+  // THE FEATURES, and only where they differ from the default.  `texts' and
+  // `lexica' are what Diogenes itself does, so a reader who takes the fixes
+  // and nothing else writes nothing at all.
+  const chosenFeatures = featuresChosen();
+  const defaultFeatures = ['texts', 'lexica'];
+  const sameAsDefault =
+    chosenFeatures.length === defaultFeatures.length
+    && defaultFeatures.every(f => chosenFeatures.includes(f));
+  if (!sameAsDefault) {
+    out.push('');
+    out.push('  ;; What is awake.  Everything else is loaded and asleep.');
+    out.push(`  (setq classicist-features '(${chosenFeatures.join(' ')}))`);
+  }
 
   out.push('');
   out.push('  :bind ("C-c d" . diogenes))');
@@ -3159,6 +3312,121 @@ function renderWhereNote() {
         '<code>:load-path</code>.';
 }
 
+// ---------- the features, and what wants what ----------
+// THE FIVE RULES ARE THE ELISP'S, in `classicist-feature-wants'.  Repeated
+// here because this is a static page and cannot read the package -- but
+// repeated as DATA and in the same shape, so that a change there is a change
+// of one line here rather than of an argument buried in a handler.
+const WANTS = {
+  treebank:     ['diorisis'],
+  dictionaries: ['lexica'],
+  notes:        ['texts', 'tei-corpora']
+};
+const FEATURE_LABEL = {
+  texts: "Diogenes' corpora", lexica: 'the lexica',
+  dictionaries: 'the printed dictionaries', diorisis: 'the Diorisis corpus',
+  treebank: 'treebank annotation', 'tei-corpora': 'the TEI editions',
+  notes: 'notes in org', windows: 'where the buffers go'
+};
+const ALL_FEATURES = Object.keys(FEATURE_LABEL);
+
+function featureOn(f) {
+  const box = document.getElementById('f-' + f);
+  return !!(box && box.checked);
+}
+function featuresChosen() {
+  return ALL_FEATURES.filter(featureOn);
+}
+
+// A SECTION IS ITS HEADING AND WHAT FOLLOWS IT, up to the next heading -- so
+// hiding one walks siblings rather than needing every row wrapped in a div,
+// which would have meant touching all four hundred lines of the pane.
+function sectionOf(h2) {
+  const out = [h2];
+  let n = h2.nextElementSibling;
+  // STOPS AT EITHER: an h3 group inside a panel is its own section, so
+  // hiding the panel does not depend on its first group and hiding a group
+  // does not take the rest of the panel with it.
+  while (n && n.tagName !== 'H2' && n.tagName !== 'H3') {
+    out.push(n); n = n.nextElementSibling;
+  }
+  return out;
+}
+// A CHILD CANNOT BE TICKED BEFORE ITS PARENT, which is why there is no
+// warning to show: a form that cannot reach an invalid state has nothing to
+// complain about.  Unticking a parent unticks its children, because leaving
+// them ticked and disabled would be a lie about what is awake.
+function syncFeatureRows() {
+  document.querySelectorAll('#c-features .featurerow').forEach(row => {
+    const f = row.dataset.feature;
+    const box = document.getElementById('f-' + f);
+    const wants = (row.dataset.wants || '').split(' ').filter(Boolean);
+    const blocked = wants.length && !wants.some(featureOn);
+    if (blocked && box.checked) box.checked = false;
+    if (box) box.disabled = blocked;
+    row.classList.toggle('blocked', blocked);
+    row.classList.toggle('on', !blocked && box && box.checked);
+  });
+}
+
+// THE CHIP FOR A HIDDEN SECTION IS HIDDEN WITH IT, so the rail lists what
+// there is rather than what there could be.  Called from showSections, which
+// already knows which headings are awake.
+function syncRails() {
+  document.querySelectorAll('.rail a').forEach(a => {
+    const target = document.querySelector(a.getAttribute('href'));
+    a.hidden = !!(target && target.hidden);
+  });
+}
+
+// AND WHICH ONE YOU ARE IN, by the last heading above the top of the window.
+// An observer rather than a scroll handler: a scroll handler fires on every
+// pixel and this needs to answer once per heading crossed.
+if ('IntersectionObserver' in window) {
+  const seen = new Map();
+  const watch = new IntersectionObserver(entries => {
+    entries.forEach(e => seen.set(e.target.id, e.isIntersecting));
+    document.querySelectorAll('.rail a').forEach(a => {
+      const id = a.getAttribute('href').slice(1);
+      a.classList.toggle('here', seen.get(id) === true);
+    });
+  }, { rootMargin: '-10% 0px -70% 0px' });
+  document.querySelectorAll('#panel-config [id^="s-"]').forEach(h =>
+    watch.observe(h));
+}
+
+function showSections() {
+  document.querySelectorAll('#panel-config h2[data-feature], #panel-config h3[data-feature]').forEach(h2 => {
+    const on = featureOn(h2.dataset.feature);
+    sectionOf(h2).forEach(el => { el.hidden = !on; });
+  });
+  syncRails();
+}
+
+// TICKING A DEPENDENT TICKS WHAT IT WANTS.  Unticking a dependency does NOT
+// untick what needed it: a reader who turns Diorisis off has probably not
+// thought about the treebank, and should be told rather than corrected.
+document.addEventListener('change', e => {
+  const f = e.target.dataset && e.target.dataset.feature;
+  if (!f) return;
+  if (e.target.checked && WANTS[f] && !WANTS[f].some(featureOn)) {
+    const first = document.getElementById('f-' + WANTS[f][0]);
+    if (first) { first.checked = true; }
+  }
+  syncFeatureRows();
+  showSections();
+  renderConfig();
+});
+
+function setFeatures(list) {
+  ALL_FEATURES.forEach(f => {
+    const box = document.getElementById('f-' + f);
+    if (box) box.checked = list.includes(f);
+  });
+  syncFeatureRows();
+  showSections();
+}
+
 function renderConfig() {
   el('c-out').textContent = configText();
   renderWhereNote();
@@ -3253,6 +3521,7 @@ el('c-download').addEventListener('click', () => {
 // always what will be written.
 const START = {
   fixes: {
+    features: ['texts', 'lexica'],
     // Nothing that changes how Diogenes looks.  Not the base -- the base
     // without its rough edges.
     'c-headerline': false, 'c-citations': false, 'c-analysis': false,
@@ -3260,7 +3529,9 @@ const START = {
     'c-claimbuffers': true, 'c-gotobylevel': true,
     preset: '', gesture: ''
   },
-  rec: {
+  all: {
+    features: ['texts', 'lexica', 'dictionaries', 'diorisis', 'treebank',
+               'tei-corpora', 'notes', 'windows'],
     // The above, plus what the package is for.
     'c-headerline': true, 'c-citations': true, 'c-analysis': true,
     'c-joinwords': true, 'c-completelemmata': true, 'c-allentries': true,
@@ -3269,16 +3540,20 @@ const START = {
   }
 };
 const START_NOTE = {
+  pick:  'Choose below. Everything not chosen is loaded and asleep.',
   fixes: 'The suite is installed and working, with the corrections it makes. '
        + 'Windows go wherever your Emacs already sends a new buffer.',
-  rec:   'An entry opens beside the text and later entries share that window; '
+  all:   'An entry opens beside the text and later entries share that window; '
        + 'the browser carries a header line, citations show beside the '
        + 'passage, a double-click looks a word up, and the analysis comes '
        + 'with the entry.'
 };
 function applyStart(which) {
-  const s = START[which];
-  if (!s) return;
+  // THE FEATURES FIRST, so that the sections a reader is about to
+  // see are the right ones before anything else is set.
+  if (START[which] && START[which].features)
+    setFeatures(START[which].features);
+  const s = START[which] || {};
   Object.keys(s).forEach(k => {
     if (k === 'preset' || k === 'gesture') return;
     const box = document.getElementById(k);
@@ -3296,8 +3571,8 @@ function applyStart(which) {
   // and a drag is drag-mouse-1, so marking a passage still works.
   const g = el('mousegesture');
   if (g) { g.value = s.gesture; g.dispatchEvent(new Event('input', {bubbles: true})); }
-  document.querySelectorAll('[data-start]').forEach(l =>
-    l.classList.toggle('on', l.dataset.start === which));
+  document.querySelectorAll('.startcard').forEach(b =>
+    b.classList.toggle('on', b.dataset.start === which));
   el('c-startnote').textContent = START_NOTE[which] || '\u00a0';
   renderConfig();
 }
@@ -3306,6 +3581,8 @@ document.addEventListener('click', e => {
   if (b) { e.preventDefault(); applyStart(b.dataset.start); }
 });
 
+showSections();
+syncFeatureRows();
 renderConfig();
 reset();
 render();
