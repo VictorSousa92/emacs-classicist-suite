@@ -1,14 +1,14 @@
 EMACS   ?= emacs
 PYTHON  ?= python3
-## diogenes-archive.el IS NOT COMPILED, and that is deliberate.  It is
-## loaded by nothing, and it has never run: its cl-loop forms would have
-## failed at the first call without cl-lib, and nothing ever made that call.
-## Compiling it produces twelve warnings about functions that no longer
-## exist, which is twelve pieces of noise about a file that does nothing.
-##
-## Left in the tree rather than deleted, because deleting it is a decision
-## about what is worth keeping and git has it either way.
-ELS      = $(filter-out diogenes-archive.el,$(wildcard *.el))
+
+## WHERE UPSTREAM IS.  The suite takes diogenes.el as a package dependency, so
+## its nine files are not in this directory.  Point this at an installation
+## carrying the nine load-bearing patches -- VictorSousa92/diogenes.el branch
+## classicist-base, or ~/.emacs.d/elpa/diogenes-* once they are merged.
+## `M-x classicist-check-base' says whether a given installation will do.
+DIOGENES ?= $(HOME)/diogenes-folder/diogenes-prs
+EMACSL    = -L . -L $(DIOGENES)
+ELS = $(wildcard *.el)
 BASELINE = per-file-baseline.txt
 
 .PHONY: all check compile declare baseline balance duplicates forms clean help
@@ -68,7 +68,7 @@ compile:
 	@rm -f *.elc
 	@fail=0; \
 	for f in $(ELS); do \
-	  out=$$($(EMACS) -Q --batch -L . -f batch-byte-compile $$f 2>&1); \
+	  out=$$($(EMACS) -Q --batch $(EMACSL) -f batch-byte-compile $$f 2>&1); \
 	  if echo "$$out" | grep -q ": Error: "; then \
 	    echo "ERROR  $$f -- does not compile"; \
 	    echo "$$out" | sed 's/^/         /'; \
@@ -106,7 +106,7 @@ compile:
 ## optional and are not on this load-path.  Those declarations are correct and
 ## `check-declare' cannot see them.
 declare:
-	@$(EMACS) -Q --batch -L . \
+	@$(EMACS) -Q --batch $(EMACSL) \
 	  --eval "(progn (require 'check-declare) \
 	                 (check-declare-directory default-directory))" 2>&1 \
 	  | grep "check-declare" | grep -v "file not found" > /tmp/declare.log \
@@ -127,7 +127,7 @@ baseline:
 	@rm -f *.elc
 	@for f in $(ELS); do \
 	  printf '%s %s\n' \
-	    "$$($(EMACS) -Q --batch -L . -f batch-byte-compile $$f 2>&1 \
+	    "$$($(EMACS) -Q --batch $(EMACSL) -f batch-byte-compile $$f 2>&1 \
 	        | grep -c Warning)" "$$f"; \
 	done | sort -rn > $(BASELINE)
 	@rm -f *.elc
