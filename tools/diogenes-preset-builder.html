@@ -513,6 +513,126 @@
       <em><code>classicist-browser-goto-by-level</code> &mdash; on by default; off takes the whole citation at once.</em></label>
   </div>
 
+
+  <h2>The corpora published as TEI</h2>
+  <div class="field">
+    <span>Where the editions are
+      <em><code>tei-directory</code> &mdash; the directory tei-index.py wrote its index into. CSEL, the Patrologia and the rest are read from here.</em></span>
+    <input type="text" id="c-teidir" data-drop="1">
+  </div>
+
+  <h2>The Diorisis corpus</h2>
+  <div class="field">
+    <span>The database
+      <em><code>diorisis-database</code> &mdash; diorisis.db, made by diorisis-index.py from the corpus's XML.</em></span>
+    <input type="text" id="c-diodb" data-drop="1">
+  </div>
+  <div class="field">
+    <span>A merged database, if you have one
+      <em><code>diorisis-merged-database</code> &mdash; one corpus's morphology attached to another's citations. Needs the box below as well, or it is named and not used.</em></span>
+    <input type="text" id="c-diomerged" data-drop="1">
+  </div>
+  <div class="row">
+    <input type="checkbox" id="c-diousemerged">
+    <label for="c-diousemerged">Work with the merged database
+      <em><code>diorisis-use-merged</code> &mdash; off by default, and the path above does nothing without it.</em></label>
+  </div>
+  <div class="field">
+    <span>Which Diogenes corpus its numbers belong to
+      <em><code>diorisis-corpus</code> &mdash; tlg for Greek, phi for Latin. The citations are looked up there.</em></span>
+    <select id="c-diocorpus">
+      <option value="tlg">the TLG — Greek</option>
+      <option value="phi">PHI — Latin</option>
+    </select>
+  </div>
+  <div class="field">
+    <span>Where searches are kept
+      <em><code>diorisis-saved-directory</code> &mdash; a saved search is a file here; M-x diorisis-search-saved reads them.</em></span>
+    <input type="text" id="c-diosaved" data-drop="1">
+  </div>
+
+  <h2>The treebank</h2>
+  <div class="field">
+    <span>Where the trees are written
+      <em><code>treebank-directory</code> &mdash; one file per sentence, as ALDT or CoNLL-U.</em></span>
+    <input type="text" id="c-tbdir" data-drop="1">
+  </div>
+  <div class="field">
+    <span>Where workbooks are kept
+      <em><code>treebank-workbook-directory</code> &mdash; a workbook is the sentences collected from a search.</em></span>
+    <input type="text" id="c-tbwork" data-drop="1">
+  </div>
+  <div class="field">
+    <span>The viewer's own page
+      <em><code>treebank-viewer-directory</code> &mdash; where index.html and Arethusa's files are, if you serve them.</em></span>
+    <input type="text" id="c-tbviewdir" data-drop="1">
+  </div>
+  <div class="field">
+    <span>Arethusa's source, if you have it
+      <em><code>treebank-arethusa-directory</code> &mdash; its own tree, for the viewer to load from rather than a copy.</em></span>
+    <input type="text" id="c-tbarethusa" data-drop="1">
+  </div>
+  <div class="field">
+    <span>The port the viewer listens on
+      <em><code>treebank-viewer-port</code> &mdash; 8087 by default.</em></span>
+    <input type="number" id="c-tbport">
+  </div>
+  <div class="row">
+    <input type="checkbox" id="c-tbserve" checked>
+    <label for="c-tbserve">Emacs starts the viewer's server
+      <em><code>treebank-serve-viewer</code> &mdash; on by default, and it opens the port above. Off if you serve the page some other way.</em></label>
+  </div>
+
+  <h2>Notes in org</h2>
+  <div class="field">
+    <span>The link type a passage gets
+      <em><code>diogenes-org-link-type</code> &mdash; classicist by default, so a note's ROAM_REFS reads classicist:tlg:0086:...</em></span>
+    <input type="text" id="c-orglink">
+  </div>
+  <div class="field">
+    <span>Go to the passage a note is about
+      <em><code>diogenes-org-goto-key</code></em></span>
+    <input type="text" id="c-orggoto">
+  </div>
+  <div class="field">
+    <span>What has been said about these lines
+      <em><code>diogenes-org-notes-key</code></em></span>
+    <input type="text" id="c-orgnotes">
+  </div>
+  <div class="field">
+    <span>Make a note on the passage in hand
+      <em><code>diogenes-org-note-key</code></em></span>
+    <input type="text" id="c-orgnote">
+  </div>
+
+  <h2>The books you have</h2>
+  <div class="field">
+    <span>Where the list is cached
+      <em><code>diogenes-books-cache-file</code> &mdash; reading every author's works takes a while; this keeps the answer.</em></span>
+    <input type="text" id="c-bookscache" data-drop="1">
+  </div>
+
+  <h2>Passage notes filed by author and work</h2>
+  <div class="field">
+    <span>The subdirectory inside your roam
+      <em><code>diogenes-roam-subdirectory</code> &mdash; ref by default, so a note lands under ref/<author>/<work>/.</em></span>
+    <input type="text" id="c-roamsub">
+  </div>
+  <div class="field">
+    <span>The tag every passage note gets
+      <em><code>diogenes-roam-tag</code> &mdash; passage by default.</em></span>
+    <input type="text" id="c-roamtag">
+  </div>
+  <div class="field">
+    <span>What a note's file is called
+      <em><code>diogenes-roam-file-name</code> &mdash; the slug org-roam makes, or the citation.</em></span>
+    <select id="c-roamname">
+      <option value="slug">org-roam's slug</option>
+      <option value="citation">the citation</option>
+    </select>
+  </div>
+  <div class="warnline" id="c-mergedwarn"></div>
+
   <h2>A preset at startup</h2>
   <p class="note">Optional. The four below need nothing else set; for one of
      your own, name it and say where the presets live. Make one on the
@@ -2220,6 +2340,66 @@ function configText() {
     out.push('  ;; One of the four behaviours, as a preset. No folder needed.');
     out.push(`  (setq diogenes-preset ${JSON.stringify(chosen)})`);
   }
+
+
+  // ---------- the corpora, the treebank, and the notes -----
+  // The paths and the few settings without a working default.
+  // Eighty-two options across these five modules; the rest have
+  // defaults, and offering them all would bury these.
+  const block = [];
+  if (normalisePath(el('c-teidir').value))
+    block.push(`  (setq tei-directory ${JSON.stringify(normalisePath(el('c-teidir').value))})`);
+  if (normalisePath(el('c-diodb').value))
+    block.push(`  (setq diorisis-database ${JSON.stringify(normalisePath(el('c-diodb').value))})`);
+  if (normalisePath(el('c-diomerged').value))
+    block.push(`  (setq diorisis-merged-database ${JSON.stringify(normalisePath(el('c-diomerged').value))})`);
+  if (el('c-diousemerged').checked)
+    block.push('  (setq diorisis-use-merged t)');
+  if (el('c-diocorpus').value && el('c-diocorpus').value !== 'tlg')
+    block.push(`  (setq diorisis-corpus '${el('c-diocorpus').value})`);
+  if (normalisePath(el('c-diosaved').value))
+    block.push(`  (setq diorisis-saved-directory ${JSON.stringify(normalisePath(el('c-diosaved').value))})`);
+  if (normalisePath(el('c-tbdir').value))
+    block.push(`  (setq treebank-directory ${JSON.stringify(normalisePath(el('c-tbdir').value))})`);
+  if (normalisePath(el('c-tbwork').value))
+    block.push(`  (setq treebank-workbook-directory ${JSON.stringify(normalisePath(el('c-tbwork').value))})`);
+  if (normalisePath(el('c-tbviewdir').value))
+    block.push(`  (setq treebank-viewer-directory ${JSON.stringify(normalisePath(el('c-tbviewdir').value))})`);
+  if (normalisePath(el('c-tbarethusa').value))
+    block.push(`  (setq treebank-arethusa-directory ${JSON.stringify(normalisePath(el('c-tbarethusa').value))})`);
+  if (el('c-tbport').value.trim() && el('c-tbport').value.trim() !== '8087')
+    block.push(`  (setq treebank-viewer-port ${el('c-tbport').value.trim()})`);
+  if (!el('c-tbserve').checked)
+    block.push('  (setq treebank-serve-viewer nil)');
+  if (el('c-orglink').value.trim())
+    block.push(`  (setq diogenes-org-link-type ${JSON.stringify(el('c-orglink').value.trim())})`);
+  if (el('c-orggoto').value.trim())
+    block.push(`  (setq diogenes-org-goto-key ${JSON.stringify(el('c-orggoto').value.trim())})`);
+  if (el('c-orgnotes').value.trim())
+    block.push(`  (setq diogenes-org-notes-key ${JSON.stringify(el('c-orgnotes').value.trim())})`);
+  if (el('c-orgnote').value.trim())
+    block.push(`  (setq diogenes-org-note-key ${JSON.stringify(el('c-orgnote').value.trim())})`);
+  if (normalisePath(el('c-bookscache').value))
+    block.push(`  (setq diogenes-books-cache-file ${JSON.stringify(normalisePath(el('c-bookscache').value))})`);
+  if (el('c-roamsub').value.trim())
+    block.push(`  (setq diogenes-roam-subdirectory ${JSON.stringify(el('c-roamsub').value.trim())})`);
+  if (el('c-roamtag').value.trim())
+    block.push(`  (setq diogenes-roam-tag ${JSON.stringify(el('c-roamtag').value.trim())})`);
+  if (el('c-roamname').value && el('c-roamname').value !== 'slug')
+    block.push(`  (setq diogenes-roam-file-name '${el('c-roamname').value})`);
+  if (block.length) {
+    out.push('');
+    out.push('  ;; The corpora, the treebank, and the notes.');
+    out.push(...block);
+  }
+  // THE ONE REAL DEPENDENCY IN EIGHTY-TWO OPTIONS.  merged-database names the
+  // file and use-merged decides whether to work with it, so the path alone is
+  // a configuration that looks finished and does nothing.
+  el('c-mergedwarn').textContent =
+    (normalisePath(el('c-diomerged').value) && !el('c-diousemerged').checked)
+      ? 'You have named a merged database and not turned it on: '
+        + 'tick the box above, or the path does nothing.'
+      : '';
 
   out.push('');
   out.push('  :bind ("C-c d" . diogenes))');
