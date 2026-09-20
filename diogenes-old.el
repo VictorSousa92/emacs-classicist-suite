@@ -1284,7 +1284,14 @@ Reader\'s own display nor this one moves the next dictionary to a frame
 of its own; with no document displayed yet, `pop-up-frames' is left
 alone and the first dictionary opens wherever your configuration puts
 it.  See `diogenes-old-reader-reuse-document-frame'."
-  (let* ((file (or file diogenes-old-pdf-file))
+  ;; THROUGH THE GATE, which resolves a folder to the one PDF in it.  THIS IS
+  ;; WHERE IT BELONGS: every scanned dictionary reaches the viewer here, so
+  ;; the Cambridge, BDAG and Montanari each having its own call to the gate
+  ;; was three fixes at the wrong level.  Theirs are harmless -- the gate is
+  ;; idempotent -- and this is the one that matters.
+  (let* ((file (classicist--require-path
+                (or file diogenes-old-pdf-file) 'diogenes-old-pdf-file
+                "The scanned dictionary" 'file))
          (viewer (diogenes-old--resolved-viewer)))
     (if (eq viewer 'emacs-reader)
         ;; Bypass purpose's display override so the Reader renders normally

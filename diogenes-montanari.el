@@ -487,7 +487,14 @@ with an interval outline, and `pdf-tools' (recommended) or
       (user-error "Could not locate \"%s\" in the Montanari outline" word))
     ;; Reuse the OLD module's viewer driver (handles pdf-tools/doc-view,
     ;; async startup, page clamping and the large-file prompt).
-    (diogenes-old--show-page page diogenes-montanari-pdf-file)
+    (diogenes-old--show-page
+     page
+     ;; THROUGH THE GATE, as the index does: a folder resolves to the one
+     ;; PDF in it.  This worked only because a file was named -- the
+     ;; Cambridge and BDAG had the same line and folders, and failed.
+     (classicist--require-path diogenes-montanari-pdf-file
+                               'diogenes-montanari-pdf-file
+                               "Montanari" 'file))
     (message "Montanari: \"%s\" -> page %d" word page)))
 
 ;;;###autoload

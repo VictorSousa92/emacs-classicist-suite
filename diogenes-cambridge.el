@@ -281,7 +281,14 @@ one-word-per-page outline, and `pdf-tools' (recommended) or
       (user-error "Could not locate \"%s\" in the Cambridge Greek Lexicon outline" word))
     ;; Reuse the OLD module's viewer driver (pdf-tools/doc-view, async
     ;; startup, page clamping, large-file prompt).
-    (diogenes-old--show-page page diogenes-cambridge-pdf-file)
+    (diogenes-old--show-page
+     page
+     ;; THROUGH THE GATE, which resolves a folder to the one PDF in it.
+     ;; The index does and this did not, so the guide words were found and
+     ;; the page was opened from a folder path.
+     (classicist--require-path diogenes-cambridge-pdf-file
+                               'diogenes-cambridge-pdf-file
+                               "The Cambridge Greek Lexicon" 'file))
     (message "Cambridge Greek Lexicon: \"%s\" -> page %d" word page)))
 
 ;;;###autoload
