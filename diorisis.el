@@ -4468,6 +4468,11 @@ The entry appears only where both packages are present."
   :type 'boolean
   :group 'diorisis)
 
+;;;###autoload
+;; AUTOLOADED BECAUSE THE MENU HOOK NAMES IT, and add-hook runs from
+;; the autoloads where this file has not loaded: run-hooks then found
+;; a void function.  A cookie makes the name reachable, which is what
+;; the fboundp guards above were doing by hand.
 (defun diorisis--add-browse-to-diogenes-menu ()
   "Put our other entries in Diogenes\=' menu: the texts and the trees.
 
@@ -4497,6 +4502,11 @@ where it is not there already."
           '("sa" "Search the annotated trees"
             treebank-annotations-menu))))))
 
+;;;###autoload
+;; AUTOLOADED BECAUSE THE MENU HOOK NAMES IT, and add-hook runs from
+;; the autoloads where this file has not loaded: run-hooks then found
+;; a void function.  A cookie makes the name reachable, which is what
+;; the fboundp guards above were doing by hand.
 (defun diorisis--add-to-diogenes-menu ()
   "Put our entry in Diogenes' menu.  Idempotent.
 

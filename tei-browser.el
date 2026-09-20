@@ -711,6 +711,11 @@ of this one, and this one adds itself."
   :type 'boolean
   :group 'tei)
 
+;;;###autoload
+;; AUTOLOADED BECAUSE THE MENU HOOK NAMES IT, and add-hook runs from
+;; the autoloads where this file has not loaded: run-hooks then found
+;; a void function.  A cookie makes the name reachable, which is what
+;; the fboundp guards above were doing by hand.
 (defun tei--add-to-diogenes-menu ()
   "Put our entry in Diogenes' menu.  Idempotent."
   (when (and (classicist-feature-p 'tei-corpora)
