@@ -4444,6 +4444,7 @@ two identical lines under SEARCH."
     ;; made, so they cannot be added before the entry they sit under exists.
     (diorisis--add-browse-to-diogenes-menu)))
 
+;;;###autoload
 (with-eval-after-load 'diogenes
   (if (fboundp 'diorisis--add-to-diogenes-menu)
       (diorisis--add-to-diogenes-menu)

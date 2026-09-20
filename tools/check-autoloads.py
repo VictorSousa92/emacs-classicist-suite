@@ -130,11 +130,29 @@ def main():
             if SAFE.match(form):
                 continue
             body = body_of(lines, at)
-            stubs = {m.group(1) for m in AUTOLOADED.finditer(text)}
+            # AND A NAME GUARDED BY fboundp IS NOT A DEPENDENCY.  That is
+            # the whole point of the guard: the form asks whether its file has
+            # loaded and does the work itself if not.  diorisis.el is written
+            # that way -- (if (fboundp 'diorisis--add-to-diogenes-menu) (call
+            # it) (else the append in full)) -- and this called it wrong.
+            #
+            # A CHECK THAT CANNOT TELL A CORRECT FORM FROM AN ABSENT ONE is
+            # worse than none: acting on its first verdict, I deleted two
+            # working menu appends and lost the Diorisis and TEI entries from
+            # Diogenes' own transient.
+            guarded = set(re.findall(r"fboundp '([a-z][a-z0-9-]*)", body))
+            stubs = ({m.group(1) for m in AUTOLOADED.finditer(text)}
+                     | guarded)
+            # THE SUBTRACTION APPLIES TO BOTH HALVES.  It bound only the
+            # first, so a name removed as guarded was added back by the
+            # second for being defined in this file -- and the check went on
+            # flagging a form that was written correctly.  Twice now a patch
+            # of mine has gone to one half of this expression.
             asks = sorted(({m.group(1) for m in INTERNAL.finditer(body)}
-                           - stubs)
-                          | {w for w in re.findall(r"\(([a-z][a-z0-9-]+)", body)
-                             if w in mine})
+                           | {w for w in re.findall(
+                                  r"\(([a-z][a-z0-9-]+)", body)
+                              if w in mine})
+                          - stubs)
             if asks:
                 trouble.append((name, at + 1, cookie + 1, asks))
             # AND THE OLDER SPELLING TOO.  eval-after-load takes a quoted form

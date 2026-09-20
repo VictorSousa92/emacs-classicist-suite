@@ -24,6 +24,11 @@
 
 (require 'seq)
 
+;; TRANSIENT, for the menu append.  diorisis.el requires it and this did
+;; not, so transient-get-suffix warned as undefined -- and the file uses
+;; transient's API either way.
+(require 'transient)
+
 ;; THE SUITE FEATURE LIST, if this file is part of a suite at all.
 ;; Declared and not required: this file stands alone -- absent the suite the
 ;; guards fall back to what they did before, which is why the one in the
@@ -673,20 +678,30 @@ of this one, and this one adds itself."
     (ignore-errors
       (transient-append-suffix 'diogenes "bm"
         '("bt" "Browse other corpora (TEI)" tei-open-work)))))
-
-;; NO COOKIE.  An autoloaded with-eval-after-load runs before the file it
-;; came from has loaded, so this called tei--add-to-diogenes-menu when that
-;; function did not exist -- void, at the first Emacs start after the install
-;; finally worked.  The Diorisis handover records this exact fault twice and
-;; the fix that works: a form that asks nothing of its own file.  This one
-;; asks everything of it.
+;;;###autoload
+;; THE COOKIE IS RIGHT AND THE OLD BODY WAS WRONG.  This form is the one
+;; that runs on a FRESH Emacs, before this file has loaded -- so it must ask
+;; nothing of it.  It called tei--add-to-diogenes-menu, which was void, and
+;; I removed the cookie instead of the fault: the error went and so did the
+;; menu entry, which then appeared only once something had pulled this file
+;; in and vanished at the next restart.
 ;;
-;; diorisis.el does it the other way, inlining the append inside an fboundp
-;; guard so the form needs nothing at all.  This file was never given the
-;; same treatment -- the fourth instance of the fault today, and the second
-;; to reach a running Emacs.
+;; diorisis.el had solved this already and says so in its own comment.  The
+;; shape: call the function where it exists, and otherwise do the appending
+;; here, naming only tei-open-work, which is autoloaded.
 (with-eval-after-load 'diogenes
-  (tei--add-to-diogenes-menu))
+  (if (fboundp 'tei--add-to-diogenes-menu)
+      (tei--add-to-diogenes-menu)
+    (when (and (or (not (fboundp 'classicist-feature-p))
+                   (classicist-feature-p 'tei-corpora))
+               (if (boundp 'tei-add-to-diogenes-menu)
+                   tei-add-to-diogenes-menu
+                 t)
+               (fboundp 'transient-append-suffix))
+      (ignore-errors
+        (unless (ignore-errors (transient-get-suffix 'diogenes "bt"))
+          (transient-append-suffix 'diogenes "bm"
+            (list "bt" "Browse other corpora (TEI)" 'tei-open-work)))))))
 
 (defun tei--work-in-index-p (corpus author work)
   "Whether the index holds AUTHOR's WORK in CORPUS.
