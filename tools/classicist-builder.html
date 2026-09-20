@@ -174,6 +174,12 @@
   .featurerow.blocked { opacity: .45; cursor: not-allowed; }
   .featurerow.blocked:hover { background: transparent; }
 
+  /* THREE FIELDS REPEATED: a corpus, an author number, a name.  Its own class
+     rather than `.field', which is a label above a control and not a row of
+     three. */
+  .overriderow { display: grid; grid-template-columns: 5rem 6rem 1fr;
+                 gap: .3rem; margin: 0 0 .25rem; }
+
   /* THE RAILS, one per column.  Their own class: `.distro' is a radio group
      and `.presetrow' reserves a column for a drawing, and borrowing either
      is what made the feature rows look wrong. */
@@ -360,6 +366,11 @@
     padding: .55rem; border: 1px solid var(--rule);
     border-radius: 4px; background: #efece5;
   }
+  /* THE RATIO IS OF THE SCREEN, not of the screen plus its frame.  With
+     box-sizing: border-box the desktop's own .55rem of padding and its border
+     came out of the 16:9, so a tiled desktop was the right width and shorter
+     than the single frame it divides. */
+  .frames.many { box-sizing: content-box; }
   .frames.many .frame { border-width: 1px; }
   .frames.many .frame .bar { font-size: .6rem; }
 
@@ -409,8 +420,12 @@
   }
   .frames.wm-scroll .windows { aspect-ratio: auto; flex: 1 1 auto; }
 
+  /* ABOVE THE FRAMES IN THE STACKING ORDER.  In floating they are
+     position:absolute with a z-index up to 4, and a frame at top:3% of a
+     desktop that begins just below this row overlapped it -- so the frame took
+     the click and Tiling could not be pressed from Floating. */
   .wmpick { display: flex; gap: .3rem; flex-wrap: wrap; margin: 0 0 .5rem;
-            justify-content: center; }
+            justify-content: center; position: relative; z-index: 10; }
   /* AND [hidden] MUST SAY SO LOUDER THAN display:flex.  `hidden' is only
      display:none in the browser's own stylesheet, so any author display rule
      beats it -- the picker was told to hide and went on showing with a single
@@ -847,6 +862,7 @@
     <label for="c-diousemerged">Work with the merged database
       <em><code>diorisis-use-merged</code> &mdash; off by default, and the path above does nothing without it. The plain database is what the corpus publishes and what everything here is tested against; the merged one answers what the other cannot.</em></label>
   </div>
+  <div class="warnline" id="c-mergedwarn"></div>
   <div class="field">
     <span>Which Diogenes corpus its numbers belong to
       <em><code>diorisis-corpus</code> &mdash; the TLG, and there is no other answer -- Diorisis is Greek filed under the TLG's own author and work numbers, which is what lets a hit be opened in the browser. A box rather than a constant because a reader with a custom corpus of the same texts may want to say so.</em></span>
@@ -894,23 +910,8 @@
   <div class="field">
     <span>The link type a passage gets
       <em><code>diogenes-org-link-type</code> &mdash; classicist by default, so a note's ROAM_REFS reads classicist:tlg:0086:...</em></span>
-    <input type="text" id="c-orglink">
+    <input type="text" id="c-orglink" placeholder="classicist">
   </div>
-  <div class="field">
-    <span>Go to the passage a note is about
-      <em><code>diogenes-org-goto-key</code></em></span>
-    <input type="text" id="c-orggoto">
-  </div>
-  <div class="field">
-    <span>What has been said about these lines
-      <em><code>diogenes-org-notes-key</code></em></span>
-    <input type="text" id="c-orgnotes">
-  </div>
-  <div class="field">
-    <span>Make a note on the passage in hand
-      <em><code>diogenes-org-note-key</code></em></span>
-    <input type="text" id="c-orgnote">
-  </div>  <div class="warnline" id="c-mergedwarn"></div>
 
   <div class="row">
     <input type="checkbox" id="c-useroam">
@@ -927,6 +928,49 @@
       <span>The tag every passage note gets
         <em><code>diogenes-roam-tag</code> &mdash; passage by default</em></span>
       <input type="text" id="r-tag" placeholder="passage">
+    </div>
+    <div class="field">
+      <span>What to call an author
+        <em><code>diogenes-roam-name-overrides</code> &mdash; the corpora name
+        an author at length: 0086 of the TLG is <i>Aristoteles Phil. et Corpus
+        Aristotelicum, Aristotle (0086)</i>, and a directory wants one word.
+        The first word is taken unless you say otherwise here. Four rows is
+        enough for the authors you read often; beyond that the option takes any
+        number, written by hand.</em></span>
+      <div id="c-overrides">
+      <div class="overriderow">
+        <select id="ovc-0">
+          <option value="tlg">tlg</option>
+          <option value="phi">phi</option>
+        </select>
+        <input type="text" id="ovn-0" placeholder="0086" size="6">
+        <input type="text" id="ovname-0" placeholder="aristotle">
+      </div>
+      <div class="overriderow">
+        <select id="ovc-1">
+          <option value="tlg">tlg</option>
+          <option value="phi">phi</option>
+        </select>
+        <input type="text" id="ovn-1" placeholder="0086" size="6">
+        <input type="text" id="ovname-1" placeholder="aristotle">
+      </div>
+      <div class="overriderow">
+        <select id="ovc-2">
+          <option value="tlg">tlg</option>
+          <option value="phi">phi</option>
+        </select>
+        <input type="text" id="ovn-2" placeholder="0086" size="6">
+        <input type="text" id="ovname-2" placeholder="aristotle">
+      </div>
+      <div class="overriderow">
+        <select id="ovc-3">
+          <option value="tlg">tlg</option>
+          <option value="phi">phi</option>
+        </select>
+        <input type="text" id="ovn-3" placeholder="0086" size="6">
+        <input type="text" id="ovname-3" placeholder="aristotle">
+      </div>
+      </div>
     </div>
     <div class="field">
       <span>What a note's file is called
@@ -1180,6 +1224,14 @@
 
 <main id="panel-preset" hidden>
 <section class="pane">
+  <h3 data-feature="notes">Org keys</h3>
+  <p class="note">Two in the browser and one in org: a note on the passage, what
+     has been said about these lines, and the way back from a note to the
+     passage. <code>C-c C-x C-d</code> rather than <code>C-c C-d</code> for the
+     last, that being <code>org-deadline</code> &mdash; a key already taken is
+     left alone and said so.</p>
+  <div id="c-keys-org"></div>
+
   <h2>Where to start</h2>
   <p class="note">A preset is a file of settings you load when you want them.
      Start from nothing, from one of the four the package ships, or from a
@@ -2558,6 +2610,30 @@ el('c-keys-lookup').innerHTML =
       <div data-warnfor="lk${i}" class="warnline"></div>
     </div>`).join('');
 
+// THE THREE ORG KEYS, as a table like the others: the row builder gives each
+// the keyboard button, the clash check and a warnline, which three
+// hand-written boxes had none of.
+const ORG_KEYS = [
+  ['diogenes-org-goto-key', 'C-c C-x C-d',
+   'in org, the way back to the passage a note is about'],
+  ['diogenes-org-notes-key', 'C-c C-y',
+   'in the browser, what has been said about these lines'],
+  ['diogenes-org-note-key', 'C-c C-w',
+   'in the browser, a note on the passage in hand'],
+];
+
+el('c-keys-org').innerHTML =
+  ORG_KEYS.map((k, i) => `
+    <div class="keyrow">
+      <div class="what"><code>${k[0]}</code><em>${k[2]}</em></div>
+      <div class="keybox">
+        <input type="text" data-orgkey="${i}" placeholder="${k[1]}"
+               data-context="lookup">
+        <button data-record="1" title="Press the keys instead of typing them">\u2328</button>
+      </div>
+      <div data-warnfor="ok${i}" class="warnline"></div>
+    </div>`).join('');
+
 el('c-keys-focus').innerHTML =
   DICTIONARY_KEY.map(k => `
     <div class="keyrow">
@@ -3073,12 +3149,6 @@ function configText() {
     block.push('  (setq treebank-serve-viewer nil)');
   if (awake('notes') && el('c-orglink').value.trim())
     block.push(`  (setq diogenes-org-link-type ${JSON.stringify(el('c-orglink').value.trim())})`);
-  if (awake('notes') && el('c-orggoto').value.trim())
-    block.push(`  (setq diogenes-org-goto-key ${JSON.stringify(el('c-orggoto').value.trim())})`);
-  if (awake('notes') && el('c-orgnotes').value.trim())
-    block.push(`  (setq diogenes-org-notes-key ${JSON.stringify(el('c-orgnotes').value.trim())})`);
-  if (awake('notes') && el('c-orgnote').value.trim())
-    block.push(`  (setq diogenes-org-note-key ${JSON.stringify(el('c-orgnote').value.trim())})`);
   // WHERE A CITATION OPENS.  Derived from the corpora where the reader has not
   // said otherwise: the form knows which features are awake and which paths
   // are set, so it can work the order out rather than asking for it.  A
@@ -3108,6 +3178,18 @@ function configText() {
       out.push(';; Where a citation in an entry opens, tried in order.');
       out.push(...lines);
     }
+  }
+  // THE THREE ORG KEYS, from their table.  `-' binds nothing, as everywhere
+  // else here -- which two hand-written special cases used to do and one did
+  // not.
+  if (awake('notes')) {
+    ORG_KEYS.forEach((k, i) => {
+      const box = document.querySelector(`[data-orgkey="${i}"]`);
+      const v = box && box.value.trim();
+      if (!v) return;
+      block.push(v === '-' ? `  (setq ${k[0]} nil)`
+                           : `  (setq ${k[0]} ${JSON.stringify(v)})`);
+    });
   }
   if (block.length) {
     out.push('');
@@ -3159,6 +3241,20 @@ function configText() {
       rblock.push(`  (setq diogenes-roam-tag ${JSON.stringify(el('r-tag').value.trim())})`);
     if (el('r-name').value !== 'citation')
       rblock.push(`  (setq diogenes-roam-file-name '${el('r-name').value})`);
+    // WHAT TO CALL AN AUTHOR, for as many rows as are filled.  A row wants
+    // all three to mean anything, so a half-filled one is passed over rather
+    // than written as a pair with an empty name.
+    const ovs = [];
+    for (let i = 0; i < 4; i++) {
+      const c = el('ovc-' + i), n = el('ovn-' + i), nm = el('ovname-' + i);
+      if (!c || !n || !nm) continue;
+      const num = n.value.trim(), name = nm.value.trim();
+      if (num && name)
+        ovs.push(`((${JSON.stringify(c.value)} ${JSON.stringify(num)}) . `
+                 + `${JSON.stringify(name)})`);
+    }
+    if (ovs.length)
+      rblock.push(`  (setq diogenes-roam-name-overrides '(${ovs.join(' ')}))`);
     if (!el('r-template').checked)
       rblock.push('  (setq diogenes-roam-install-capture-template nil)');
     if (el('r-idxname').value.trim()
