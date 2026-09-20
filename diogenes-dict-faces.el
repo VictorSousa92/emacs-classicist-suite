@@ -68,7 +68,7 @@
 ;;;; --------------------------------------------------------------------
 
 (defface diogenes-browser-header
-  '((t :height 1.3 :weight bold :inherit variable-pitch))
+  '((t :weight bold))
   "Face for the citation header above a passage in the browser.
 ITS OWN ATTRIBUTES, and nothing from Info.  The header named info-title-1
 directly, which is defined in info.el, a library nothing here loads -- so
@@ -77,9 +77,10 @@ Naming it in :inherit instead was meant to make the miss quiet and did not:
 sixty of them on one screen after a fresh install, which is where this was
 found.
 
-variable-pitch is built in and cannot be missing, and the numbers are what
-info-title-1 is -- larger, bold.  Themable as before, and now no longer
-dependent on whether anyone in the session has opened an Info buffer."
+Bold, and nothing else.  What info-title-1 looks like depends on the theme,
+so replacing it with a size and a variable pitch made the header huge where it
+had not been -- a choice nobody asked for.  Themable as before, and no longer
+dependent on whether anyone has opened an Info buffer."
   :group 'diogenes)
 
 (defface diogenes-dict-quote
