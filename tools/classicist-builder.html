@@ -664,6 +664,10 @@
       <input type="checkbox" id="f-dictionaries" data-feature="dictionaries">
       <div><b>The printed dictionaries</b><span>Bailly, the OLD, the TLL, Montanari, the DGE and the rest, offered from the head of an entry</span></div>
     </label>
+    <label class="featurerow child" data-feature="lemmata" data-wants="texts lexica">
+      <input type="checkbox" id="f-lemmata" data-feature="lemmata">
+      <div><b>Completing a lemma prompt</b><span>the word list&rsquo;s 63,718 Greek lemmata with their frequencies, matched by beta code or Greek with the diacritics optional &mdash; so <code>mu/w</code>, <code>muw</code> and <code>&#956;&#973;&#969;</code> all reach the word. <b>An index of some megabytes</b>, built from the hundred thousand lines of <code>greek-lemmata.txt</code> the first time a prompt is used and read at every one after: a second or two once per installation. Without this the prompts are plain, as Diogenes&rsquo; own are</span></div>
+    </label>
     <label class="featurerow child" data-feature="books" data-wants="texts">
       <input type="checkbox" id="f-books" data-feature="books">
       <div><b>A work at one of its books</b><span>opened at <i>Theta</i> rather than at 1045b27. <b>Two ways, and not every work either.</b> Aristotle prints his book titles in the text &mdash; <code>{&#920;}</code> &mdash; and those are found by reading and remembered. Plato does not, the division being editorial and carried by the Stephanus pages alone &mdash; so the <i>Republic</i>, the <i>Laws</i> and the thirteen <i>Letters</i> are declared outright in <code>classicist-books-declared</code>, from the Oxford text&rsquo;s contents. <b>Other authors have not been tried.</b> One that prints its titles in braces should answer by reading; one that does not gives nothing rather than a wrong answer, and can be declared as Plato’s are</span></div>
@@ -841,7 +845,7 @@
     <label for="c-joinwords">Rejoin a word broken across a line
       <em><code>classicist-browser-join-broken-words</code> &mdash; on by default, and off means a hyphenated word cannot be looked up.</em></label>
   </div>
-  <div class="row">
+  <div class="row" data-feature="lemmata">
     <input type="checkbox" id="c-completelemmata" checked>
     <label for="c-completelemmata">Complete lemmata at the search prompt
       <em><code>diogenes-complete-lemmata</code> &mdash; on by default; the first use in a session takes a second or two.</em></label>
