@@ -1223,19 +1223,45 @@
     <div id="c-keys-evil"></div>
   </div>
 
-</section>
-</main>
-
-<main id="panel-preset" hidden>
-<section class="pane">
-  <h3>Org keys</h3>
+  <h3 data-feature="notes">Org keys</h3>
   <p class="note">Two in the browser and one in org: a note on the passage, what
      has been said about these lines, and the way back from a note to the
      passage. <code>C-c C-x C-d</code> rather than <code>C-c C-d</code> for the
      last, that being <code>org-deadline</code> &mdash; a key already taken is
      left alone and said so.</p>
-  <div id="c-keys-org"></div>
+  <div class="keyrow">
+    <div class="what"><code>diogenes-org-goto-key</code><em>in org, the way back to the passage a note is about</em></div>
+    <div class="keybox">
+      <input type="text" data-orgkey="0" placeholder="C-c C-x C-d"
+             data-context="lookup">
+      <button data-record="1" title="Press the keys instead of typing them">⌨</button>
+    </div>
+    <div data-warnfor="ok0" class="warnline"></div>
+  </div>
+  <div class="keyrow">
+    <div class="what"><code>diogenes-org-notes-key</code><em>in the browser, what has been said about these lines</em></div>
+    <div class="keybox">
+      <input type="text" data-orgkey="1" placeholder="C-c C-y"
+             data-context="lookup">
+      <button data-record="1" title="Press the keys instead of typing them">⌨</button>
+    </div>
+    <div data-warnfor="ok1" class="warnline"></div>
+  </div>
+  <div class="keyrow">
+    <div class="what"><code>diogenes-org-note-key</code><em>in the browser, a note on the passage in hand</em></div>
+    <div class="keybox">
+      <input type="text" data-orgkey="2" placeholder="C-c C-w"
+             data-context="lookup">
+      <button data-record="1" title="Press the keys instead of typing them">⌨</button>
+    </div>
+    <div data-warnfor="ok2" class="warnline"></div>
+  </div>
 
+</section>
+</main>
+
+<main id="panel-preset" hidden>
+<section class="pane">
   <h2>Where to start</h2>
   <p class="note">A preset is a file of settings you load when you want them.
      Start from nothing, from one of the four the package ships, or from a
@@ -2626,17 +2652,6 @@ const ORG_KEYS = [
    'in the browser, a note on the passage in hand'],
 ];
 
-el('c-keys-org').innerHTML =
-  ORG_KEYS.map((k, i) => `
-    <div class="keyrow">
-      <div class="what"><code>${k[0]}</code><em>${k[2]}</em></div>
-      <div class="keybox">
-        <input type="text" data-orgkey="${i}" placeholder="${k[1]}"
-               data-context="lookup">
-        <button data-record="1" title="Press the keys instead of typing them">\u2328</button>
-      </div>
-      <div data-warnfor="ok${i}" class="warnline"></div>
-    </div>`).join('');
 
 el('c-keys-focus').innerHTML =
   DICTIONARY_KEY.map(k => `
