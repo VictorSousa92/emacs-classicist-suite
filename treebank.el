@@ -4076,6 +4076,11 @@ what of Plato they have annotated without naming it."
                               labels))
                   :file)))))
 
+;;;###autoload
+;; AUTOLOADED BECAUSE DIORISIS NAMES IT, in a menu append that runs on a
+;; fresh Emacs before either file has loaded: transient wants the command
+;; nameable at that moment or it says so -- Suffix command is not defined
+;; or autoloaded.  A cookie on a prefix is how, the same as on a command.
 (transient-define-prefix treebank-annotations-menu ()
   "The trees that have been annotated, and the ways to make another.
 

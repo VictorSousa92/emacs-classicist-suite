@@ -50,6 +50,12 @@ SAFE = re.compile(
     r"|\(add-to-list\b"
     r"|\(autoload\b"
     r"|\(provide\b"
+    # A PREFIX IS A DEFINITION, and the pattern above wants `def' at the
+    # start: transient-define-prefix begins with `transient-', so a cookie on
+    # one read as a call and the body was scanned for dependencies it only
+    # touches when invoked -- by which time the file is loaded.  The fourth
+    # correction this check has taken from real code.
+    r"|\([a-z-]*define-[a-z-]+\b"
 )
 
 # A name with a double hyphen is internal to the package that defines it, and
