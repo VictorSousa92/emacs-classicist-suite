@@ -864,6 +864,17 @@
       <em><code>tei-directory</code> &mdash; the directory holding canonical-greekLit, canonical-latinLit, First1KGreek or the like, and the index tei-index.py wrote there.</em></span>
     <input type="text" id="c-teidir" placeholder="/path/to/TEI" data-drop="1">
   </div>
+  <div class="field">
+    <span>The reading script, if you installed rather than cloned
+      <em><code>tei-read-script</code> &mdash; <code>tei-read.py</code>, which
+      a package manager leaves in its checkout rather than its build: straight
+      puts it under <code>straight/repos/</code> while the package looks in
+      <code>straight/build/</code>. Empty if you cloned the repository, where
+      it is found beside the elisp.</em></span>
+    <input type="text" id="c-teiscript" placeholder="/path/to/tei-read.py"
+           data-drop="1">
+  </div>
+
 
   <h2 data-feature="diorisis">The Diorisis corpus</h2>
   <div class="field">
@@ -1066,6 +1077,18 @@
     </div>
   </div>
   <h2 data-feature="windows">Frames</h2>
+  <div class="row" data-feature="windows">
+    <input type="checkbox" id="c-keepsplash">
+    <input type="hidden" id="c-keepsplash-note">
+    <label for="c-keepsplash">Leave the startup screen alone
+      <em><code>classicist-startup-screen-buffers</code> set to nil. A
+      Diogenes buffer otherwise takes the window your dashboard is holding
+      &mdash; Doom&rsquo;s, Spacemacs&rsquo;, or vanilla&rsquo;s &mdash; on the
+      reasoning that a reader who opens a text has finished with it, and that
+      none of the three behaviours above meant to leave a placeholder in a
+      window. Not your scratch buffer, which may hold something.</em></label>
+  </div>
+
   <div class="row">
     <input type="checkbox" id="c-pixelwise">
     <label for="c-pixelwise"><code>frame-resize-pixelwise</code>
@@ -3226,6 +3249,12 @@ function configText() {
                            : `  (setq ${k[0]} ${JSON.stringify(v)})`);
     });
   }
+  // TODAY'S TWO, both found by installing rather than by reading.
+  if (normalisePath(el('c-teiscript') && el('c-teiscript').value))
+    block.push(`  (setq tei-read-script ${JSON.stringify(
+      normalisePath(el('c-teiscript').value))})`);
+  if (el('c-keepsplash') && el('c-keepsplash').checked)
+    block.push('  (setq classicist-startup-screen-buffers nil)');
   if (block.length) {
     out.push('');
     out.push('  ;; The corpora, the treebank, and the notes.');

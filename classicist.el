@@ -543,7 +543,14 @@ otherwise, prompt the user for input."
    ("l" "Show all lemmata and their forms matching query"
     diogenes-show-all-lemmata-latin)])
 
-;;;###autoload (autoload 'diogenes "diogenes" nil t)
+;; THE AUTOLOAD NAMED THE BASE'S FILE, which is where this command used to
+;; live -- so C-c d loaded diogenes.el and got ITS prefix, unguarded, while
+;; the guarded one below waited in a file nothing had loaded.  SEARCH,
+;; BROWSE and DUMP therefore showed with texts asleep.
+;;
+;; The same race as the twenty-one commands, and here written out in the
+;; cookie rather than left to filename order.
+;;;###autoload (autoload 'diogenes "classicist" nil t)
 (transient-define-prefix diogenes ()
   "Study Greek and Latin Texts with Peter Heslin's Diogenes.
 This is the main dispatcher function that starts the transient
