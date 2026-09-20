@@ -195,14 +195,16 @@ another dictionary quickly; `C-u\=' prompts for a word if the guess is wrong."
       word))
 
 
-;;;###autoload
 
-;;;###autoload
 
 
 ;;; LOOKUP MODE
 
 
+;; NO COOKIE, for the reason given further up: an autoloaded form runs
+;; before its own file has loaded, and this calls a function of
+;; classicist-lookup.  There were TWO cookies on this one call, stacked --
+;; which is how the first survived being looked for.
 (classicist--lookup-install-registered-keys)
 
 
