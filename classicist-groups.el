@@ -114,7 +114,12 @@ reads as a question and the answer can change without editing eleven places."
 (defconst classicist-feature-wants
   '((treebank     diorisis)
     (dictionaries lexica)
-    (notes        texts tei-corpora))
+    (notes        texts tei-corpora)
+    ;; THE BOOKS ARE FOUND BY READING THE WORK, which is a Perl dump of a
+    ;; corpus text -- and the declared ones are opened in the browser.  Both
+    ;; want Diogenes' own corpora; neither the TEI editions nor Diorisis can
+    ;; answer, the braced titles being the CD-ROM texts' own.
+    (books        texts))
   "What a feature wants, as (FEATURE . ONE-OF).
 A feature is useful when one of the features it wants is also awake -- so
 `notes\=' is content with either browser, and `treebank\=' wants the one corpus

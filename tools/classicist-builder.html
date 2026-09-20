@@ -664,9 +664,9 @@
       <input type="checkbox" id="f-dictionaries" data-feature="dictionaries">
       <div><b>The printed dictionaries</b><span>Bailly, the OLD, the TLL, Montanari, the DGE and the rest, offered from the head of an entry</span></div>
     </label>
-    <label class="featurerow" data-feature="books">
+    <label class="featurerow child" data-feature="books" data-wants="texts">
       <input type="checkbox" id="f-books" data-feature="books">
-      <div><b>A work at one of its books</b><span>opened at <i>Theta</i> rather than at 1045b27. <b>Two ways, and not every work either.</b> Aristotle prints his book titles in the text &mdash; <code>{&#920;}</code> &mdash; and those are found by reading and remembered. Plato does not: the <i>Republic</i> and the <i>Laws</i> are divided editorially, by Stephanus page alone, so they are declared in <code>classicist-books-declared</code> from the Oxford text&rsquo;s contents. A work that is neither gives nothing rather than a wrong answer</span></div>
+      <div><b>A work at one of its books</b><span>opened at <i>Theta</i> rather than at 1045b27. <b>Two ways, and not every work either.</b> Aristotle prints his book titles in the text &mdash; <code>{&#920;}</code> &mdash; and those are found by reading and remembered. Plato does not, the division being editorial and carried by the Stephanus pages alone &mdash; so the <i>Republic</i>, the <i>Laws</i> and the thirteen <i>Letters</i> are declared outright in <code>classicist-books-declared</code>, from the Oxford text&rsquo;s contents. <b>Other authors have not been tried.</b> One that prints its titles in braces should answer by reading; one that does not gives nothing rather than a wrong answer, and can be declared as Plato’s are</span></div>
     </label>
     <label class="featurerow" data-feature="diorisis">
       <input type="checkbox" id="f-diorisis" data-feature="diorisis">
@@ -4139,7 +4139,8 @@ function renderWhereNote() {
 const WANTS = {
   treebank:     ['diorisis'],
   dictionaries: ['lexica'],
-  notes:        ['texts', 'tei-corpora']
+  notes:        ['texts', 'tei-corpora'],
+  books:        ['texts']
 };
 const FEATURE_LABEL = {
   texts: "Diogenes' corpora", lexica: 'the lexica',
