@@ -3337,7 +3337,7 @@ nothing saved is lost."
                      "n narrows\n"
                      "RET searches \u00b7 c counts \u00b7 x explains \u00b7 "
                      "S saves \u00b7 l loads \u00b7 k clears \u00b7 q quits\n"
-                     "each is also under C-c: C-c a, C-c d, C-c RET ...\n")
+                     "each is also under C-c: C-c a, C-c C-d, C-c RET ...\n")
              'face 'shadow))
     (goto-char (point-min))
     (diorisis--evil-enter-state)))
@@ -3638,7 +3638,7 @@ elsewhere -- see `diorisis-evil-emacs-state-modes' -- and this is the belt
 to that braces: a `C-c' key is nobody else's, and works in any state, under
 any framework, and in a buffer that was made before any of it was set up."
   "C-c a"   #'diorisis-query-add
-  "C-c d"   #'diorisis-query-delete
+  "C-c C-d" #'diorisis-query-delete
   "C-c k"   #'diorisis-query-clear
   "C-c n"   #'diorisis-query-narrow
   "C-c RET" #'diorisis-query-run

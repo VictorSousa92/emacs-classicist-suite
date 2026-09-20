@@ -3245,7 +3245,7 @@ and is reachable in any state."
   "C-c u" #'treebank-tree-goto-head
   "C-c s" #'treebank-tree-save
   "C-c v" #'treebank-tree-revert
-  "C-c d" #'treebank-tree-toggle-diagram
+  "C-c C-d" #'treebank-tree-toggle-diagram
   "C-c D" #'treebank-tree-graph
   "C-c w" #'treebank-tree-widget
   "C-c W" #'treebank-tree-widget-here
@@ -3818,7 +3818,7 @@ collection exported twice."
   "k" #'treebank-workbook-clear
   "q" #'quit-window
   "C-c e" #'treebank-workbook-export
-  "C-c d" #'treebank-workbook-delete
+  "C-c C-d" #'treebank-workbook-delete
   "C-c k" #'treebank-workbook-clear)
 
 (define-derived-mode treebank-workbook-mode special-mode
