@@ -388,13 +388,13 @@ This feature needs an OLD PDF whose bookmarks are the page guide words"
 (defun diogenes-old--index (&optional file)
   "Return the running-head index for FILE (default `diogenes-old-pdf-file').
 Uses and populates `diogenes-old--index-cache'."
-  (let ((file (or file diogenes-old-pdf-file)))
-    (unless file
-      (classicist--require-path file 'diogenes-old-pdf-file
-                              "The Oxford Latin Dictionary" 'file))
-    (unless (file-readable-p file)
-      (classicist--require-path file 'diogenes-old-pdf-file
-                              "The Oxford Latin Dictionary" 'file))
+  ;; THE GATE RESOLVES AND THIS THREW THE ANSWER AWAY: a folder is
+  ;; readable, so neither guard fired and it reached the viewer as a
+  ;; folder.  The Cambridge and BDAG had the same shape.
+  (let ((file (classicist--require-path
+               (or file diogenes-old-pdf-file)
+               'diogenes-old-pdf-file
+               "The Oxford Latin Dictionary" 'file)))
     (let ((key (diogenes-old--cache-key file)))
       (or (gethash key diogenes-old--index-cache)
           (setf (gethash key diogenes-old--index-cache)

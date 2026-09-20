@@ -190,13 +190,15 @@ Install pdf-tools (M-x package-install RET pdf-tools) and run M-x pdf-tools-inst
 (defun diogenes-cambridge--index (&optional file)
   "Return the cached CGL guide-word index for FILE.
 FILE defaults to `diogenes-cambridge-pdf-file'."
-  (let ((file (or file diogenes-cambridge-pdf-file)))
-    (unless file
-      (classicist--require-path file 'diogenes-cambridge-pdf-file
-                              "The Cambridge Greek Lexicon" 'file))
-    (unless (file-readable-p file)
-      (classicist--require-path file 'diogenes-cambridge-pdf-file
-                              "The Cambridge Greek Lexicon" 'file))
+  ;; THE GATE RESOLVES THE PATH AND THIS THREW THE ANSWER AWAY: both calls
+  ;; sat inside an unless, wanted only for the error.  A FOLDER IS READABLE,
+  ;; so neither guard fired and the folder went to epdfinfo, which called it
+  ;; a damaged PDF.  Naming a folder with one PDF in it works now, and only
+  ;; for a caller that takes what the gate returns.
+  (let ((file (classicist--require-path
+               (or file diogenes-cambridge-pdf-file)
+               'diogenes-cambridge-pdf-file
+               "The Cambridge Greek Lexicon" 'file)))
     (let ((key (diogenes-cambridge--cache-key file)))
       (or (gethash key diogenes-cambridge--index-cache)
           (setf (gethash key diogenes-cambridge--index-cache)

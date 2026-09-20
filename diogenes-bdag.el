@@ -178,11 +178,12 @@ Install pdf-tools (M-x package-install RET pdf-tools) and run M-x pdf-tools-inst
 (defun diogenes-bdag--index (&optional file)
   "Return the cached page-interval index for FILE.
 FILE defaults to `diogenes-bdag-pdf-file'."
-  (let ((file (or file diogenes-bdag-pdf-file)))
-    (unless file
-      (classicist--require-path file 'diogenes-bdag-pdf-file "BDAG" 'file))
-    (unless (file-readable-p file)
-      (classicist--require-path file 'diogenes-bdag-pdf-file "BDAG" 'file))
+  ;; THE GATE RESOLVES AND THIS THREW THE ANSWER AWAY, as the Cambridge did:
+  ;; a folder is readable, so neither guard fired and the folder reached
+  ;; epdfinfo, which called it a damaged PDF.
+  (let ((file (classicist--require-path
+               (or file diogenes-bdag-pdf-file)
+               'diogenes-bdag-pdf-file "BDAG" 'file)))
     (let ((key (diogenes-bdag--cache-key file)))
       (or (gethash key diogenes-bdag--index-cache)
           (setf (gethash key diogenes-bdag--index-cache)

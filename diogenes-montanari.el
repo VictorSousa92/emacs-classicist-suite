@@ -280,13 +280,13 @@ Install pdf-tools (M-x package-install RET pdf-tools) and run M-x pdf-tools-inst
 (defun diogenes-montanari--index (&optional file)
   "Return the cached page-interval index for FILE.
 FILE defaults to `diogenes-montanari-pdf-file'."
-  (let ((file (or file diogenes-montanari-pdf-file)))
-    (unless file
-      (classicist--require-path file 'diogenes-montanari-pdf-file
-                              "Montanari" 'file))
-    (unless (file-readable-p file)
-      (classicist--require-path file 'diogenes-montanari-pdf-file
-                              "Montanari" 'file))
+  ;; THE GATE RESOLVES AND THIS THREW THE ANSWER AWAY: a folder is
+  ;; readable, so neither guard fired and it reached the viewer as a
+  ;; folder.  The Cambridge and BDAG had the same shape.
+  (let ((file (classicist--require-path
+               (or file diogenes-montanari-pdf-file)
+               'diogenes-montanari-pdf-file
+               "Montanari" 'file)))
     (let ((key (diogenes-montanari--cache-key file)))
       (or (gethash key diogenes-montanari--index-cache)
           (setf (gethash key diogenes-montanari--index-cache)
