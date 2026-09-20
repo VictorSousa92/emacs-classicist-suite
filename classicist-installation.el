@@ -146,6 +146,26 @@ run M-x customize-variable RET %s RET"
                     dictionary name value))
       value)
      (t
+      ;; A FOLDER WHERE A FILE IS WANTED, and one PDF in it: take the PDF.
+      ;; Nine dictionaries are scans, and a reader who keeps each in its own
+      ;; folder had to name the file -- a name they did not choose and may
+      ;; not remember.  The folder is the thing they know.
+      ;;
+      ;; ONE ONLY, AND IT SAYS SO OTHERWISE.  Two PDFs in a folder is a
+      ;; question this cannot answer, and taking the first would be wrong
+      ;; quietly.
+      (when (file-directory-p value)
+        (let ((pdfs (ignore-errors
+                      (directory-files value t "\\.pdf\\'" t))))
+          (cond
+           ((null pdfs)
+            (user-error "%s: %s is the folder %s, which holds no PDF"
+                        dictionary name value))
+           ((cdr pdfs)
+            (user-error
+             "%s: %s is the folder %s, which holds %d PDFs -- name one"
+             dictionary name value (length pdfs)))
+           (t (setq value (car pdfs))))))
       (unless (file-readable-p value)
         (user-error "%s: `%s' is %s, which cannot be read"
                     dictionary name value))
