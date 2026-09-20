@@ -1255,7 +1255,21 @@ candidate it matches by substring under either, and under anything else."
                   (truncate-string-to-width
                    greek diorisis-lemma-greek-width nil ?\s)
                 greek)
-              "  " beta)
+              "  " beta
+              ;; AND THE BARE LETTERS, MATCHABLE BUT UNSEEN.  le/g matches
+              ;; the beta and leg matches nothing, the slash being in the
+              ;; way -- so the letters alone go in too, the diacritics
+              ;; being optional here as they are in the approximation.
+              ;;
+              ;; INVISIBLE, because a column of legw beside le/gw is noise
+              ;; to read: the property hides it from the display and leaves
+              ;; it in the string the styles compare against.  Left off
+              ;; where the two are the same, a word with no diacritics
+              ;; having nothing to add.
+              (let ((plain (ignore-errors (diorisis--bare beta))))
+                (and plain (not (string= plain beta))
+                     (propertize (concat "  " plain)
+                                 'invisible t))))
     greek))
 
 (defun diorisis--lemma-candidate-greek (candidate)
