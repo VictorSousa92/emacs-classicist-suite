@@ -1012,15 +1012,25 @@ marked."
      (replace-regexp-in-string
       (concat "\\`" (regexp-quote diogenes-org-link-type) ":") "" ref))))
 
-(defcustom diogenes-org-goto-key "C-c C-x C-d"
+(defcustom diogenes-org-goto-key nil
   "Key in an org buffer for opening the passage a note is about.
-Nil binds nothing.
+Nil, which is the default, binds nothing.
 
-`C-c C-x C-d\=' because the plain `C-c C-d\=' is `org-deadline\=', which a reader
-of org will want to keep; the `C-c C-x\=' prefix is where org itself puts its
-less common commands.  Set this to `\"C-c C-d\"\=' to take the shorter key
-anyway -- a binding already there is left alone and said so, so nothing is
-stolen silently."
+IT WAS C-c C-x C-d, on the reasoning that C-c C-x is where org puts its less
+common commands -- which is exactly why it is occupied: that key is
+org-clock-display, and C-c C-x d, tried next, is org-insert-drawer.  A
+binding already there is left alone and said so, so the command was unbound
+and a reader was told twelve times in one session.
+
+A PACKAGE SHOULD NOT PROMISE A KEY IN SOMEBODY ELSE'S MAJOR MODE.  Org has
+its own ideas about its keymap and is entitled to them; a free key today is
+a taken key after an org release.  So this binds nothing and a reader binds
+it where they want it -- under Doom or Spacemacs the localleader is
+uncontested and is what it is for, with the command bound there rather than
+here.
+
+The note commands in the browser are unaffected: they are in a keymap of
+this package's own, where a default is ours to give."
   :type '(choice (const :tag "Bind nothing" nil) string)
   :group 'diogenes-org)
 
