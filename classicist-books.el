@@ -291,12 +291,25 @@ being ordinary enough."
           (push book out))))
     (nreverse out)))
 
-(defun classicist-books--find (corpus author work then)
+(cl-defun classicist-books--find (corpus author work then)
   "Find the books of WORK and call THEN with them.
 
 Reads the whole work, there being no other way: the titles are in the text.
 Asynchronous, the dump being a Perl process that answers in its own time, so
 THEN is called when it has finished."
+  ;; THE FEATURE, AND NOT THE COMMAND.  A guard on diogenes-open-book stops a
+  ;; reader pressing it and leaves everything that reads the books directly --
+  ;; the roam index among them -- dividing away.  This is the one gate every
+  ;; discovery passes, so off here means off.
+  ;;
+  ;; AND NOTHING RATHER THAN AN ERROR, this being asynchronous: its callers
+  ;; expect THEN with what was found, and none is what a work carrying no book
+  ;; titles gives too.  So the absent feature looks like the absent titles,
+  ;; which is the honest answer to both.
+  (when (and (fboundp 'classicist-feature-p)
+             (not (classicist-feature-p 'books)))
+    (funcall then nil)
+    (cl-return-from classicist-books--find nil))
   (classicist-books--load)
   (let* ((key (list corpus author work))
          ;; SAID OUTRIGHT FIRST.  A declared work needs no reading, and a

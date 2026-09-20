@@ -664,6 +664,10 @@
       <input type="checkbox" id="f-dictionaries" data-feature="dictionaries">
       <div><b>The printed dictionaries</b><span>Bailly, the OLD, the TLL, Montanari, the DGE and the rest, offered from the head of an entry</span></div>
     </label>
+    <label class="featurerow" data-feature="books">
+      <input type="checkbox" id="f-books" data-feature="books">
+      <div><b>A work at one of its books</b><span>opened at <i>Theta</i> rather than at 1045b27. <b>Two ways, and not every work either.</b> Aristotle prints his book titles in the text &mdash; <code>{&#920;}</code> &mdash; and those are found by reading and remembered. Plato does not: the <i>Republic</i> and the <i>Laws</i> are divided editorially, by Stephanus page alone, so they are declared in <code>classicist-books-declared</code> from the Oxford text&rsquo;s contents. A work that is neither gives nothing rather than a wrong answer</span></div>
+    </label>
     <label class="featurerow" data-feature="diorisis">
       <input type="checkbox" id="f-diorisis" data-feature="diorisis">
       <div><b>The Diorisis corpus</b><span>ten million lemmatised words of Greek, searched by lemma, form, morphology and date. Wants no Diogenes data</span></div>
@@ -1003,8 +1007,9 @@
     <div class="row">
       <input type="checkbox" id="r-idxbook" checked>
       <label for="r-idxbook">Divide the index into books
-        <em><code>diogenes-roam-index-by-book</code> &mdash; on by default</em></label>
+        <em><code>diogenes-roam-index-by-book</code> &mdash; on by default, and wants <b>a work at one of its books</b> above: dividing an index into books needs something that knows where they are</em></label>
     </div>
+    <div class="warnline" id="c-booknote"></div>
     <div class="row">
       <input type="checkbox" id="r-idxbar" checked>
       <label for="r-idxbar">The index opens beside the text
@@ -3282,6 +3287,25 @@ function configText() {
     if (el('r-idxwidth').value.trim()
         && el('r-idxwidth').value.trim() !== '88')
       rblock.push(`  (setq diogenes-roam-index-snippet-width ${el('r-idxwidth').value.trim()})`);
+    // DIVIDING AN INDEX INTO BOOKS NEEDS SOMETHING THAT KNOWS WHERE THEY
+    // ARE, which is the books feature -- the index says as much itself, its
+    // optional require meaning a flat list rather than an error.  A want that
+    // crosses a package boundary and cannot be enforced.
+    //
+    // SO IT IS SAID AND NOT PREVENTED.  Greying the box would stop a reader
+    // asking for what they want; a line telling them which feature to turn on
+    // lets them have it.  The option stays theirs to set either way -- it is
+    // their file, and a flat index is what they will get until the feature is
+    // awake.
+    const wantsBooks = el('r-idxbook') && el('r-idxbook').checked
+                       && !featureOn('books');
+    const bookNote = el('c-booknote');
+    if (bookNote)
+      bookNote.textContent = wantsBooks
+        ? 'An index divided into books wants the books feature above \u2014 '
+          + 'turn on "A work at one of its books", or the index will be one '
+          + 'flat list.'
+        : '';
     if (!el('r-idxbook').checked)
       rblock.push('  (setq diogenes-roam-index-by-book nil)');
     if (!el('r-idxbar').checked)
@@ -4121,6 +4145,7 @@ const FEATURE_LABEL = {
   texts: "Diogenes' corpora", lexica: 'the lexica',
   dictionaries: 'the printed dictionaries', diorisis: 'the Diorisis corpus',
   treebank: 'treebank annotation', 'tei-corpora': 'the TEI editions',
+  books: 'a work at one of its books',
   notes: 'notes in org', windows: 'where the buffers go'
 };
 const ALL_FEATURES = Object.keys(FEATURE_LABEL);
@@ -4343,7 +4368,7 @@ const START = {
   },
   all: {
     features: ['texts', 'lexica', 'dictionaries', 'diorisis', 'treebank',
-               'tei-corpora', 'notes', 'windows'],
+               'tei-corpora', 'notes', 'windows', 'books'],
     'c-useroam': true,
     // The above, plus what the package is for.
     'c-headerline': true, 'c-citations': true, 'c-analysis': true,
