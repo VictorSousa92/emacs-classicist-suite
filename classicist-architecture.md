@@ -1183,3 +1183,20 @@ script, with the fallback written once: the option if set, beside the library,
 and then the source checkout that a build directory implies.  Four copies of
 that logic is three too many, and tei--script currently has the first two and
 not the third.
+
+## An eighth gate: what the suite offers and the builder does not
+
+Twice in one session the builder emitted a correct configuration that left
+something switched off. The `lemmata` feature was not in its feature list;
+`diogenes-roam-index-global-mode` was not turned on, so a reader who ticked
+notes got an index that went stale on the first save.
+
+The existing gate checks one direction -- every symbol the builder emits is a
+real one -- and nothing checks the other. A list of every
+`define-minor-mode`, and every member of `classicist-features`, against what
+the builder mentions, would have caught both in a second.
+
+Neither was a fault in the elisp. Both were a reader being handed a
+configuration that worked and did less than it could, which is the hardest
+kind to notice: nothing errors, and the feature simply is not there.
+
