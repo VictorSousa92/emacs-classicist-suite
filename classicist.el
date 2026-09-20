@@ -550,78 +550,110 @@ otherwise, prompt the user for input."
 ;;
 ;; The same race as the twenty-one commands, and here written out in the
 ;; cookie rather than left to filename order.
+;;;###autoload (autoload 'classicist-define-menu "classicist")
 ;;;###autoload (autoload 'diogenes "classicist" nil t)
-(transient-define-prefix diogenes ()
-  "Study Greek and Latin Texts with Peter Heslin's Diogenes.
-This is the main dispatcher function that starts the transient
-user interface."
-  [["SEARCH"
-    ;; ANY OF ITS MEMBERS, not `texts' alone: the appends from
-    ;; diorisis.el and tei-browser.el land in this group, so asking
-    ;; for `texts' hid the corpora that want no Diogenes data.
-    :if (lambda () (or (classicist-feature-p 'texts) (classicist-feature-p 'diorisis) (classicist-feature-p 'treebank)))
-    ("sg" "Search the Greek TLG"
-     (lambda () (interactive) (transient-setup 'diogenes--search--select-mode nil nil
-					  :scope (list :type "tlg")))
-     :transient transient--do-recurse :if (lambda () (classicist-feature-p 'texts)))
-    ("sl" "Search the Latin PHI"
-     (lambda () (interactive) (transient-setup 'diogenes--search--select-mode nil nil
-					  :scope (list :type "phi")))
-     :transient transient--do-recurse :if (lambda () (classicist-feature-p 'texts)))
-    ("sd" "Search the Duke Documentary Papyri"
-     (lambda () (interactive) (transient-setup 'diogenes--search--select-mode nil nil
-					  :scope (list :type "ddp")))
-     :transient transient--do-recurse :if (lambda () (classicist-feature-p 'texts)))
-    ("si" "Search the Classical Inscriptions"
-     (lambda () (interactive) (transient-setup 'diogenes--search--select-mode nil nil
-					  :scope (list :type "ins")))
-     :transient transient--do-recurse :if (lambda () (classicist-feature-p 'texts)))
-    ("sc" "Search the Christian Inscriptions"
-     (lambda () (interactive) (transient-setup 'diogenes--search--select-mode nil nil
-					  :scope (list :type "chr")))
-     :transient transient--do-recurse :if (lambda () (classicist-feature-p 'texts)))
-    ("sm" "Search the Miscellaneous PHI Texts"
-     (lambda () (interactive) (transient-setup 'diogenes--search--select-mode nil nil
-					  :scope (list :type "misc")))
-     :transient transient--do-recurse :if (lambda () (classicist-feature-p 'texts)))]
-   ["BROWSE"
-    ;; ANY OF ITS MEMBERS, not `texts' alone: the appends from
-    ;; diorisis.el and tei-browser.el land in this group, so asking
-    ;; for `texts' hid the corpora that want no Diogenes data.
-    :if (lambda () (or (classicist-feature-p 'texts) (classicist-feature-p 'diorisis) (classicist-feature-p 'tei-corpora)))
-    ("bg" "Browse the Greek TLG" diogenes-browse-tlg :if (lambda () (classicist-feature-p 'texts)))
-    ("bl" "Browse the Latin PHI" diogenes-browse-phi :if (lambda () (classicist-feature-p 'texts)))
-    ("bd" "Browse the Duke Documentary Papyri" diogenes-browse-ddp :if (lambda () (classicist-feature-p 'texts)))
-    ("bi" "Browse the Classical Inscriptions" diogenes-browse-ins :if (lambda () (classicist-feature-p 'texts)))
-    ("bc" "Browse the Christian Inscriptions" diogenes-browse-chr :if (lambda () (classicist-feature-p 'texts)))
-    ("bm" "Browse the Miscellaneous PHI Texts" diogenes-browse-misc :if (lambda () (classicist-feature-p 'texts)))]]
-  [["MORPHOLOGY & DICTIONARY LOOKUP"
-    :if (lambda () (classicist-feature-p 'lexica))
-    ("lg" "Look up Greek word (LSJ; C-u to choose)" diogenes-lookup-greek)
-    ("ll" "Look up Latin word (Lewis & Short; C-u to choose)"
-     diogenes-lookup-latin)
-    ("pg" "Try to parse and look up a Greek (C-u to choose)"
-     diogenes-parse-and-lookup-greek)
-    ("pl" "Try to parse and look up a Latin (C-u to choose)"
-     diogenes-parse-and-lookup-latin)
-    ("mg" "Greek morphology tools" diogenes-morphology-greek)
-    ("ml" "Latin morphology tools" diogenes-morphology-latin)]
-   ["DUMP AN ENTIRE WORK AS PLAIN TEXT"
-    :if (lambda () (classicist-feature-p 'texts))
-    ("dg" "Dump from the Greek TLG" diogenes-dump-tlg)
-    ("dl" "Dump from the Latin PHI" diogenes-dump-phi)
-    ("dd" "Dump from the Duke Documentary Papyri" diogenes-dump-ddp)
-    ("di" "Dump from the Classical Inscriptions" diogenes-dump-ins)
-    ("dc" "Dump from the Christian Inscriptions" diogenes-dump-chr)
-    ("dm" "Dump from the Miscellaneous PHI Texts" diogenes-dump-misc)]]
-  ;; The keys for going between the windows are NOT here.  This menu is for
-  ;; STARTING things -- search a corpus, look a word up -- where going from one
-  ;; Diogenes buffer to another is done while already in one, and `C-c C-b',
-  ;; `C-c C-l', `C-c C-a' and `C-c C-e' are to hand there.  The cheatsheet lists
-  ;; them under `Going between the windows and frames'.
-  ["CUSTOM CORPORA"
-    :if (lambda () (classicist-feature-p 'texts))
-   ("c" "Manage custom search corpora" diogenes-manage-user-corpora)])
+;; DEFINED IN A FUNCTION, AND THE FUNCTION CALLED WHEN THE BASE HAS
+;; LOADED.  Both packages define a `diogenes' transient and the later
+;; definition wins -- which came down to the package manager: straight
+;; loaded this suite last and a reader saw ours, package.el activates
+;; alphabetically and the base's landed on top.
+;;
+;; A REQUIRE WOULD NOT DO IT.  Loading this file when the base loads
+;; makes our prefix run EARLIER, not later: the base is part way
+;; through its own file and defines its prefix after we have finished.
+;; And the same form in our own autoloads can fire before `provide'
+;; and recurse.
+;;
+;; The hook runs after the base by definition, so this is
+;; deterministic under every manager.
+(defun classicist-define-menu ()
+  "Define the `diogenes\=' menu, this package\='s version of it.
+
+Called from a `with-eval-after-load\=' below, so that it lands on top of
+the base's own definition whichever of the two files loaded first.
+Idempotent: defining a transient prefix again simply replaces it."
+  (transient-define-prefix diogenes ()
+    "Study Greek and Latin Texts with Peter Heslin's Diogenes.
+  This is the main dispatcher function that starts the transient
+  user interface."
+    [["SEARCH"
+      ;; ANY OF ITS MEMBERS, not `texts' alone: the appends from
+      ;; diorisis.el and tei-browser.el land in this group, so asking
+      ;; for `texts' hid the corpora that want no Diogenes data.
+      :if (lambda () (or (classicist-feature-p 'texts) (classicist-feature-p 'diorisis) (classicist-feature-p 'treebank)))
+      ("sg" "Search the Greek TLG"
+       (lambda () (interactive) (transient-setup 'diogenes--search--select-mode nil nil
+  					  :scope (list :type "tlg")))
+       :transient transient--do-recurse :if (lambda () (classicist-feature-p 'texts)))
+      ("sl" "Search the Latin PHI"
+       (lambda () (interactive) (transient-setup 'diogenes--search--select-mode nil nil
+  					  :scope (list :type "phi")))
+       :transient transient--do-recurse :if (lambda () (classicist-feature-p 'texts)))
+      ("sd" "Search the Duke Documentary Papyri"
+       (lambda () (interactive) (transient-setup 'diogenes--search--select-mode nil nil
+  					  :scope (list :type "ddp")))
+       :transient transient--do-recurse :if (lambda () (classicist-feature-p 'texts)))
+      ("si" "Search the Classical Inscriptions"
+       (lambda () (interactive) (transient-setup 'diogenes--search--select-mode nil nil
+  					  :scope (list :type "ins")))
+       :transient transient--do-recurse :if (lambda () (classicist-feature-p 'texts)))
+      ("sc" "Search the Christian Inscriptions"
+       (lambda () (interactive) (transient-setup 'diogenes--search--select-mode nil nil
+  					  :scope (list :type "chr")))
+       :transient transient--do-recurse :if (lambda () (classicist-feature-p 'texts)))
+      ("sm" "Search the Miscellaneous PHI Texts"
+       (lambda () (interactive) (transient-setup 'diogenes--search--select-mode nil nil
+  					  :scope (list :type "misc")))
+       :transient transient--do-recurse :if (lambda () (classicist-feature-p 'texts)))]
+     ["BROWSE"
+      ;; ANY OF ITS MEMBERS, not `texts' alone: the appends from
+      ;; diorisis.el and tei-browser.el land in this group, so asking
+      ;; for `texts' hid the corpora that want no Diogenes data.
+      :if (lambda () (or (classicist-feature-p 'texts) (classicist-feature-p 'diorisis) (classicist-feature-p 'tei-corpora)))
+      ("bg" "Browse the Greek TLG" diogenes-browse-tlg :if (lambda () (classicist-feature-p 'texts)))
+      ("bl" "Browse the Latin PHI" diogenes-browse-phi :if (lambda () (classicist-feature-p 'texts)))
+      ("bd" "Browse the Duke Documentary Papyri" diogenes-browse-ddp :if (lambda () (classicist-feature-p 'texts)))
+      ("bi" "Browse the Classical Inscriptions" diogenes-browse-ins :if (lambda () (classicist-feature-p 'texts)))
+      ("bc" "Browse the Christian Inscriptions" diogenes-browse-chr :if (lambda () (classicist-feature-p 'texts)))
+      ("bm" "Browse the Miscellaneous PHI Texts" diogenes-browse-misc :if (lambda () (classicist-feature-p 'texts)))]]
+    [["MORPHOLOGY & DICTIONARY LOOKUP"
+      :if (lambda () (classicist-feature-p 'lexica))
+      ("lg" "Look up Greek word (LSJ; C-u to choose)" diogenes-lookup-greek)
+      ("ll" "Look up Latin word (Lewis & Short; C-u to choose)"
+       diogenes-lookup-latin)
+      ("pg" "Try to parse and look up a Greek (C-u to choose)"
+       diogenes-parse-and-lookup-greek)
+      ("pl" "Try to parse and look up a Latin (C-u to choose)"
+       diogenes-parse-and-lookup-latin)
+      ("mg" "Greek morphology tools" diogenes-morphology-greek)
+      ("ml" "Latin morphology tools" diogenes-morphology-latin)]
+     ["DUMP AN ENTIRE WORK AS PLAIN TEXT"
+      :if (lambda () (classicist-feature-p 'texts))
+      ("dg" "Dump from the Greek TLG" diogenes-dump-tlg)
+      ("dl" "Dump from the Latin PHI" diogenes-dump-phi)
+      ("dd" "Dump from the Duke Documentary Papyri" diogenes-dump-ddp)
+      ("di" "Dump from the Classical Inscriptions" diogenes-dump-ins)
+      ("dc" "Dump from the Christian Inscriptions" diogenes-dump-chr)
+      ("dm" "Dump from the Miscellaneous PHI Texts" diogenes-dump-misc)]]
+    ;; The keys for going between the windows are NOT here.  This menu is for
+    ;; STARTING things -- search a corpus, look a word up -- where going from one
+    ;; Diogenes buffer to another is done while already in one, and `C-c C-b',
+    ;; `C-c C-l', `C-c C-a' and `C-c C-e' are to hand there.  The cheatsheet lists
+    ;; them under `Going between the windows and frames'.
+    ["CUSTOM CORPORA"
+      :if (lambda () (classicist-feature-p 'texts))
+     ("c" "Manage custom search corpora" diogenes-manage-user-corpora)]))
+
+;;;###autoload
+;; AFTER THE BASE, whichever loaded first.  The autoload above reaches
+;; `classicist-define-menu' by this file's own name, which is what an
+;; autoload is for and does not recurse.
+(with-eval-after-load 'diogenes
+  (if (fboundp 'classicist-define-menu)
+      (classicist-define-menu)
+    ;; FROM THE AUTOLOADS, where this file has not loaded: naming the
+    ;; function is enough, it being autoloaded itself.
+    (ignore-errors (classicist-define-menu))))
 
 
 ;; And the mouse gestures a reader has asked for, which is nothing by default.
