@@ -652,6 +652,51 @@ user interface."
 ;; AND AFTER THE BASE HAS LOADED, because advising a name the base has not
 ;; defined yet installs the advice on nothing.
 
+;;;; --------------------------------------------------------------------
+;;;; THE LEMMA SEARCH, GIVEN ITS OWN COMPLETION
+;;;; --------------------------------------------------------------------
+
+;; `diogenes--morphological-search' asks with a bare `read-from-minibuffer',
+;; and this package has a reader that completes on the word list -- so the
+;; prompt that most wants it was the one not using it.  A reader searching the
+;; corpus for a lemma had no list, no frequencies and no way to check the
+;; spelling, while the same reader looking a word up had all three.
+;;
+;; :filter-args IS THE SMALLEST THING THAT WORKS.  The base prompts only where
+;; its LEMMA argument is nil, so filling it in beforehand leaves the search
+;; itself untouched.
+
+(defun classicist--search-lemma-args (args)
+  "Fill in the lemma ARGS lack, with completion.
+ARGS are `diogenes--morphological-search\='s: (TYPE &optional LEMMA AUTHORS).
+Where LEMMA is there already -- a caller that knew it, or a second search of
+the same word -- ARGS come back untouched."
+  (if (or (cdr args) (not (fboundp 'diogenes-read-lemma)))
+      args
+    (let* ((type (car args))
+           (lang (if (fboundp 'diogenes--probable-corpus-language)
+                     (diogenes--probable-corpus-language type)
+                   "greek")))
+      (list type
+            (diogenes-read-lemma
+             lang
+             (format "Lemma to search the %s for: " (upcase type)))))))
+
+(defun classicist--install-search-lemma ()
+  "Give the base's lemma search this package\='s completion.
+Idempotent, and only where `texts\=' is awake: a reader who wants the
+corrections and not the corpora gets Diogenes\=' own prompt."
+  (when (and (or (not (fboundp 'classicist-feature-p))
+                 (classicist-feature-p 'texts))
+             (fboundp 'diogenes--morphological-search))
+    (advice-add 'diogenes--morphological-search :filter-args
+                #'classicist--search-lemma-args)))
+
+(defun classicist--remove-search-lemma ()
+  "Give the base\='s plain prompt back."
+  (advice-remove 'diogenes--morphological-search
+                 #'classicist--search-lemma-args))
+
 (defconst classicist--overridden-commands
   (let (out)
     (dolist (family '("search" "dump" "browse"))
@@ -676,14 +721,18 @@ asleep should mean."
             (classicist-feature-p 'texts))
     (dolist (pair classicist--overridden-commands)
       (when (and (fboundp (car pair)) (fboundp (cdr pair)))
-        (advice-add (car pair) :override (cdr pair))))))
+        (advice-add (car pair) :override (cdr pair))))
+    ;; AND THE LEMMA SEARCH'S PROMPT, which is an argument filter rather than
+    ;; an override but belongs to the same feature and the same moment.
+    (classicist--install-search-lemma)))
 
 (defun classicist-remove-overrides ()
   "Give the base's commands back.
 What a redefinition could not do, and the reason this is advice."
   (interactive)
   (dolist (pair classicist--overridden-commands)
-    (advice-remove (car pair) (cdr pair))))
+    (advice-remove (car pair) (cdr pair)))
+  (classicist--remove-search-lemma))
 
 ;;;###autoload
 (with-eval-after-load 'diogenes
@@ -698,7 +747,13 @@ What a redefinition could not do, and the reason this is advice."
         (let ((theirs (intern (format "diogenes-%s-%s" family corpus)))
               (ours (intern (format "classicist-%s-%s" family corpus))))
           (when (and (fboundp theirs) (fboundp ours))
-            (advice-add theirs :override ours)))))))
+            (advice-add theirs :override ours)))))
+    ;; AND THE LEMMA SEARCH, where this file has not loaded: the filter is
+    ;; autoloaded, so naming it is enough to reach it.
+    (when (and (fboundp 'diogenes--morphological-search)
+               (fboundp 'classicist--search-lemma-args))
+      (advice-add 'diogenes--morphological-search :filter-args
+                  #'classicist--search-lemma-args))))
 
 (provide 'classicist)
 
