@@ -201,7 +201,7 @@ The form is (ABBREV . FULL-NAME")
 
 ;;; SEARCH
 ;;;###autoload
-(defun diogenes-search-tlg (options-or-pattern
+(defun classicist-search-tlg (options-or-pattern
 			    &optional author-plist prefix)
   "Search for a phrase in the Greek TLG database.
 Uses the Diogenes Perl Module."
@@ -209,7 +209,7 @@ Uses the Diogenes Perl Module."
   (diogenes--search-database "tlg" options-or-pattern author-plist prefix))
 
 ;;;###autoload
-(defun diogenes-search-phi (options-or-pattern
+(defun classicist-search-phi (options-or-pattern
 			    &optional author-plist prefix)
   "Search for a phrase in the Latin PHI database.
 Uses the Diogenes Perl Module."
@@ -217,7 +217,7 @@ Uses the Diogenes Perl Module."
   (diogenes--search-database "phi" options-or-pattern author-plist prefix))
 
 ;;;###autoload
-(defun diogenes-search-ddp (options-or-pattern
+(defun classicist-search-ddp (options-or-pattern
 			    &optional author-plist prefix)
   "Search for a phrase in the Duke Documentary Papyri.
 Uses the Diogenes Perl module."
@@ -225,7 +225,7 @@ Uses the Diogenes Perl module."
   (diogenes--search-database "ddp" options-or-pattern author-plist prefix))
 
 ;;;###autoload
-(defun diogenes-search-ins (options-or-pattern
+(defun classicist-search-ins (options-or-pattern
 			    &optional author-plist prefix)
   "Search for a phrase in the Classical Inscriptions Database.
 Uses the Diogenes Perl module."
@@ -233,7 +233,7 @@ Uses the Diogenes Perl module."
   (diogenes--search-database "ins" options-or-pattern author-plist prefix))
 
 ;;;###autoload
-(defun diogenes-search-chr (options-or-pattern
+(defun classicist-search-chr (options-or-pattern
 			    &optional author-plist prefix)
   "Search for a phrase in the Christian Inscriptions Database.
 Uses the Diogenes Perl module."
@@ -241,7 +241,7 @@ Uses the Diogenes Perl module."
   (diogenes--search-database "chr" options-or-pattern author-plist prefix))
 
 ;;;###autoload
-(defun diogenes-search-misc (options-or-pattern
+(defun classicist-search-misc (options-or-pattern
 			    &optional author-plist prefix)
   "Search for a phrase in the Miscellaneous PHI Texts Database.
 Uses the Diogenes Perl module."
@@ -249,7 +249,7 @@ Uses the Diogenes Perl module."
   (diogenes--search-database "misc" options-or-pattern author-plist prefix))
 
 ;;;###autoload
-(defun diogenes-search-cop (options-or-pattern
+(defun classicist-search-cop (options-or-pattern
 			    &optional author-plist prefix)
   "Search for a phrase in the PHI Coptic Texts Database.
 Uses the Diogenes Perl module."
@@ -259,49 +259,49 @@ Uses the Diogenes Perl module."
 
 ;;; DUMP
 ;;;###autoload
-(defun diogenes-dump-tlg (&optional author work)
+(defun classicist-dump-tlg (&optional author work)
   "Dump a work from the Greek TLG database in its entirety.
 Uses the Diogenes Perl module."
   (interactive)
   (classicist--dump-from-database "tlg" author work))
 
 ;;;###autoload
-(defun diogenes-dump-phi (&optional author work)
+(defun classicist-dump-phi (&optional author work)
   "Dump a work from the Latin PHI database in its entirety.
 Uses the Diogenes Perl module."
   (interactive)
   (classicist--dump-from-database "phi" author work))
 
 ;;;###autoload
-(defun diogenes-dump-ddp (&optional author work)
+(defun classicist-dump-ddp (&optional author work)
   "Dump a work from the Duke Documentary Database in its entirety.
 Uses the Diogenes Perl module."
   (interactive)
   (classicist--dump-from-database "ddp" author work))
 
 ;;;###autoload
-(defun diogenes-dump-ins (&optional author work)
+(defun classicist-dump-ins (&optional author work)
   "Dump a work from the Classical Inscriptions Database in its entirety.
 Uses the Diogenes Perl module."
   (interactive)
   (classicist--dump-from-database "ins" author work))
 
 ;;;###autoload
-(defun diogenes-dump-chr (&optional author work)
+(defun classicist-dump-chr (&optional author work)
   "Dump a work from the Christian Inscriptions Database in its entirety.
 Uses the Diogenes Perl module."
   (interactive)
   (classicist--dump-from-database "chr" author work))
 
 ;;;###autoload
-(defun diogenes-dump-misc (&optional author work)
+(defun classicist-dump-misc (&optional author work)
   "Dump a work from the Miscellaneous PHI Texts Database in its entirety.
 Uses the Diogenes Perl module."
   (interactive)
   (classicist--dump-from-database "misc" author work))
 
 ;;;###autoload
-(defun diogenes-dump-cop (&optional author work)
+(defun classicist-dump-cop (&optional author work)
   "Dump a work from the PHI Coptic Texts Database in its entirety.
 Uses the Diogenes Perl module."
   (interactive)
@@ -310,49 +310,49 @@ Uses the Diogenes Perl module."
 
 ;;; BROWSE
 ;;;###autoload
-(defun diogenes-browse-tlg (&optional author work)
+(defun classicist-browse-tlg (&optional author work)
   "Browse a specific passage in a work from the Greek TLG database.
 Uses the Diogenes Perl module."
   (interactive)
   (classicist--browse-database "tlg" author work))
 
 ;;;###autoload
-(defun diogenes-browse-phi (&optional author work)
+(defun classicist-browse-phi (&optional author work)
   "Browse a work from the Latin PHI database.
 Uses the Diogenes Perl module."
   (interactive)
   (classicist--browse-database "phi" author work))
 
 ;;;###autoload
-(defun diogenes-browse-ddp (&optional author work)
+(defun classicist-browse-ddp (&optional author work)
   "Browse a work from the Duke Documentary Database.
 Uses the Diogenes Perl module."
   (interactive)
   (classicist--browse-database "ddp" author work))
 
 ;;;###autoload
-(defun diogenes-browse-ins (&optional author work)
+(defun classicist-browse-ins (&optional author work)
   "Browse a work from the Classical Inscriptions Database.
 Uses the Diogenes Perl module."
   (interactive)
   (classicist--browse-database "ins" author work))
 
 ;;;###autoload
-(defun diogenes-browse-chr (&optional author work)
+(defun classicist-browse-chr (&optional author work)
   "Browse a work from the Christian Inscriptions Database.
 Uses the Diogenes Perl module."
   (interactive)
   (classicist--browse-database "chr" author work))
 
 ;;;###autoload
-(defun diogenes-browse-misc (&optional author work)
+(defun classicist-browse-misc (&optional author work)
   "Browse a work from the Miscellaneous PHI Texts  Database.
 Uses the Diogenes Perl module."
   (interactive)
   (classicist--browse-database "misc" author work))
 
 ;;;###autoload
-(defun diogenes-browse-cop (&optional author work)
+(defun classicist-browse-cop (&optional author work)
   "Browse a work from the  PHI Coptic Texts Database.
 Uses the Diogenes Perl module."
   (interactive)
@@ -620,6 +620,72 @@ user interface."
     (classicist-browser-install-mouse-keys))
   (when (fboundp 'classicist-browser-install-turn-keys)
     (classicist-browser-install-turn-keys))))
+
+;;;; --------------------------------------------------------------------
+;;;; THE BASE'S OWN NAMES, POINTED HERE
+;;;; --------------------------------------------------------------------
+
+;; TWENTY-ONE COMMANDS THIS PACKAGE HAS ITS OWN VERSION OF, and a reader's
+;; configuration, Diogenes' menu and everyone's muscle memory all name the
+;; base's.  So the base's names are advised to reach ours.
+;;
+;; NOT A SECOND DEFUN, which is what this was.  Redefining a name works only
+;; if the other definition came first, and across two packages that is the
+;; order the autoload stubs were written -- filename order, in which
+;; `diogenes' follows `classicist' and the base won.  A fresh Emacs got the
+;; plain browser and the suite looked inert.  It had looked right here only
+;; because a long session had pulled this file in last.
+;;
+;; AND AFTER THE BASE HAS LOADED, because advising a name the base has not
+;; defined yet installs the advice on nothing.
+
+(defconst classicist--overridden-commands
+  (let (out)
+    (dolist (family '("search" "dump" "browse"))
+      (dolist (corpus '("tlg" "phi" "ddp" "ins" "chr" "misc" "cop"))
+        (push (cons (intern (format "diogenes-%s-%s" family corpus))
+                    (intern (format "classicist-%s-%s" family corpus)))
+              out)))
+    (nreverse out))
+  "The base's command names, and ours that answer for them.
+An alist of (THEIRS . OURS), built rather than written out: three families of
+seven, and a list of twenty-one pairs typed by hand is twenty-one chances to
+mistype one.")
+
+(defun classicist-install-overrides ()
+  "Point the base's browse, search and dump commands at ours.
+Idempotent: `advice-add\=' with the same function is a no-op the second time.
+
+ONLY WHERE `texts\=' IS AWAKE.  A reader who wants the corrections and not the
+rest gets Diogenes\=' own commands, unadvised, which is what `texts\=' being
+asleep should mean."
+  (when (or (not (fboundp 'classicist-feature-p))
+            (classicist-feature-p 'texts))
+    (dolist (pair classicist--overridden-commands)
+      (when (and (fboundp (car pair)) (fboundp (cdr pair)))
+        (advice-add (car pair) :override (cdr pair))))))
+
+(defun classicist-remove-overrides ()
+  "Give the base's commands back.
+What a redefinition could not do, and the reason this is advice."
+  (interactive)
+  (dolist (pair classicist--overridden-commands)
+    (advice-remove (car pair) (cdr pair))))
+
+;;;###autoload
+(with-eval-after-load 'diogenes
+  (if (fboundp 'classicist-install-overrides)
+      (classicist-install-overrides)
+    ;; FROM THE AUTOLOADS, where this file has not loaded: the pairs are
+    ;; rebuilt here rather than read from the defconst above, so the form asks
+    ;; nothing of its own file.  Ours are autoloaded, so naming them is
+    ;; enough to reach them.
+    (dolist (family '("search" "dump" "browse"))
+      (dolist (corpus '("tlg" "phi" "ddp" "ins" "chr" "misc" "cop"))
+        (let ((theirs (intern (format "diogenes-%s-%s" family corpus)))
+              (ours (intern (format "classicist-%s-%s" family corpus))))
+          (when (and (fboundp theirs) (fboundp ours))
+            (advice-add theirs :override ours)))))))
 
 (provide 'classicist)
 

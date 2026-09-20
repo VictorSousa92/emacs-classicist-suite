@@ -60,7 +60,6 @@
 (declare-function diogenes--get-work-labels "diogenes-perl-interface" (options author-and-work))
 (declare-function diogenes--select-passage "diogenes-user-interface"
                   (options author work))
-(declare-function diogenes-browse-tlg "classicist" (&optional author work))
 (defvar diogenes-abbreviations)
 
 ;; STAYED IN THE BROWSER, because it opens a passage there, and opening one is
@@ -381,7 +380,7 @@ A plist: `:corpus\=', `:author\=', `:work\=', `:from\=' and `:to\=' -- the last
 two
 being citations, and `:to\=' nil unless a region is marked.
 
-The corpus, author and work are what `diogenes-browse-tlg\=' and its siblings
+The corpus, author and work are what `classicist-browse-tlg\=' and its siblings
 take, so a reference is enough to open the work again; `:from\=' says where in
 it.
 Nil in a buffer that is not a browser, there being nothing to refer to."
