@@ -105,6 +105,16 @@ answer.
               (const :tag "Frame, window and buffer managing" windows))
   :group 'classicist)
 
+;;;###autoload
+;; AUTOLOADED, because everything asks it and some of the askers run
+;; before any of this has loaded: a transient :if predicate evaluated
+;; when a menu is built, a menu append copied into the package
+;; autoloads, a mode hook.
+;;
+;; GUARDING EACH CALLER WAS THE WRONG SHAPE.  I added four fboundp
+;; guards this morning and the error moved every time, which is what
+;; fixing symptoms looks like.  One cookie makes every caller safe; the
+;; guards stay as belt and braces.
 (defun classicist-feature-p (feature)
   "Whether FEATURE is awake, by `classicist-features\='.
 A function rather than a `memq\=' at every site, so that a transient\='s `:if\='
