@@ -300,6 +300,36 @@ is what some package managers make."
                         "tei-read.py"
                         (file-name-directory (locate-library "tei-browser"))))))
         (and library (file-exists-p library) library))
+      ;; AND THE SOURCE CHECKOUT, which is where a .py actually is.  A
+      ;; package manager builds .el files into a build directory and leaves
+      ;; everything else where it cloned -- straight keeps
+      ;; straight/build-VERSION/NAME beside straight/repos/REPO, quelpa
+      ;; builds into .cache/quelpa/build/NAME and installs the elisp into
+      ;; elpa.  Both places tried above are inside the build, so a reader who
+      ;; INSTALLED rather than cloned had no script at all and was told to
+      ;; name it -- twice today, on two distributions.
+      ;;
+      ;; ASKED OF THE DIRECTORY RATHER THAN OF THE MANAGER: whatever built
+      ;; this, the file sits beside a copy of the repository somewhere near,
+      ;; and one search of the parent finds it.  tei-index.py and
+      ;; diorisis-index.py need none of this -- they are named in messages
+      ;; and run in a shell, never from here.
+      (let* ((dir (or tei--directory
+                      (ignore-errors
+                        (file-name-directory
+                         (locate-library "tei-browser"))))))
+        (and dir
+             (car (ignore-errors
+                    (directory-files-recursively
+                     (expand-file-name "../.." dir)
+                     (concat "\\`" (regexp-quote "tei-read.py") "\\'")
+                     nil
+                     ;; NOT INTO node_modules OR .git, which are large and
+                     ;; hold no script of ours.
+                     (lambda (d)
+                       (not (string-match-p
+                             "\\`\\(?:[.]\\|node_modules\\)"
+                             (file-name-nondirectory d)))))))))
       (user-error
        (concat "tei-read.py not found.  Looked beside tei-browser.el (%s) "
                "and where the library is.  Set tei-read-script to its path")
