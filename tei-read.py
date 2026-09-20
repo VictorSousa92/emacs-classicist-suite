@@ -39,6 +39,7 @@ recorded beside it instead.  Which way round a text wants is a fact about the
 text; the default is the divisions, which is right for the greater number.
 """
 
+import html.entities
 import argparse
 import io
 import os
@@ -144,7 +145,18 @@ class Reader:
                 self.words.append(element.tail)
             return
 
-        if tag == "div":
+        # AND div1, div2, div3, WHICH IS THE PRE-P5 SHAPE.  The docstring above
+        # says every text in these corpora marks textpart divisions "by
+        # construction" -- and phi2003, Caesar, has <div1 type="book"> and
+        # <div2 type="chapter">, so the assumption was wrong rather than the
+        # file unusual.  canonical-latinLit is a mixture of the two vintages.
+        #
+        # THE SAME INFORMATION, DIFFERENTLY PLACED: the level is in type
+        # rather than subtype, and the depth is the digit in the tag rather
+        # than the nesting.  So one branch reads either and the walk is
+        # unchanged.
+        if tag == "div" or (len(tag) == 4 and tag.startswith("div")
+                                and tag[3].isdigit()):
             kind = element.get("type")
             if kind in ("edition", "translation"):
                 # THE TEXT SAYS what it is and in what language.  The first
@@ -154,13 +166,25 @@ class Reader:
                 self.language = element.get("lang") or self.language
             number = element.get("n")
             subtype = element.get("subtype")
+            # THE LEVEL, FROM WHICHEVER ATTRIBUTE HOLDS IT.  A textpart names it
+            # in subtype; a div1 names it in type, there being no subtype and
+            # type not being the constant "textpart".
+            level = subtype or (kind if kind not in ("textpart", "edition",
+                                                     "translation") else None)
             opened = False
-            if kind == "textpart" and number:
+            # AND ONLY WHERE THE SHAPE SAYS SO.  In a P5 file a division is a
+            # textpart and nothing else; in the old shape it is a numbered
+            # tag.  Taking any typed div with an n would have given a
+            # <div type="speech" n="1"> a citation level it should not have --
+            # which Antiphon happens not to contain, so a test would have
+            # passed and the next text would have been wrong.
+            if number and (kind == "textpart"
+                           or (level and tag != "div")):
                 self.flush()
-                self.stack.append((subtype or "part", number))
-                self.note_level(subtype or "part")
+                self.stack.append((level or "part", number))
+                self.note_level(level or "part")
                 opened = True
-                if subtype == "book":
+                if level == "book":
                     # Filled in after the walk: a book's citation is the one
                     # in force once its first passage is reached.
                     self.books.append([number, None])
@@ -214,7 +238,15 @@ class Reader:
             self.words.append(element.tail)
 
     def read(self, path):
-        root = strip_namespace(ET.parse(path)).getroot()
+        # THE HTML ENTITIES, WHICH XML DOES NOT DEFINE.  A Perseus file says
+        # &mdash; and &aacute; rather than &#8212; and &#225;, having been
+        # edited by people; ElementTree refuses them -- undefined entity
+        # &mdash;, line 128 -- and will not parse the file at all.
+        #
+        # html.entities.entitydefs is the whole set, in the standard library.
+        parser = ET.XMLParser()
+        parser.entity.update(html.entities.entitydefs)
+        root = strip_namespace(ET.parse(path, parser)).getroot()
         self.walk(root)
         self.flush()
         for entry in self.books:
