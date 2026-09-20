@@ -1181,7 +1181,14 @@ number of the author and the number of the work."
   (with-current-buffer (diogenes--start-perl
 			"browser"
 			(diogenes--browse-interactively-script options passage)
-			#'classicist--browser-filter)
+			#'classicist--browser-filter
+			;; NO SENTINEL, and NO-DISPLAY: the base pops to the
+			;; buffer the moment the process is made, which gave
+			;; two windows on one buffer once this function
+			;; displayed it properly.  Placing it is ours to do,
+			;; and the with-current-buffer below needs no display
+			;; to make the buffer current.
+			nil t)
     (classicist-browser-mode)
     (setq classicist--browser-first-insertion t)
     (setq classicist--browser-language
