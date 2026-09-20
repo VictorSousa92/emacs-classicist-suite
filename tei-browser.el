@@ -568,6 +568,11 @@ command's business and the opening is not."
         (tei--render datum))
       (pop-to-buffer buffer))))
 
+;;;###autoload
+;; NAMED BY THE AUTOLOADED MENU APPEND, so it must be reachable before
+;; this file has loaded -- Suffix command is not defined or autoloaded,
+;; otherwise.  Lost when tei--open-version was split out of this command,
+;; the split having rewritten the defun and not the cookie above it.
 (defun tei-open-work ()
   "Choose a TEI text and read it."
   (interactive)
