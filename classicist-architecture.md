@@ -1165,3 +1165,21 @@ the load order independently of the graph.
   against thirteen patches. A `.gitignore` line and `git rm --cached` is an
   obvious fourteenth patch; it is also why that worktree kept going dirty and
   why one compile read an out-of-date file.
+
+## The Python scripts are unreachable from an installed package
+
+A package manager builds .el files into a build directory and leaves
+everything else in the checkout.  So tei-read.py, tei-index.py,
+diorisis-index.py and the viewer's own files are all in straight/repos while
+the package looks in straight/build -- and tei--script tries two places, both
+inside the build.
+
+A reader who INSTALLS rather than clones therefore has no TEI reading, no way
+to make either index, and no viewer, until they name four paths by hand.
+Found by installing on Doom, like everything else that mattered today.
+
+WHAT IT WANTS is one classicist--script, asked by every file that runs a
+script, with the fallback written once: the option if set, beside the library,
+and then the source checkout that a build directory implies.  Four copies of
+that logic is three too many, and tei--script currently has the first two and
+not the third.
