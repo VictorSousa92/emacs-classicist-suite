@@ -3377,7 +3377,13 @@ function configText() {
     out.push('');
     out.push(';; PASSAGE NOTES FILED BY AUTHOR AND WORK are their own package.');
     out.push('  (with-eval-after-load \'diogenes-roam');
-    out.push('    (diogenes-roam-mode 1))');
+    out.push('    (diogenes-roam-mode 1)');
+    // AND THE INDEX MODE, WHICH IS A SEPARATE ONE.  diogenes-roam-mode is
+    // the notes; the index mode installs the after-save and after-capture
+    // hooks that keep an index current and opens it beside the browser.
+    // Without it an index on screen goes stale the moment a note is saved,
+    // which is how the omission was found.
+    out.push('    (diogenes-roam-index-global-mode 1))');
     if (rblock.length) out.push(...rblock);
   }
 
