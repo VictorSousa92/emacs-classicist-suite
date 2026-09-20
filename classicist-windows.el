@@ -972,6 +972,19 @@ only displays -- and a reader left in the buffer they came from, looking at
 an entry in another window, finds that the keys they expect are undefined,
 because the buffer they are in is not the entry.  The distinction is easy to
 miss and was missed here."
+  ;; A SPLASH SCREEN'S WINDOW BEATS A NEW FRAME.  A reader who set
+  ;; pop-up-frames meant that new buffers get frames, and display-buffer
+  ;; honours it BEFORE any action of ours is consulted -- so the startup-
+  ;; screen rule in classicist--display-action could never fire while it was
+  ;; set, and the first text opened beside the dashboard in a frame of its
+  ;; own.
+  ;;
+  ;; THIS IS THE ONE CASE where an existing window is better than a frame:
+  ;; a dashboard is a placeholder and a reader opening a text has finished
+  ;; with it.  Bound here, at the one place that decides where a Diogenes
+  ;; buffer goes, rather than at each of the four calls below.
+  (let ((pop-up-frames (and (not (classicist--startup-screen-window))
+                            pop-up-frames)))
   ;; Claimed BEFORE it is displayed, so that whatever watches the display --
   ;; a perspective, a workspace -- sees a buffer that already belongs.
   (classicist--claim-buffer buffer)
@@ -1089,7 +1102,7 @@ miss and was missed here."
     (when (and (window-live-p window) kind)
       (classicist--remember-role window kind))
     (classicist--display-log buffer window)
-    window))
+    window)))
 
 
 (defun classicist--home-buffer-p (name)
