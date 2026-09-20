@@ -684,10 +684,11 @@ the same word -- ARGS come back untouched."
 
 (defun classicist--install-search-lemma ()
   "Give the base's lemma search this package\='s completion.
-Idempotent, and only where `texts\=' is awake: a reader who wants the
-corrections and not the corpora gets Diogenes\=' own prompt."
+Idempotent, and only where `lemmata\=' is awake -- the word list being a
+hundred thousand lines and the index some megabytes, which a reader may
+decline.  Without it they get Diogenes\=' own plain prompt."
   (when (and (or (not (fboundp 'classicist-feature-p))
-                 (classicist-feature-p 'texts))
+                 (classicist-feature-p 'lemmata))
              (fboundp 'diogenes--morphological-search))
     (advice-add 'diogenes--morphological-search :filter-args
                 #'classicist--search-lemma-args)))

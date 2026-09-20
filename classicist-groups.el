@@ -53,6 +53,10 @@ does.
 
   `texts\='         browsing and searching Diogenes\=' own corpora
   `lexica\='        the LSJ and Lewis & Short, the parse, every attested form
+  `lemmata\='       completing a lemma prompt on the word list: 63,718 Greek
+                  lemmata with their frequencies, matched by beta code or
+                  Greek with the diacritics optional.  Wants a prompt to
+                  complete, so `texts\=' or `lexica\=' with it
   `dictionaries\='  the printed ones.  WHICH of them is
                   `classicist-declared-dictionaries\='; without this that list
                   is not consulted at all
@@ -79,7 +83,7 @@ disk and wants nothing of the CD-ROMs; `diorisis\=' reads its own index, and
 will open a hit in its own reader where the browser cannot.  So
 `(diorisis tei-corpora)\=', with no Diogenes data at all, is a working
 answer.
-WHICH WANTS WHICH.  Three of the eight are not free-standing:
+WHICH WANTS WHICH.  Four of the ten are not free-standing:
 
   `treebank\='      wants `diorisis\=': it annotates that corpus\='s sentences,
                   requires its file, and puts its keys in its results buffer.
@@ -96,6 +100,7 @@ answer.
 "
   :type '(set (const :tag "Diogenes' corpora" texts)
               (const :tag "The LSJ and Lewis & Short" lexica)
+              (const :tag "Completing a lemma prompt" lemmata)
               (const :tag "The printed dictionaries" dictionaries)
               (const :tag "The Diorisis corpus" diorisis)
               (const :tag "Treebank annotation" treebank)
@@ -124,6 +129,11 @@ reads as a question and the answer can change without editing eleven places."
 (defconst classicist-feature-wants
   '((treebank     diorisis)
     (dictionaries lexica)
+    ;; THE COMPLETION SERVES A PROMPT, and both the searches and the parse
+    ;; have one.  Either is enough; without either there is nothing to
+    ;; complete, the word list being useful only when something asks for a
+    ;; lemma.
+    (lemmata      texts lexica)
     (notes        texts tei-corpora)
     ;; THE BOOKS ARE FOUND BY READING THE WORK, which is a Perl dump of a
     ;; corpus text -- and the declared ones are opened in the browser.  Both
