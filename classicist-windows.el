@@ -768,6 +768,52 @@ these behaviours exists to prevent."
       (window--display-buffer buffer window 'window alist))))
 
 
+(defcustom classicist-startup-screen-buffers
+  '("*doom*" "*spacemacs*" "*GNU Emacs*" "*About GNU Emacs*")
+  "Buffers whose window a Diogenes buffer may take.
+A startup screen is a placeholder: a reader who opens a text has finished with
+it, and none of `classicist-window-behaviour\='s three answers meant to leave
+it holding a window.  `reuse\=', `split\=' and `frames\=' say where a Diogenes
+buffer goes relative to other Diogenes buffers and to the text being read, and
+a splash screen is neither.
+
+NOT `*scratch*\=', deliberately, and not any file.  A dashboard holds nothing,
+where a scratch buffer may hold a morning\='s thinking -- so taking its window
+would lose something, and this takes only what cannot be lost.
+
+Nil, or an empty list, to leave every screen where it is."
+  :type '(repeat string)
+  :group 'classicist-windows)
+
+(defcustom classicist-startup-screen-modes
+  '(+doom-dashboard-mode spacemacs-buffer-mode)
+  "Major modes whose window a Diogenes buffer may take.
+As `classicist-startup-screen-buffers\=', for the screens that are better
+recognised by their mode: Doom renames its dashboard buffer where a project is
+open, and Spacemacs\=' own mode is surer than its buffer name."
+  :type '(repeat symbol)
+  :group 'classicist-windows)
+
+(defun classicist--startup-screen-p (&optional buffer)
+  "Whether BUFFER is a startup screen whose window may be taken."
+  (let ((buffer (or buffer (current-buffer))))
+    (or (member (buffer-name buffer) classicist-startup-screen-buffers)
+        (memq (buffer-local-value 'major-mode buffer)
+              classicist-startup-screen-modes)
+        nil)))
+
+(defun classicist--startup-screen-window ()
+  "A window showing a startup screen, or nil.
+THE SELECTED WINDOW FIRST, because a reader who has just started Emacs is
+looking at it.  Then any other on this frame -- but not on another frame,
+where taking a window would move a reader\='s attention to a frame they were
+not in."
+  (when classicist-startup-screen-buffers
+    (or (and (classicist--startup-screen-p (window-buffer (selected-window)))
+             (selected-window))
+        (seq-find (lambda (w) (classicist--startup-screen-p (window-buffer w)))
+                  (window-list nil 'never)))))
+
 (defun classicist--display-action (kind)
   "The `display-buffer\=' action for a Diogenes buffer of KIND.
 KIND is a role -- see `classicist-role-modes\=' -- and nil for none.
@@ -777,7 +823,19 @@ The action set for that kind if there is one, and otherwise whatever
 for lookups leaves the browser and the dictionaries on the shorthand.  A
 reader who wants one thing arranged specially should not have to spell out
 the other two."
-  (or (pcase kind
+  ;; A STARTUP SCREEN'S WINDOW IS FREE, whatever the behaviour says.  The
+  ;; first thing a reader does after starting Emacs opens a text, and none of
+  ;; `reuse', `split' or `frames' meant to leave the dashboard holding a
+  ;; window: they say where a Diogenes buffer goes relative to OTHER Diogenes
+  ;; buffers and to the text being read, and a splash screen is neither.
+  ;;
+  ;; BEFORE THE REST AND NOT INSTEAD OF IT.  This answers only while a screen
+  ;; is showing; the second text a reader opens finds none and is placed by
+  ;; the behaviour as before.
+  (if-let* ((window (classicist--startup-screen-window)))
+      (list (list (lambda (buffer alist)
+                    (window--display-buffer buffer window 'reuse alist))))
+    (or (pcase kind
         ;; The four that had an option each, and they still win: a reader who
         ;; set one should not find it overruled by a default.
         ('lookup classicist-lookup-display-action)
@@ -789,7 +847,7 @@ the other two."
       (cdr (assq kind classicist-display-actions))
       ;; `defer' yields nil, there being nothing for it to be: it means that
       ;; no action of ours is passed at all.
-      (classicist--behaviour-action (classicist--behaviour-for kind) kind)))
+      (classicist--behaviour-action (classicist--behaviour-for kind) kind))))
 
 
 (defun classicist--claim-buffer (buffer)
