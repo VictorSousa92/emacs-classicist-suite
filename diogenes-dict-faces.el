@@ -68,15 +68,18 @@
 ;;;; --------------------------------------------------------------------
 
 (defface diogenes-browser-header
-  '((t :inherit (info-title-1 bold)))
+  '((t :height 1.3 :weight bold :inherit variable-pitch))
   "Face for the citation header above a passage in the browser.
-Inherits from `info-title-1', which is what the header used directly --
-and which is defined in `info.el', a library nothing here loads.  Until
-something else in the session had loaded Info the face did not exist, and
-every redisplay of a header reported `Invalid face reference: info-title-1',
-once per header line.  A missing face named in `:inherit' is passed over
-quietly, where one named directly is not, so this both fixes that and makes
-the header themable."
+ITS OWN ATTRIBUTES, and nothing from Info.  The header named info-title-1
+directly, which is defined in info.el, a library nothing here loads -- so
+every redisplay reported Invalid face reference, once per header line.
+Naming it in :inherit instead was meant to make the miss quiet and did not:
+sixty of them on one screen after a fresh install, which is where this was
+found.
+
+variable-pitch is built in and cannot be missing, and the numbers are what
+info-title-1 is -- larger, bold.  Themable as before, and now no longer
+dependent on whether anyone in the session has opened an Info buffer."
   :group 'diogenes)
 
 (defface diogenes-dict-quote
