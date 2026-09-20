@@ -710,6 +710,39 @@
       <em><code>classicist-lookup-always-ask-dictionary</code> &mdash; off by default; on prompts rather than choosing by language.</em></label>
   </div>
 
+  <h3 data-feature="lexica">Where a citation opens</h3>
+  <p class="note">An entry is full of citations, and three places may hold the
+     passage: the corpus itself, a TEI edition, or the Diorisis sentences.
+     Tried in order, each saying whether it has the passage rather than
+     opening something else &mdash; so a citation leads somewhere or says
+     which path to set. <b>Left as they are, these follow the corpora you have
+     set above.</b></p>
+  <div class="field">
+    <span>Greek citations
+      <em><code>classicist-lookup-open-greek-with</code> &mdash; all three are
+      open to Greek</em></span>
+    <select id="c-citegreek">
+      <option value="">As your corpora imply</option>
+      <option value="diogenes tei diorisis">the corpus, then the editions, then Diorisis</option>
+      <option value="tei diorisis">the editions, then Diorisis</option>
+      <option value="diorisis tei">Diorisis, then the editions</option>
+      <option value="diogenes ask">the corpus, and ask if it cannot</option>
+      <option value="ask">ask every time</option>
+    </select>
+  </div>
+  <div class="field">
+    <span>Latin citations
+      <em><code>classicist-lookup-open-latin-with</code> &mdash; two only: the
+      Diorisis corpus is Greek</em></span>
+    <select id="c-citelatin">
+      <option value="">As your corpora imply</option>
+      <option value="diogenes tei">the corpus, then the editions</option>
+      <option value="tei">the editions only</option>
+      <option value="diogenes ask">the corpus, and ask if it cannot</option>
+      <option value="ask">ask every time</option>
+    </select>
+  </div>
+
   <h2 data-feature="texts">How it behaves</h2>
   <p class="note">All seven are on. The first three change what you see the
   moment you open a text; the rest are fixes, or are invisible until used.</p>
@@ -2997,6 +3030,36 @@ function configText() {
     block.push(`  (setq diogenes-org-notes-key ${JSON.stringify(el('c-orgnotes').value.trim())})`);
   if (awake('notes') && el('c-orgnote').value.trim())
     block.push(`  (setq diogenes-org-note-key ${JSON.stringify(el('c-orgnote').value.trim())})`);
+  // WHERE A CITATION OPENS.  Derived from the corpora where the reader has not
+  // said otherwise: the form knows which features are awake and which paths
+  // are set, so it can work the order out rather than asking for it.  A
+  // citation in an entry is the commonest thing in a lexicon and the last
+  // thing anyone wants to configure.
+  if (awake('lexica')) {
+    const haveDio = !!normalisePath(el('c-path') && el('c-path').value);
+    const haveTei = featureOn('tei-corpora')
+                    && !!normalisePath(el('c-teidir').value);
+    const haveDior = featureOn('diorisis')
+                     && !!normalisePath(el('c-diodb').value);
+    const impliedGreek = [haveDio && 'diogenes', haveTei && 'tei',
+                          haveDior && 'diorisis'].filter(Boolean);
+    const impliedLatin = [haveDio && 'diogenes', haveTei && 'tei']
+                         .filter(Boolean);
+    const greek = el('c-citegreek').value || impliedGreek.join(' ');
+    const latin = el('c-citelatin').value || impliedLatin.join(' ');
+    // THE DEFAULTS THE PACKAGE ALREADY HAS, which need no line: `(diogenes
+    // tei diorisis)' and `(diogenes tei ask)'.
+    const lines = [];
+    if (greek && greek !== 'diogenes tei diorisis')
+      lines.push(`  (setq classicist-lookup-open-greek-with '(${greek}))`);
+    if (latin && latin !== 'diogenes tei ask')
+      lines.push(`  (setq classicist-lookup-open-latin-with '(${latin}))`);
+    if (lines.length) {
+      out.push('');
+      out.push(';; Where a citation in an entry opens, tried in order.');
+      out.push(...lines);
+    }
+  }
   if (block.length) {
     out.push('');
     out.push('  ;; The corpora, the treebank, and the notes.');
