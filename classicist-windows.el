@@ -804,15 +804,22 @@ open, and Spacemacs\=' own mode is surer than its buffer name."
 
 (defun classicist--startup-screen-window ()
   "A window showing a startup screen, or nil.
+
 THE SELECTED WINDOW FIRST, because a reader who has just started Emacs is
-looking at it.  Then any other on this frame -- but not on another frame,
-where taking a window would move a reader\='s attention to a frame they were
-not in."
+looking at it.  Then every window on every VISIBLE FRAME -- and not just the
+selected frame\='s, which is what this asked and why it answered nil: by the
+time a display runs the selected frame may be a new one, so the dashboard was
+looked for where it was not.  A dashboard is worth taking wherever it sits."
   (when classicist-startup-screen-buffers
     (or (and (classicist--startup-screen-p (window-buffer (selected-window)))
              (selected-window))
-        (seq-find (lambda (w) (classicist--startup-screen-p (window-buffer w)))
-                  (window-list nil 'never)))))
+        (catch 'found
+          (dolist (frame (frame-list))
+            (when (frame-visible-p frame)
+              (dolist (w (window-list frame 'never))
+                (when (classicist--startup-screen-p (window-buffer w))
+                  (throw 'found w)))))
+          nil))))
 
 (defun classicist--display-action (kind)
   "The `display-buffer\=' action for a Diogenes buffer of KIND.
@@ -983,8 +990,25 @@ miss and was missed here."
   ;; a dashboard is a placeholder and a reader opening a text has finished
   ;; with it.  Bound here, at the one place that decides where a Diogenes
   ;; buffer goes, rather than at each of the four calls below.
-  (let ((pop-up-frames (and (not (classicist--startup-screen-window))
-                            pop-up-frames)))
+  ;; FOUND ONCE, HERE, and used directly below.  It was asked twice -- here
+  ;; for pop-up-frames and again in classicist--display-action for the action
+  ;; -- and a frame can appear between the two, so the answers differed and
+  ;; the second governed.  The display log said so: `branch action set by the
+  ;; reader', with the browser already in a window before the display.
+  (let* ((splash (classicist--startup-screen-window))
+         (pop-up-frames (and (not splash) pop-up-frames)))
+    ;; A WINDOW IN HAND NEEDS NO ACTION.  `window--display-buffer' puts the
+    ;; buffer there and nothing gets a say -- not `pop-up-frames', not a
+    ;; reader's own display action, not window-purpose.  Which is right: a
+    ;; splash screen is not a placement question but a window nobody wants,
+    ;; and an action is a request where this is not one.
+    (when splash
+      (let ((window (window--display-buffer buffer splash 'reuse nil)))
+        (unless no-select (select-window window))
+        (when (and (window-live-p window) kind)
+          (classicist--remember-role window kind))
+        (classicist--display-log buffer window)
+        (cl-return-from classicist-display-buffer window)))
   ;; Claimed BEFORE it is displayed, so that whatever watches the display --
   ;; a perspective, a workspace -- sees a buffer that already belongs.
   (classicist--claim-buffer buffer)
