@@ -52,7 +52,7 @@
   :group 'diogenes)
 
 (defcustom diogenes-evil-emacs-state-modes
-  '(diogenes-lookup-mode
+  '(classicist-lookup-mode
     classicist-analysis-mode
     diogenes-search-mode
     diogenes-select-forms-mode
