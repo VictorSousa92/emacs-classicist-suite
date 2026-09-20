@@ -720,6 +720,27 @@ of this one, and this one adds itself."
           (transient-append-suffix 'diogenes "bm"
             (list "bt" "Browse other corpora (TEI)" 'tei-open-work)))))))
 
+;; AND AGAIN WHEN THE BASE LOADS, because its own
+;; transient-define-prefix REPLACES the diogenes prefix wholesale and
+;; takes the appended suffixes with it: the first press showed them and
+;; the second did not, the base having loaded in between.
+;;
+;; IDEMPOTENT, so twice is safe: each append asks transient-get-suffix
+;; first, which is what that guard was put there for.
+(with-eval-after-load 'diogenes
+  (if (fboundp 'tei--add-to-diogenes-menu)
+      (tei--add-to-diogenes-menu)
+    (when (and (or (not (fboundp 'classicist-feature-p))
+                   (classicist-feature-p 'tei-corpora))
+               (if (boundp 'tei-add-to-diogenes-menu)
+                   tei-add-to-diogenes-menu
+                 t)
+               (fboundp 'transient-append-suffix))
+      (ignore-errors
+        (unless (ignore-errors (transient-get-suffix 'diogenes "bt"))
+          (transient-append-suffix 'diogenes "bm"
+            (list "bt" "Browse other corpora (TEI)" 'tei-open-work)))))))
+
 (defun tei--work-in-index-p (corpus author work)
   "Whether the index holds AUTHOR's WORK in CORPUS.
 A LOOKUP AND NOT A GUESS.  The index is keyed by author number -- \`tei-authors\='

@@ -4491,6 +4491,49 @@ two identical lines under SEARCH."
             '("sa" "Search the annotated trees"
               treebank-annotations-menu)))))))
 
+;; AND AGAIN WHEN THE BASE LOADS, because its own
+;; transient-define-prefix REPLACES the diogenes prefix wholesale and
+;; takes the appended suffixes with it: the first press showed them and
+;; the second did not, the base having loaded in between.
+;;
+;; IDEMPOTENT, so twice is safe: each append asks transient-get-suffix
+;; first, which is what that guard was put there for.
+(with-eval-after-load 'diogenes
+  (if (fboundp 'diorisis--add-to-diogenes-menu)
+      (diorisis--add-to-diogenes-menu)
+    (when (and (or (not (fboundp 'classicist-feature-p))
+                   (classicist-feature-p 'diorisis))
+               (if (boundp 'diorisis-add-to-diogenes-menu)
+                   diorisis-add-to-diogenes-menu
+                 t)
+               (fboundp 'transient-append-suffix))
+      (ignore-errors
+        (unless (ignore-errors (transient-get-suffix 'diogenes "sD"))
+          (transient-append-suffix 'diogenes "sm"
+            '("sD" "Search the Diorisis corpus by lemma"
+              diorisis-search))))
+      (ignore-errors
+        (unless (ignore-errors (transient-get-suffix 'diogenes "bD"))
+          (transient-append-suffix 'diogenes "bm"
+            '("bD" "Browse the Diorisis corpus"
+              diorisis-open-work))))
+      ;; AND THE ANNOTATIONS.  This form is the one that runs on a FRESH
+      ;; Emacs -- before this file is loaded -- so an entry left out of it is
+      ;; an entry that appears only once something has pulled the file in,
+      ;; and vanishes again at the next restart.  `sa\=' was in the function
+      ;; above and not here, which is exactly how it behaved.
+      ;;
+      ;; APPENDED AFTER `sa\='S OWN PREDECESSOR and not after `sD\=', because
+      ;; `sD\=' may not be there: a reader with
+      ;; `diorisis-add-to-diogenes-menu\=' nil, or a Diogenes whose SEARCH
+      ;; section is named otherwise, would leave this with nothing to hang
+      ;; from.  `sm\=' is Diogenes\=' own and is what the others hang from too.
+      (ignore-errors
+        (unless (ignore-errors (transient-get-suffix 'diogenes "sa"))
+          (transient-append-suffix 'diogenes "sm"
+            '("sa" "Search the annotated trees"
+              treebank-annotations-menu)))))))
+
 (with-eval-after-load 'classicist-browser
   (when (boundp 'diorisis-results-mode-map)
     (diorisis-install-mouse-keys)))
