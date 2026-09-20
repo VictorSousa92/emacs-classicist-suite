@@ -266,6 +266,41 @@ and the lemmata above the dictionary entries."
   :type 'boolean
   :group 'classicist-lookup)
 
+(defcustom classicist-lookup-open-greek-with '(diogenes tei diorisis)
+  "Where a Greek citation in an entry opens, tried in order.
+An LSJ entry is full of citations, and three places may hold the passage:
+
+  `diogenes\='   the corpus, by author and work number.  Everything the CD-ROM
+               databases hold, and nothing without them.
+  `tei\='        the edition, from `tei-directory\=' -- Perseus, the First
+               Thousand Years of Greek and the rest.  A few hundred works, so
+               not every citation is there.
+  `diorisis\='   the Diorisis corpus\='s own sentences.  Greek only, and filed
+               under the TLG\='s own numbers, so the citation goes across as it
+               comes.
+  `ask\='        put the choice to you.
+
+TRIED IN ORDER, each saying whether it has the passage rather than opening
+something else -- so `(diogenes tei diorisis)\=' is the corpus where it is
+installed, the edition where it is not, and the sentences where neither has
+the text.  `(ask)\=' asks every time; `(diogenes ask)\=' asks only when the
+corpus cannot answer.
+
+THE DEFAULT IS THE CORPUS FIRST, because it is the real text in a real
+edition with the paging and the citations, and the other two are what a reader
+without the CD-ROMs has instead."
+  :type '(repeat (choice (const diogenes) (const tei) (const diorisis)
+                         (const ask)))
+  :group 'classicist-lookup)
+
+(defcustom classicist-lookup-open-latin-with '(diogenes tei ask)
+  "Where a Latin citation in an entry opens, tried in order.
+As `classicist-lookup-open-greek-with\=', less `diorisis\=': that corpus is
+Greek.  So a Latin citation with neither the CD-ROMs nor the TEI editions has
+nowhere to go, and says which of the two to set rather than failing in Perl."
+  :type '(repeat (choice (const diogenes) (const tei) (const ask)))
+  :group 'classicist-lookup)
+
 (defvar classicist--lookup-same-window nil
   "When non-nil, show a looked-up entry in the CURRENT window.
 `classicist--search-dict' normally opens each entry in a fresh
@@ -1485,6 +1520,23 @@ With a numerical prefix, move back N entries.  The counterpart of
 	    (goto-char (classicist--lookup-insert-entry xml-bytes start end
 						      (point) t))))))))
 
+(defun classicist--lookup-bibl-parts (str)
+  "The corpus, author, work and passage of a bibliography reference STR.
+Returns (CORPUS AUTHOR WORK PASSAGE), PASSAGE being a list of levels as the
+entry wrote them, or nil where STR is not of that shape.
+
+SPLIT OFF FROM `classicist--lookup-parse-bibl-string\=', which pads PASSAGE to
+the number of levels the work has by asking `diogenes--get-work-labels\=' --
+a Perl call, and so a question only an installed corpus can answer.  The raw
+split needs nothing, and every route below wants it: without this the parse
+failed before a route could be chosen, which is the whole fault being fixed."
+  (let* ((clean (replace-regexp-in-string "\\`Perseus:abo:" "" str))
+         (fields (split-string clean ",")))
+    (when (= (length fields) 3)
+      (seq-let (corpus author work-and-passage) fields
+        (seq-let (work &rest passage) (split-string work-and-passage ":")
+          (list corpus author work passage))))))
+
 (defun classicist--lookup-parse-bibl-string (str)
   "Parse a DICT bibliography reference string.
 Returns a list that classicist--browse-work can be applied to."
@@ -1598,8 +1650,13 @@ the file only at the first call."
         (funcall (plist-get dictionary :command)
                  (get-text-property char 'headword))
       (cl-case action
-      (bibl (apply #'classicist--browse-work (classicist--lookup-parse-bibl-string
-					    (get-text-property char 'bibl))))
+      ;; THREE PLACES THE PASSAGE MIGHT BE, tried in order.  This went
+      ;; straight to `classicist--browse-work', which starts Perl against a
+      ;; corpus that may not be installed -- so an entry full of citations
+      ;; offered links that could not lead anywhere.
+      (bibl (classicist--lookup-open-citation
+             (get-text-property char 'bibl)
+             (or (get-text-property char 'lang) "greek")))
       ;; The `lemma-nr' property is the byte offset of the entry in the
       ;; dictionary -- the first field of the analyses record, or the second
       ;; of a lemmata record, where make_latin_lemmata.pl writes 0 for "no
@@ -1632,6 +1689,145 @@ the file only at the first call."
 			      (y-or-n-p "Open the result in this same window? ")))))
 		(classicist--parse-and-lookup (or word (classicist--word-at-point-for-lookup)) lang)))
 	     (_ (message "C-c C-c cannot do anything useful here!")))))))))
+
+;;;; Where a citation opens
+
+;; AN ENTRY IS FULL OF CITATIONS and none could open without the CD-ROMs: the
+;; `bibl' branch went straight to `classicist--browse-work', which starts Perl
+;; against a corpus that may not be there.  Three places may hold the passage
+;; and each can be asked, so the question is which to try and in what order.
+
+(declare-function tei--work-in-index-p "tei-browser" (corpus author work))
+(declare-function diorisis--work-present-p "diorisis" (author work))
+(declare-function tei-corpora "tei-browser" ())
+(declare-function tei-authors "tei-browser" (corpus))
+(declare-function tei--open-version "tei-browser" (work version))
+(declare-function tei-versions "tei-browser" (work))
+(declare-function diorisis-open-work "diorisis" (&optional author work
+                                                          sentence))
+
+(defun classicist--lookup-route-diogenes-p (corpus author work)
+  "Whether the Diogenes corpus can open AUTHOR's WORK in CORPUS.
+Asks whether the databases are there at all, `diogenes-path\=' naming them --
+a Perl process started against an absent corpus reports whatever Perl finds,
+which is not an answer a reader can act on."
+  (ignore corpus author work)
+  (and (fboundp 'classicist--browse-work)
+       (boundp 'diogenes-path)
+       diogenes-path
+       (file-directory-p diogenes-path)))
+
+(defun classicist--lookup-route-tei-p (corpus author work)
+  "Whether the TEI editions hold AUTHOR's WORK in CORPUS.
+A lookup and not a guess: the index is keyed by author number, so this asks it
+rather than assembling a CTS URN and hoping."
+  (and (fboundp 'tei-open-work)
+       (boundp 'tei-directory)
+       tei-directory
+       (file-directory-p tei-directory)
+       (ignore-errors (tei--work-in-index-p corpus author work))))
+
+(defun classicist--lookup-route-diorisis-p (corpus author work)
+  "Whether the Diorisis corpus holds AUTHOR's WORK in CORPUS.
+Greek only, and by the TLG\='s own numbers -- which is what Diorisis files
+under, so the numbers go across as they come."
+  (and (equal corpus "tlg")
+       (fboundp 'diorisis-read-text)
+       (boundp 'diorisis-database)
+       diorisis-database
+       (file-exists-p diorisis-database)
+       (ignore-errors (diorisis--work-present-p author work))))
+
+(defun classicist--lookup-route-available-p (route corpus author work)
+  "Whether ROUTE can open AUTHOR's WORK in CORPUS."
+  (pcase route
+    ('diogenes (classicist--lookup-route-diogenes-p corpus author work))
+    ('tei (classicist--lookup-route-tei-p corpus author work))
+    ('diorisis (classicist--lookup-route-diorisis-p corpus author work))
+    ('ask t)
+    (_ nil)))
+
+(defun classicist--lookup-route-label (route)
+  "What to call ROUTE when asking."
+  (pcase route
+    ('diogenes "the corpus, in its edition")
+    ('tei "the TEI edition")
+    ('diorisis "the Diorisis sentences")
+    (_ (format "%s" route))))
+
+(defun classicist--lookup-open-by (route corpus author work passage)
+  "Open AUTHOR's WORK in CORPUS at PASSAGE, by ROUTE."
+  (pcase route
+    ('diogenes
+     ;; THE PADDING BELONGS HERE, being the one route that wants it: the
+     ;; browser takes as many levels as the work has, and asking how many is a
+     ;; Perl call this route has already established it can make.
+     (apply #'classicist--browse-work
+            (classicist--lookup-parse-bibl-string
+             (format "%s,%s,%s" corpus author
+                     (string-join (cons work passage) ":")))))
+    ;; THE INDEX'S OWN ENTRIES, not a URN built by hand: the predicate has
+    ;; already found the work, so this asks the index for it again and takes
+    ;; the first version -- one edition being better than a prompt a citation
+    ;; did not ask for.
+    ('tei (when-let* ((c (seq-find (lambda (x) (equal (plist-get x :id) corpus))
+                                  (tei-corpora)))
+                      (a (assoc author (tei-authors c)))
+                      (w (assoc work (nth 2 a)))
+                      (v (car (tei-versions w))))
+            (tei--open-version w v)))
+    ;; ALREADY CALLABLE, taking all three optionally --
+    ;; \`diorisis-read-text' is the PROMPT, which asks for an author and a
+    ;; work and returns the pair, and its name misled me into calling it as
+    ;; the opener.
+    ('diorisis (diorisis-open-work author work))))
+
+(defun classicist--lookup-open-citation (str lang)
+  "Open the passage a citation STR names, in LANG.
+Tries `classicist-lookup-open-greek-with\=' or its Latin counterpart in order,
+asking each whether it has the passage before letting it try -- so a citation
+in an entry leads somewhere or says why not, rather than starting a Perl
+process against a corpus that is not installed."
+  (let ((parts (classicist--lookup-bibl-parts str)))
+    (unless parts
+      (user-error "Not a citation this can follow: %s" str))
+    (seq-let (corpus author work passage) parts
+      (let* ((routes (if (equal lang "latin")
+                         classicist-lookup-open-latin-with
+                       classicist-lookup-open-greek-with))
+             (here (seq-filter
+                    (lambda (r)
+                      (and (not (eq r 'ask))
+                           (classicist--lookup-route-available-p
+                            r corpus author work)))
+                    routes))
+             (asking (and (memq 'ask routes) (cdr here))))
+        (cond
+         ((null here)
+          ;; WHICH IS NOT AN ERROR IN PERL BUT A SENTENCE A READER CAN ACT ON,
+          ;; naming the paths that would answer.  Latin has one fewer, this
+          ;; corpus being Greek.
+          (user-error
+           "Nowhere to open %s %s.%s: set %s"
+           corpus author work
+           (if (equal lang "latin")
+               " diogenes-path or tei-directory"
+             " diogenes-path, tei-directory or diorisis-database")))
+         (asking
+          (let* ((choice (completing-read
+                          (format "Open %s %s.%s in: " corpus author work)
+                          (mapcar (lambda (r)
+                                    (cons (classicist--lookup-route-label r) r))
+                                  here)
+                          nil t)))
+            (classicist--lookup-open-by
+             (cdr (assoc choice
+                         (mapcar (lambda (r)
+                                   (cons (classicist--lookup-route-label r) r))
+                                 here)))
+             corpus author work passage)))
+         (t (classicist--lookup-open-by (car here) corpus author work
+                                        passage)))))))
 
 (provide 'classicist-lookup)
 

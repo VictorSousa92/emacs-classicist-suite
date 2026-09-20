@@ -4499,6 +4499,23 @@ two identical lines under SEARCH."
 (declare-function treebank-tree-mode "treebank" t)
 (declare-function treebank-workbook "treebank" ())
 
+(defun diorisis--work-present-p (author work)
+  "Whether the corpus holds AUTHOR's WORK.
+By the TLG's own numbers, which is what Diorisis files under -- so the two
+numbers a citation gives go across as they come, with no mapping.
+
+FOR THE LEXICA, which ask before offering a citation as a link: an entry full
+of references that cannot lead anywhere is worse than an entry with fewer
+links."
+  (and (boundp 'diorisis-database) diorisis-database
+       (file-exists-p diorisis-database)
+       (ignore-errors
+         (car (sqlite-select
+               (diorisis--db)
+               "SELECT 1 FROM texts WHERE author_id = ? AND work_id = ? LIMIT 1"
+               (list author work))))
+       t))
+
 (provide 'diorisis)
 
 ;;; diorisis.el ends here

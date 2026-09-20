@@ -539,13 +539,13 @@ milestones is a stream parser's work, and the result is read in one go."
       (read (current-buffer)))))
 
 ;;;###autoload
-(defun tei-open-work ()
-  "Choose a TEI text and read it."
-  (interactive)
-  (let* ((chosen (tei-select-work))
-         (work (nth 2 chosen))
-         (version (nth 3 chosen))
-         (file (nth 2 version))
+(defun tei--open-version (work version)
+  "Read the file VERSION names and show it, WORK naming the text.
+THE CALLABLE HALF of `tei-open-work', which prompts.  Split out for the
+lexica: a citation in an entry asks the index whether the text is here and
+then wants to open it, with nobody to ask which edition -- the prompt is the
+command's business and the opening is not."
+  (let* ((file (nth 2 version))
          (datum (tei--read-file file))
          (name (format "*TEI: %s (%s)*"
                        (or (nth 1 work) "?")
@@ -556,6 +556,12 @@ milestones is a stream parser's work, and the result is read in one go."
         (tei--diogenes-locals datum (plist-get datum :urn))
         (tei--render datum))
       (pop-to-buffer buffer))))
+
+(defun tei-open-work ()
+  "Choose a TEI text and read it."
+  (interactive)
+  (let* ((chosen (tei-select-work)))
+    (tei--open-version (nth 2 chosen) (nth 3 chosen))))
 
 (defun tei-goto-citation (citation)
   "Move to CITATION in this text."
@@ -665,6 +671,24 @@ of this one, and this one adds itself."
 ;;;###autoload
 (with-eval-after-load 'diogenes
   (tei--add-to-diogenes-menu))
+
+(defun tei--work-in-index-p (corpus author work)
+  "Whether the index holds AUTHOR's WORK in CORPUS.
+A LOOKUP AND NOT A GUESS.  The index is keyed by author number -- \`tei-authors\='
+gives entries whose car is the number and whose third element is the works,
+each work's car being its own -- so this asks it rather than assembling a CTS
+URN and hoping something answers.
+
+FOR THE LEXICA, which ask before offering a citation as a link.  Perseus and
+the First Thousand Years of Greek are a few hundred works between them, so a
+citation is often to a text that is not there, and an entry with fewer links
+is better than one with links that lead nowhere."
+  (when-let* ((corpora (ignore-errors (tei-corpora)))
+              (c (seq-find (lambda (x)
+                             (equal (plist-get x :id) corpus))
+                           corpora))
+              (a (assoc author (ignore-errors (tei-authors c)))))
+    (and (assoc work (nth 2 a)) t)))
 
 (provide 'tei-browser)
 ;;; tei-browser.el ends here
