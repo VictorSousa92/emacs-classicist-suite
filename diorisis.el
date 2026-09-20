@@ -4405,7 +4405,8 @@ The entry appears only where both packages are present."
 can name; `sa\=' under SEARCH finds an annotated tree, by work and then by
 passage, which is a search and not a place.  Idempotent, each being added only
 where it is not there already."
-  (when (and (classicist-feature-p 'diorisis)
+  (when (and (or (not (fboundp 'classicist-feature-p))
+                 (classicist-feature-p 'diorisis))
              diorisis-add-to-diogenes-menu
              (fboundp 'transient-append-suffix))
     (ignore-errors
@@ -4433,7 +4434,8 @@ IDEMPOTENT IN EARNEST, by asking whether the entry is there.  It can now be
 appended from two places -- the autoloads, and here once this file is loaded
 -- and `transient-append-suffix\=' asked twice appends twice, which showed as
 two identical lines under SEARCH."
-  (when (and (classicist-feature-p 'diorisis)
+  (when (and (or (not (fboundp 'classicist-feature-p))
+                 (classicist-feature-p 'diorisis))
              diorisis-add-to-diogenes-menu
              (fboundp 'transient-append-suffix))
     (ignore-errors
