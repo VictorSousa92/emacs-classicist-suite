@@ -40,13 +40,6 @@
 
 (require 'transient)
 
-;; DECLARED SO THE BINDING IS DYNAMIC.  Without a defvar, let binds this
-;; lexically -- which binds nothing helm can see, and the compiler said so:
-;; unused lexical variable, and symbol-value cannot use a lexical var.  A bare
-;; defvar marks the name special without giving it a value, which is what a
-;; variable belonging to another package wants.
-(defvar helm-completing-read-handlers-alist)
-
 (require 'text-property-search)
 
 ;; THE SUITE FEATURE LIST, if this file is part of a suite at all.
@@ -1399,52 +1392,36 @@ thing the prompt would not accept was the two ways a classicist actually
 types.  Narrowing by approximation happens after the prompt rather than inside
 it, which works whatever completion framework a reader has -- and gives a
 second, shorter list to choose from, which is the point."
-  ;; HELM WILL NOT ACCEPT A NON-CANDIDATE ON RET, and this prompt is built to
-  ;; be given one -- beta code, an unaccented form, a wildcard, an inflected
-  ;; form, none of which is among the accented Greek candidates.  So it did
-  ;; nothing under helm where it worked under other frameworks.
-  ;;
-  ;; BOUND HERE AND NOT LEFT TO A READER, because the alist is keyed on the
-  ;; COMMAND: this read happens inside `diorisis-query-add\=', whose other
-  ;; prompt is a list of five element kinds that helm shows well, so exempting
-  ;; the command breaks that one.  Two prompts under one command, wanting
-  ;; opposite treatment, and the alist cannot tell them apart.
-  ;;
-  ;; Harmless where helm is absent: nothing else consults the variable.
-  (let ((helm-completing-read-handlers-alist
-         (cons (cons this-command nil)
-               (and (boundp 'helm-completing-read-handlers-alist)
-                    helm-completing-read-handlers-alist))))
-    (let* ((table (diorisis--lemma-completion))
-           (candidates (nth 0 table))
-           (beta (nth 1 table))
-           (counts (nth 2 table))
-           (table (diorisis--lemma-completion-table candidates counts beta))
-           (answer (string-trim
-                    (completing-read (or prompt
-                                         "Lemma (Greek or beta, accents \
-  optional): ")
-                                     table nil nil initial))))
-      ;; WHAT COMES BACK may be a candidate, or whatever was typed where the
-      ;; framework allowed it through.  Both are handled below, in order of how
-      ;; exact they are.
-      (or
-       ;; A lemma chosen from the list.
-       (gethash answer beta)
-       ;; A LEMMA TYPED, and known.  A reader who knows the word list types beta
-       ;; code and is not made to complete on it.
-       (let ((typed (diorisis--beta answer)))
-         (and (gethash (diorisis--greek typed) beta) typed))
-       ;; OR AN APPROXIMATION of one, which is the common case: the accents left
-       ;; off, or beta code, or half the word and a wildcard.
-       (diorisis--choose-lemma (diorisis--approximate answer) answer)
-       ;; OR A FORM, which the corpus settles.  `memuko/tos' is not a lemma and
-       ;; matches no lemma by approximation either; it is a form of `mu/w', the
-       ;; corpus says which, and what the reader meant was the word.
-       (diorisis-lemma-of-form answer)
-       ;; Or something the corpus has never seen, which is the reader's answer
-       ;; and is searched for as given -- finding nothing being the right report.
-       (diorisis--beta answer)))))
+  (let* ((table (diorisis--lemma-completion))
+         (candidates (nth 0 table))
+         (beta (nth 1 table))
+         (counts (nth 2 table))
+         (table (diorisis--lemma-completion-table candidates counts beta))
+         (answer (string-trim
+                  (completing-read (or prompt
+                                       "Lemma (Greek or beta, accents \
+optional): ")
+                                   table nil nil initial))))
+    ;; WHAT COMES BACK may be a candidate, or whatever was typed where the
+    ;; framework allowed it through.  Both are handled below, in order of how
+    ;; exact they are.
+    (or
+     ;; A lemma chosen from the list.
+     (gethash answer beta)
+     ;; A LEMMA TYPED, and known.  A reader who knows the word list types beta
+     ;; code and is not made to complete on it.
+     (let ((typed (diorisis--beta answer)))
+       (and (gethash (diorisis--greek typed) beta) typed))
+     ;; OR AN APPROXIMATION of one, which is the common case: the accents left
+     ;; off, or beta code, or half the word and a wildcard.
+     (diorisis--choose-lemma (diorisis--approximate answer) answer)
+     ;; OR A FORM, which the corpus settles.  `memuko/tos' is not a lemma and
+     ;; matches no lemma by approximation either; it is a form of `mu/w', the
+     ;; corpus says which, and what the reader meant was the word.
+     (diorisis-lemma-of-form answer)
+     ;; Or something the corpus has never seen, which is the reader's answer
+     ;; and is searched for as given -- finding nothing being the right report.
+     (diorisis--beta answer))))
 
 (defun diorisis--column (column)
   "Every value of COLUMN in `texts\\=', for completion.
@@ -4118,39 +4095,23 @@ Returns (PAIRS . BETA), PAIRS being (CANDIDATE . BARE)."
 SOURCE defaults to `diorisis-lemma-source'.  The matching is the same as
 the corpus prompt's -- see `diorisis--filter' -- so beta code and Greek
 both work and the diacritics typed are the ones required."
-  ;; HELM WILL NOT ACCEPT A NON-CANDIDATE ON RET, and this prompt is built to
-  ;; be given one -- beta code, an unaccented form, a wildcard, an inflected
-  ;; form, none of which is among the accented Greek candidates.  So it did
-  ;; nothing under helm where it worked under other frameworks.
-  ;;
-  ;; BOUND HERE AND NOT LEFT TO A READER, because the alist is keyed on the
-  ;; COMMAND: this read happens inside `diorisis-query-add\=', whose other
-  ;; prompt is a list of five element kinds that helm shows well, so exempting
-  ;; the command breaks that one.  Two prompts under one command, wanting
-  ;; opposite treatment, and the alist cannot tell them apart.
-  ;;
-  ;; Harmless where helm is absent: nothing else consults the variable.
-  (let ((helm-completing-read-handlers-alist
-         (cons (cons this-command nil)
-               (and (boundp 'helm-completing-read-handlers-alist)
-                    helm-completing-read-handlers-alist))))
-    (let* ((source (or source diorisis-lemma-source))
-           (found (diorisis--source-pairs source))
-           (pairs (car found))
-           (beta (cdr found))
-           (diorisis--completion-pairs pairs)
-           (table (lambda (string predicate action)
-                    (pcase action
-                      ('metadata
-                       '(metadata (category . tei-diorisis-lemma)
-                                  (display-sort-function . identity)
-                                  (cycle-sort-function . identity)))
-                      (_ (complete-with-action action (mapcar #'car pairs)
-                                               string predicate)))))
-           (answer (string-trim
-                    (completing-read (or prompt "Lemma: ") table nil nil))))
-      (or (gethash answer beta)
-          (diorisis--beta answer)))))
+  (let* ((source (or source diorisis-lemma-source))
+         (found (diorisis--source-pairs source))
+         (pairs (car found))
+         (beta (cdr found))
+         (diorisis--completion-pairs pairs)
+         (table (lambda (string predicate action)
+                  (pcase action
+                    ('metadata
+                     '(metadata (category . tei-diorisis-lemma)
+                                (display-sort-function . identity)
+                                (cycle-sort-function . identity)))
+                    (_ (complete-with-action action (mapcar #'car pairs)
+                                             string predicate)))))
+         (answer (string-trim
+                  (completing-read (or prompt "Lemma: ") table nil nil))))
+    (or (gethash answer beta)
+        (diorisis--beta answer))))
 
 (defconst diorisis--advised-commands
   '((diogenes-show-all-forms-greek . "Show all forms of: ")
