@@ -4449,7 +4449,13 @@ two identical lines under SEARCH."
     (diorisis--add-browse-to-diogenes-menu)))
 
 ;;;###autoload
-(with-eval-after-load 'diogenes
+;; ON classicist AND NOT ON diogenes.  This appends to the diogenes
+;; transient, and that prefix is defined in classicist.el now -- its
+;; autoload used to name the base file, which is why the base loaded and
+;; this fired.  With the autoload corrected, waiting on the base means
+;; waiting for a file that may never load, while the file defining the
+;; thing being modified loads under another name.
+(with-eval-after-load 'classicist
   (if (fboundp 'diorisis--add-to-diogenes-menu)
       (diorisis--add-to-diogenes-menu)
     (when (and (or (not (fboundp 'classicist-feature-p))
