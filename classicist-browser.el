@@ -1203,6 +1203,17 @@ number of the author and the number of the work."
           (ignore-errors
             (diogenes--get-work-labels (list :type (plist-get options :type))
                                        (list (car passage) (cadr passage)))))
+    ;; AND SHOWN DELIBERATELY, which it never was.  Nothing here displayed
+    ;; the buffer -- it appeared by whatever means, and the suite placement
+    ;; layer was never consulted.  Which is why frames and the startup-screen
+    ;; rule both missed the browser while Diorisis and the lookups obeyed
+    ;; them: they are consulted for buffers the suite displays, and this one
+    ;; it did not.
+    ;;
+    ;; THE BUFFER IS STILL RETURNED, callers expecting it.
+    (if (fboundp 'classicist-display-buffer)
+        (classicist-display-buffer (current-buffer) :kind 'browser)
+      (pop-to-buffer (current-buffer)))
     (current-buffer)))
 
 (defun classicist--browse-database (type &optional author work)

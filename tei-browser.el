@@ -566,7 +566,13 @@ command's business and the opening is not."
         (tei-mode)
         (tei--diogenes-locals datum (plist-get datum :urn))
         (tei--render datum))
-      (pop-to-buffer buffer))))
+      ;; THROUGH THE SUITE, as diorisis.el does.  A raw pop-to-buffer
+      ;; means pop-up-frames makes a frame and the suite places nothing,
+      ;; so a text opened in a frame of its own beside the dashboard.  A
+      ;; TEI text is a text, so 'browser.
+      (if (fboundp 'classicist-display-buffer)
+          (classicist-display-buffer buffer :kind 'browser)
+        (pop-to-buffer buffer)))))
 
 ;;;###autoload
 ;; NAMED BY THE AUTOLOADED MENU APPEND, so it must be reachable before
