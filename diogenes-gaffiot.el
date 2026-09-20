@@ -126,7 +126,7 @@
 (defvar diogenes--lookup-headword)
 (defvar diogenes--lookup-file)
 (defvar classicist--lookup-same-window)
-(defvar diogenes--dict-xml-handlers-extra)
+(defvar classicist--dict-xml-handlers-extra)
 
 ;;;; --------------------------------------------------------------------
 ;;;; CUSTOMIZATION
@@ -189,8 +189,8 @@ dictionary that shares them, so there is nothing left to declare here.")
   "Teach the dictionary formatter about Gaffiot's elements.  Idempotent.
 Gaffiot's own additions first, so they win, then the shared TEI faces."
   (dolist (handler diogenes-gaffiot--xml-handlers)
-    (unless (assq (car handler) diogenes--dict-xml-handlers-extra)
-      (push handler diogenes--dict-xml-handlers-extra)))
+    (unless (assq (car handler) classicist--dict-xml-handlers-extra)
+      (push handler classicist--dict-xml-handlers-extra)))
   (diogenes-dict-install-faces))
 
 ;;;; --------------------------------------------------------------------

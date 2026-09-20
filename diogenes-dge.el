@@ -263,7 +263,7 @@
 
 (defvar diogenes--lookup-file)
 (defvar classicist--lookup-same-window)
-(defvar diogenes--dict-xml-handlers-extra)
+(defvar classicist--dict-xml-handlers-extra)
 
 (defvar diogenes-dge--coverage-cache nil
   "Cached last entry of the dictionary: (STAMP KEY . HEADWORD).
@@ -442,7 +442,7 @@ formatter; this is for the <num> that stay where they are, inside a locus."
     (del       . (font-lock-face diogenes-dict-note))
     (gloss     . (font-lock-face diogenes-dict-quote)))
   "Faces for the elements the DGE uses and the other dictionaries do not.
-Added to `diogenes--dict-xml-handlers-extra' on load, without disturbing an
+Added to `classicist--dict-xml-handlers-extra' on load, without disturbing an
 entry already there, so the LSJ and Lewis & Short keep their appearance.
 
 The rest of what a DGE entry contains needs nothing: <quote>, <author>,
@@ -456,8 +456,8 @@ is empty.")
 (defun diogenes-dge--install-xml-handlers ()
   "Teach the dictionary formatter about the DGE's elements.  Idempotent."
   (dolist (handler diogenes-dge--xml-handlers)
-    (unless (assq (car handler) diogenes--dict-xml-handlers-extra)
-      (push handler diogenes--dict-xml-handlers-extra)))
+    (unless (assq (car handler) classicist--dict-xml-handlers-extra)
+      (push handler classicist--dict-xml-handlers-extra)))
   (diogenes-dict-install-faces))
 
 ;;;; --------------------------------------------------------------------

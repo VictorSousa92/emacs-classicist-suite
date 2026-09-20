@@ -86,7 +86,7 @@
 
 (defvar diogenes--lookup-file)
 (defvar classicist--lookup-same-window)
-(defvar diogenes--dict-xml-handlers-extra)
+(defvar classicist--dict-xml-handlers-extra)
 
 ;;;; --------------------------------------------------------------------
 ;;;; CUSTOMIZATION
@@ -149,8 +149,8 @@ go.")
 (defun diogenes-georges--install-xml-handlers ()
   "Teach the dictionary formatter about Georges' elements.  Idempotent."
   (dolist (handler diogenes-georges--xml-handlers)
-    (unless (assq (car handler) diogenes--dict-xml-handlers-extra)
-      (push handler diogenes--dict-xml-handlers-extra)))
+    (unless (assq (car handler) classicist--dict-xml-handlers-extra)
+      (push handler classicist--dict-xml-handlers-extra)))
   (diogenes-dict-install-faces))
 
 ;;;; --------------------------------------------------------------------

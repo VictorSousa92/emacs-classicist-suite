@@ -23,7 +23,7 @@
 ;; author cited, the work, the locus, the etymology, the grammatical
 ;; information.  The LSJ and Lewis & Short already arrive coloured, because
 ;; `diogenes--dict-handle-elt' gives <head> and <sense> faces of their own
-;; and `diogenes--dict-xml-handlers-extra' carries `i' and `b'.  This file
+;; and `classicist--dict-xml-handlers-extra' carries `i' and `b'.  This file
 ;; extends the same treatment to the elements the converted dictionaries
 ;; use -- Bailly, Gaffiot, Georges -- which the Perseus files do not.
 ;;
@@ -43,7 +43,7 @@
 ;; WHAT CAN AND CANNOT BE COLOURED
 ;; ---------------------------------------------------------------------
 ;;
-;; `diogenes--dict-xml-handlers-extra' is keyed on the ELEMENT NAME alone,
+;; `classicist--dict-xml-handlers-extra' is keyed on the ELEMENT NAME alone,
 ;; so it cannot distinguish <hi rend="italic"> from <hi rend="bold">: both
 ;; are `hi' and both would take one face.  The converted dictionaries
 ;; therefore rewrite <hi> into `i', `b', `sc' and `sup' when the dictionary
@@ -57,7 +57,7 @@
 
 ;;; Code:
 
-(defvar diogenes--dict-xml-handlers-extra)
+(defvar classicist--dict-xml-handlers-extra)
 
 (defgroup diogenes-dict-faces nil
   "Faces for the parts of a dictionary entry."
@@ -165,7 +165,7 @@ Emacs cannot render true small capitals, so weight stands in for them."
     (sc        . (font-lock-face diogenes-dict-smallcaps))
     (sup       . (font-lock-face diogenes-dict-scope)))
   "Faces for the TEI elements the converted dictionaries use.
-An alist in the shape `diogenes--dict-xml-handlers-extra' expects.
+An alist in the shape `classicist--dict-xml-handlers-extra' expects.
 
 Note what is NOT here.  <head> and <sense> have faces of their own from
 `diogenes--dict-handle-elt', and <bibl> is drawn as a link because it is
@@ -180,8 +180,8 @@ Idempotent, and never displaces an entry already present: a dictionary
 module that wants its own face for an element registers it first and keeps
 it."
   (dolist (handler diogenes-dict-tei-faces)
-    (unless (assq (car handler) diogenes--dict-xml-handlers-extra)
-      (push handler diogenes--dict-xml-handlers-extra))))
+    (unless (assq (car handler) classicist--dict-xml-handlers-extra)
+      (push handler classicist--dict-xml-handlers-extra))))
 
 ;;;; --------------------------------------------------------------------
 ;;;; <hi rend="..."> AT BUILD TIME

@@ -187,7 +187,7 @@
 (declare-function diogenes-bailly-pdf-available-p "diogenes-bailly-pdf" ())
 
 (defvar classicist--lookup-same-window)
-(defvar diogenes--dict-xml-handlers-extra)
+(defvar classicist--dict-xml-handlers-extra)
 
 ;;;; --------------------------------------------------------------------
 ;;;; CUSTOMIZATION
@@ -260,8 +260,8 @@ somewhere to go.")
 (defun diogenes-bailly--install-xml-handlers ()
   "Teach the dictionary formatter about Bailly's elements.  Idempotent."
   (dolist (handler diogenes-bailly--xml-handlers)
-    (unless (assq (car handler) diogenes--dict-xml-handlers-extra)
-      (push handler diogenes--dict-xml-handlers-extra)))
+    (unless (assq (car handler) classicist--dict-xml-handlers-extra)
+      (push handler classicist--dict-xml-handlers-extra)))
   (diogenes-dict-install-faces))
 
 ;;;; --------------------------------------------------------------------

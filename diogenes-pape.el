@@ -127,7 +127,7 @@
 
 (defvar classicist-lookup-mode-map)
 (defvar classicist--lookup-same-window)
-(defvar diogenes--dict-xml-handlers-extra)
+(defvar classicist--dict-xml-handlers-extra)
 
 ;;;; --------------------------------------------------------------------
 ;;;; CUSTOMIZATION
@@ -194,7 +194,7 @@ the text is in -- and where it says nil, `diogenes-lookup-display-action\=' and
   '((hi   . (font-lock-face italic))            ; <hi rend="italic">
     (gram . (font-lock-face font-lock-keyword-face)))
   "Faces for the elements Pape uses and the Perseus dictionaries do not.
-Added to `diogenes--dict-xml-handlers-extra' on load, without disturbing an
+Added to `classicist--dict-xml-handlers-extra' on load, without disturbing an
 entry already there, so the LSJ and Lewis & Short keep their appearance.
 Pape's <head>, <sense>, <bibl>, <foreign> and <title> need nothing: the
 shared handlers in `diogenes--dict-handle-elt' already cover them.  <hi> is
@@ -204,8 +204,8 @@ it too, so the face improves that as well.")
 (defun diogenes-pape--install-xml-handlers ()
   "Teach the dictionary formatter about Pape's elements.  Idempotent."
   (dolist (handler diogenes-pape--xml-handlers)
-    (unless (assq (car handler) diogenes--dict-xml-handlers-extra)
-      (push handler diogenes--dict-xml-handlers-extra))))
+    (unless (assq (car handler) classicist--dict-xml-handlers-extra)
+      (push handler classicist--dict-xml-handlers-extra))))
 
 ;;;; --------------------------------------------------------------------
 ;;;; THE KEY A HEADWORD SORTS UNDER
