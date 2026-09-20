@@ -60,6 +60,10 @@ does.
   `treebank\='      annotating one of its sentences as a dependency tree
   `tei-corpora\='   CSEL, the Patrologia Latina, Corpus Corporum, and anything
                   else published as TEI XML
+  `books\='         a work opened at one of its books, by the letter a
+                  classicist uses -- `Theta\=' and not `1045b27'.  The corpora
+                  do not know books; the text carries their titles, and this
+                  reads them
   `notes\='         the org commands: a note on a passage, and what has been
                   said about the lines in front of you
   `windows\='       the suite placing buffers, rather than leaving that to
@@ -96,6 +100,7 @@ answer.
               (const :tag "The Diorisis corpus" diorisis)
               (const :tag "Treebank annotation" treebank)
               (const :tag "Editions as TEI" tei-corpora)
+              (const :tag "A work at one of its books" books)
               (const :tag "Notes in org" notes)
               (const :tag "Frame, window and buffer managing" windows))
   :group 'classicist)
