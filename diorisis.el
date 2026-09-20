@@ -3250,8 +3250,10 @@ genre alone reads the whole corpus and says so before doing it."
    ("o" "Open a search saved before" diorisis-open-search)
    ("D" "Switch between the plain and merged databases"
     diorisis-switch-database)
-   ("L" "Annotated trees" treebank-annotations-menu :if (lambda () (classicist-feature-p 'treebank)))
-   ("b" "The workbook of collected sentences" treebank-workbook :if (lambda () (classicist-feature-p 'treebank)))
+   ("L" "Annotated trees" treebank-annotations-menu :if (lambda () (or (not (fboundp 'classicist-feature-p))
+                                 (classicist-feature-p 'treebank))))
+   ("b" "The workbook of collected sentences" treebank-workbook :if (lambda () (or (not (fboundp 'classicist-feature-p))
+                                 (classicist-feature-p 'treebank))))
    ("c" "Count only" diorisis-run-count)
    ("d" "Count by author and work" diorisis-run-by-text)])
 
