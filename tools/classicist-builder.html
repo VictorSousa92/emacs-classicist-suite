@@ -25,9 +25,17 @@
     height: 100vh; display: flex; flex-direction: column; overflow: hidden;
     font: 1rem/1.58 "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
   }
-  header { padding: 1.5rem 2rem 1rem; border-bottom: 1px solid var(--rule); }
+  /* HALF THE SCREEN, whatever the screen is.  An explanation read once,
+     not a control -- and 50% adapts where a measure in rem or ch does
+     not: the paragraphs were held at 70ch, which is why three rules on
+     this element changed nothing visible. */
+  header { padding: 1.5rem 2rem 1rem; border-bottom: 1px solid var(--rule);
+           max-width: 50%; }
   h1 { margin: 0; font-size: 1.4rem; font-weight: 600; letter-spacing: -0.01em; }
-  header p { margin: .4rem 0 0; color: var(--quiet); max-width: 70ch; }
+  /* THE PARAGRAPHS WRAPPED AT 70 CHARACTERS, which is why three rules on
+     the header itself changed nothing visible: the line length was set
+     here, separately, and 70ch is narrower than half a wide screen. */
+  header p { margin: .4rem 0 0; color: var(--quiet); font-size: .88rem; }
   .tabs { display: flex; align-items: baseline; gap: .25rem; padding: 0 2rem;
           border-bottom: 1px solid var(--rule); background: #f2eee6; }
   /* THE TABS STAY ON TOP, above the rails: two sticky layers, the outer one
@@ -344,7 +352,12 @@
      got one; what the desktop does with it is the manager's business, and the
      three classes below are the three things managers do. */
   .frames.many {
-    width: 100%; padding: .55rem; border: 1px solid var(--rule);
+    /* THE DESKTOP IS THE SCREEN A READER PICKED, which is the 65% a single
+       frame occupies -- so the width is inherited and not reset.  It was set
+       to 100% and then to auto, and both made the desktop wider than the one
+       frame it divides: two tiles took more room than the window they came
+       from. */
+    padding: .55rem; border: 1px solid var(--rule);
     border-radius: 4px; background: #efece5;
   }
   .frames.many .frame { border-width: 1px; }
@@ -353,7 +366,11 @@
   /* FLOATING: the newest on top, offset.  What a stacking manager does, and
      what most desktops do untouched. */
   .frames.wm-float {
-    display: block; position: relative; aspect-ratio: 1.6;
+    display: block; position: relative;
+    /* THE SCREEN A READER PICKED, as the other two now use -- this was 1.6
+       hardcoded, so changing the monitor in the select changed the tiled and
+       scrolling desktops and left this one alone. */
+    aspect-ratio: var(--screen, 1.778);
     flex-direction: row;
   }
   .frames.wm-float .frame {
@@ -363,19 +380,43 @@
   .frames.wm-float .frame:nth-child(3) { left: 26%; top: 27%; z-index: 3; }
   .frames.wm-float .frame:nth-child(n+4) { left: 32%; top: 36%; z-index: 4; }
 
-  /* TILING: the screen divided, nothing over anything. */
-  .frames.wm-tile { flex-direction: row; gap: .4rem; align-items: stretch; }
-  .frames.wm-tile .frame { flex: 1 1 0; min-width: 0; }
+  /* TILING: the screen divided, nothing over anything.  THE DESKTOP KEEPS THE
+     SHAPE and the tiles fill it -- each frame's windows carry the monitor's
+     ratio, so halving a tile's width halved its height too and two tiles came
+     out a third as tall as the one window they divide. */
+  .frames.wm-tile {
+    flex-direction: row; gap: .4rem; align-items: stretch;
+    aspect-ratio: var(--screen, 1.778);
+  }
+  .frames.wm-tile .frame {
+    flex: 1 1 0; min-width: 0; display: flex; flex-direction: column;
+  }
+  .frames.wm-tile .windows { aspect-ratio: auto; flex: 1 1 auto; }
 
   /* SCROLLING: a strip wider than the screen, moved to show the newest. */
+  /* SCROLLING: a strip wider than the screen, moved to show the newest.  THE
+     STRIP IS THE SCREEN'S HEIGHT and the windows in it are as tall as the
+     screen -- a window on a scrolling desktop is full height and narrower,
+     which is the whole idea, and without this each was 62% as tall as well as
+     62% as wide. */
   .frames.wm-scroll {
     flex-direction: row; gap: .4rem; overflow-x: auto;
     scroll-behavior: smooth; padding-bottom: .8rem;
+    aspect-ratio: var(--screen, 1.778);
   }
-  .frames.wm-scroll .frame { flex: 0 0 62%; }
+  .frames.wm-scroll .frame {
+    flex: 0 0 62%; display: flex; flex-direction: column;
+  }
+  .frames.wm-scroll .windows { aspect-ratio: auto; flex: 1 1 auto; }
 
   .wmpick { display: flex; gap: .3rem; flex-wrap: wrap; margin: 0 0 .5rem;
             justify-content: center; }
+  /* AND [hidden] MUST SAY SO LOUDER THAN display:flex.  `hidden' is only
+     display:none in the browser's own stylesheet, so any author display rule
+     beats it -- the picker was told to hide and went on showing with a single
+     frame and nothing set to frames.  The rail's chips have the same line for
+     the same reason. */
+  .wmpick[hidden] { display: none; }
   .wmpick label {
     border: 1px solid var(--rule); border-radius: 3px; background: #fff;
     padding: .2rem .5rem; font-size: .8rem; cursor: pointer;
@@ -1558,7 +1599,9 @@ document.addEventListener('change', e => {
   if (e.target.id === 'scanplace') reset();
   if (e.target.dataset.kind) {
     kind[e.target.dataset.kind] = e.target.value;
-    if (Object.values(kind).includes('frames')) el('popupframes').checked = true;
+    // AND FALSE WHERE NONE IS.  This only set it true, so the box latched
+    // on: once frames had been chosen it stayed checked for the session.
+    el('popupframes').checked = Object.values(kind).includes('frames');
     reset();
   }
   render();
@@ -2189,13 +2232,19 @@ function render() {
   // THE COUNT AND THE DISCLAIMER, shown only where there is more than one
   // frame -- the distinction the `frames' behaviour exists to make, and the
   // one the drawing cannot make on its own.
+  // THE PICKER FOLLOWS THE CHOICE, the desktop follows the scene.  Two
+  // different questions: a reader who has chosen frames should see the three
+  // managers at once, and the desktop only has something to arrange once a
+  // second frame exists.
+  const framesChosen = KINDS.some(([k]) => kind[k] === 'frames')
+                       || (el('popupframes') && el('popupframes').checked);
   const many = scene.length > 1;
   const box = el('frames');
   box.classList.toggle('many', many);
   ['float', 'tile', 'scroll'].forEach(w =>
     box.classList.toggle('wm-' + w, many && wmKind === w));
   const pick = el('wmpick');
-  if (pick) pick.hidden = !many;
+  if (pick) pick.hidden = !framesChosen;
   const count = el('framecount');
   if (count) {
     count.hidden = !many;
