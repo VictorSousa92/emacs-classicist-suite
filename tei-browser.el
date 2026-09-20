@@ -376,7 +376,13 @@ is wanted now, and loading it is cheap beside reading a text."
                         classicist-browser-mode-map)))
       (set-keymap-parent tei-mode-map classicist-browser-mode-map))))
 
-;;;###autoload
+;; NO COOKIE, AND THIS ONE DID NOT EVEN ERROR.  The guard is (boundp
+;; 'tei-mode-map), and in the autoloads context that variable is unbound --
+;; so the form ran, found nothing, and did nothing.  Silently: a no-op is
+;; worse than the void function two forms down, which at least said so.
+;;
+;; Without the cookie the keys are lent when this file loads, which is when
+;; tei-mode-map exists and there is a keymap to lend to.
 (with-eval-after-load 'classicist-browser
   (when (boundp 'tei-mode-map)
     (tei--lend-browser-keys)))
@@ -668,7 +674,17 @@ of this one, and this one adds itself."
       (transient-append-suffix 'diogenes "bm"
         '("bt" "Browse other corpora (TEI)" tei-open-work)))))
 
-;;;###autoload
+;; NO COOKIE.  An autoloaded with-eval-after-load runs before the file it
+;; came from has loaded, so this called tei--add-to-diogenes-menu when that
+;; function did not exist -- void, at the first Emacs start after the install
+;; finally worked.  The Diorisis handover records this exact fault twice and
+;; the fix that works: a form that asks nothing of its own file.  This one
+;; asks everything of it.
+;;
+;; diorisis.el does it the other way, inlining the append inside an fboundp
+;; guard so the form needs nothing at all.  This file was never given the
+;; same treatment -- the fourth instance of the fault today, and the second
+;; to reach a running Emacs.
 (with-eval-after-load 'diogenes
   (tei--add-to-diogenes-menu))
 

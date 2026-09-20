@@ -74,7 +74,7 @@ pairing:
 fixture:
 	@$(PYTHON) tools/make-diorisis-fixture.py /tmp/diorisis-fixture.db
 
-check: compile declare duplicates builder sql pairing
+check: autoloads compile declare duplicates builder sql pairing
 
 ## THE RATCHET, AND NOT A ZERO.  tei-browser fails on a single warning
 ## because that file is at zero and can stay there.  This package is at 59
@@ -102,6 +102,17 @@ check: compile declare duplicates builder sql pairing
 ## So the output is taken ONCE, checked for `error' before anything is
 ## counted, and only then compared.  Taking it once also halves the work: the
 ## old recipe compiled every worse file a second time to print its warnings.
+## A COOKIE ON A FORM THAT ASKS SOMETHING OF ITS OWN FILE.  An autoloaded
+## form runs before that file has loaded, so the call finds nothing --
+## loudly if it errors, quietly if a guard turns it into a no-op.
+##
+## FIVE IN ONE DAY, four of them reaching a running Emacs, and not one
+## visible to make compile: byte-compiling a file does not run its
+## top-level forms, and the autoloads file is the package manager to
+## generate.  So this runs first.
+autoloads:
+	@$(PYTHON) tools/check-autoloads.py
+
 compile:
 	@rm -f *.elc
 	@fail=0; \
