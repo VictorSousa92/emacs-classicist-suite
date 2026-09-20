@@ -42,16 +42,25 @@
 (require 'classicist-citation)
 
 
-(define-obsolete-variable-alias 'diogenes--browser-author
-                                'classicist--browser-author "0.1")
-(define-obsolete-variable-alias 'diogenes--browser-corpus
-                                'classicist--browser-corpus "0.1")
-(define-obsolete-variable-alias 'diogenes--browser-labels
-                                'classicist--browser-labels "0.1")
-(define-obsolete-variable-alias 'diogenes--browser-passage
-                                'classicist--browser-passage "0.1")
-(define-obsolete-variable-alias 'diogenes--browser-work
-                                'classicist--browser-work "0.1")
+;; NINE ALIASES OF BUFFER-LOCAL VARIABLES, commented out together.  Emacs
+;; refuses to alias one: Don't know how to make a buffer-local variable an
+;; alias.  They were quiet for as long as the base browser ran and ours did
+;; not -- the override made ours run, and the first passage opened failed.
+;;
+;; AND EVERY ONE IS AN INTERNAL: a double hyphen says nobody's configuration
+;; names it, so there is no reader to keep compatible.  An alias for the sake
+;; of symmetry with the public ones, and it cost a working browser.
+
+;; (define-obsolete-variable-alias 'diogenes--browser-author
+;;                                 'classicist--browser-author "0.1")
+;; (define-obsolete-variable-alias 'diogenes--browser-corpus
+;;                                 'classicist--browser-corpus "0.1")
+;; (define-obsolete-variable-alias 'diogenes--browser-labels
+;;                                 'classicist--browser-labels "0.1")
+;; (define-obsolete-variable-alias 'diogenes--browser-passage
+;;                                 'classicist--browser-passage "0.1")
+;; (define-obsolete-variable-alias 'diogenes--browser-work
+;;                                 'classicist--browser-work "0.1")
 (define-obsolete-variable-alias 'diogenes-abbreviation-overrides
                                 'classicist-abbreviation-overrides "0.1")
 (define-obsolete-function-alias 'diogenes-browser-citation-at

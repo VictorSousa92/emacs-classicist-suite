@@ -51,24 +51,40 @@
                                 'classicist--browse-database "0.1")
 (define-obsolete-function-alias 'diogenes--browse-work
                                 'classicist--browse-work "0.1")
-(define-obsolete-variable-alias 'diogenes--browser-addition
-                                'classicist--browser-addition "0.1")
+;; NINE ALIASES OF BUFFER-LOCAL VARIABLES, commented out together.  Emacs
+;; refuses to alias one: Don't know how to make a buffer-local variable an
+;; alias.  They were quiet for as long as the base browser ran and ours did
+;; not -- the override made ours run, and the first passage opened failed.
+;;
+;; AND EVERY ONE IS AN INTERNAL: a double hyphen says nobody's configuration
+;; names it, so there is no reader to keep compatible.  An alias for the sake
+;; of symmetry with the public ones, and it cost a working browser.
+
+;; (define-obsolete-variable-alias 'diogenes--browser-addition
+;;                                 'classicist--browser-addition "0.1")
 (define-obsolete-function-alias 'diogenes--browser-filter
                                 'classicist--browser-filter "0.1")
 (define-obsolete-function-alias 'diogenes--browser-format-header
                                 'classicist--browser-format-header "0.1")
-(define-obsolete-variable-alias 'diogenes--browser-output-buffer
-                                'classicist--browser-output-buffer "0.1")
-(define-obsolete-variable-alias 'diogenes--browser-page-lines
-                                'classicist--browser-page-lines "0.1")
+;; NOT ALIASED.  Both are defvar-local, and Emacs refuses: Don't know how to
+;; make a buffer-local variable an alias.  It was quiet while the base's
+;; browser ran and ours did not; the override made ours run and the alias
+;; fired on the first passage opened.
+;;
+;; AND IT IS AN INTERNAL, which nobody's configuration names: a double
+;; hyphen says so.  The alias was for readers, and there are none to keep.
+;; (define-obsolete-variable-alias 'diogenes--browser-output-buffer
+;;                                 'classicist--browser-output-buffer "0.1")
+;; (define-obsolete-variable-alias 'diogenes--browser-page-lines
+;;                                 'classicist--browser-page-lines "0.1")
 (define-obsolete-function-alias 'diogenes--browser-remove-duplicate-header
                                 'classicist--browser-remove-duplicate-header "0.1")
-(define-obsolete-variable-alias 'diogenes--browser-replace
-                                'classicist--browser-replace "0.1")
+;; (define-obsolete-variable-alias 'diogenes--browser-replace
+;;                                 'classicist--browser-replace "0.1")
 (define-obsolete-function-alias 'diogenes--browser-set-height
                                 'classicist--browser-set-height "0.1")
-(define-obsolete-variable-alias 'diogenes--browser-turned
-                                'classicist--browser-turned "0.1")
+;; (define-obsolete-variable-alias 'diogenes--browser-turned
+;;                                 'classicist--browser-turned "0.1")
 (define-obsolete-function-alias 'diogenes--dump-from-database
                                 'classicist--dump-from-database "0.1")
 (define-obsolete-function-alias 'diogenes--dump-from-database-sentinel
