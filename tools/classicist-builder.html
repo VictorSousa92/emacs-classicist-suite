@@ -250,6 +250,10 @@
      under the key it is about -- as it does in the dictionary rows, where the
      `.keycol' does the same.  Wide enough for a sentence: it was the warning
      squeezed into a narrow cell that made one invisible before. */
+  /* AND [hidden] LOUDER THAN display:grid, which it is not by itself: hidden
+     is display:none in the browser's own stylesheet and any author rule beats
+     it.  Third time today -- the rail's chips and the manager picker both. */
+  .keyrow[hidden] { display: none; }
   .keyrow { display: grid; grid-template-columns: 1fr minmax(15rem, 24rem);
             gap: .35rem .6rem; align-items: baseline; margin: .6rem 0; }
   .keyrow > .warnline { grid-column: 2; }
@@ -1224,7 +1228,7 @@
 
 <main id="panel-preset" hidden>
 <section class="pane">
-  <h3 data-feature="notes">Org keys</h3>
+  <h3>Org keys</h3>
   <p class="note">Two in the browser and one in org: a note on the passage, what
      has been said about these lines, and the way back from a note to the
      passage. <code>C-c C-x C-d</code> rather than <code>C-c C-d</code> for the
