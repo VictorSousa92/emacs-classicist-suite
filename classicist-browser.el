@@ -1010,8 +1010,7 @@ a Perl process on every page."
   "Major mode to browse Diogenes' databases."
   ;; A line of its own, above the text: see
   ;; `classicist-browser-header-line'.
-  (setq header-line-format '(:eval (classicist-browser-header-line)))
-  (make-local-variable 'diogenes--browser-first-insertion))
+  (setq header-line-format '(:eval (classicist-browser-header-line))))
 
 
 ;;; Browser process filter
