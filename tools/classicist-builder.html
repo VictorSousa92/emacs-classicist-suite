@@ -3009,23 +3009,6 @@ function configText() {
     }
     out.push('');
     out.push(';; ---- in dotspacemacs/user-config ----');
-    // THE MENU IS DEFINED TWICE AND package.el ACTIVATES ALPHABETICALLY.
-    // Both packages autoload the `diogenes' transient, so `diogenes''s own
-    // stub is written second and wins: C-c d loads the base, nothing loads
-    // this suite, and a reader gets Diogenes' own menu with none of this
-    // package's entries.  Doom's order happens to go the other way, which
-    // is why only Spacemacs needs this.
-    //
-    // SAFE HERE WHERE IT WOULD NOT BE IN THE PACKAGE'S OWN AUTOLOADS: a
-    // form there can fire while classicist.el is part way through loading,
-    // before its provide, and the require recurses.  In a reader's
-    // configuration it runs once, after both files exist.
-    out.push(';; The base and this suite both autoload the C-c d menu,');
-    out.push(';; and package.el activates alphabetically -- so without this');
-    out.push(';; the base\'s own menu answers the key and this one is');
-    out.push(';; never defined.');
-    out.push('(with-eval-after-load \'diogenes (require \'classicist nil t))');
-    out.push('');
     out.push('(use-package classicist');
     out.push('  :init');
   } else {
