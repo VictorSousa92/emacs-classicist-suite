@@ -485,6 +485,14 @@ them having any use for the Unicode a reader may have typed.
 
 Falls back on a plain prompt where `diogenes-complete-lemmata\\=' is nil or the
 word list cannot be read, so a caller may use this unconditionally."
+  ;; HELM WILL NOT ACCEPT A NON-CANDIDATE ON RET, and the docstring below
+  ;; says this prompt takes one: what comes back is either a candidate or
+  ;; whatever was typed, converted at the end.  So Unicode and beta both
+  ;; worked under vertico and neither under helm.
+  ;;
+  ;; BOUND HERE because the alist is keyed on the COMMAND, and the commands
+  ;; that call this have other prompts helm shows well.
+  (defvar helm-completing-read-handlers-alist)
   (let ((prompt (or prompt (format "Lemma (%s): " lang))))
     (if (not diogenes-complete-lemmata)
         (diogenes-complete--as-stored (read-from-minibuffer prompt) lang)

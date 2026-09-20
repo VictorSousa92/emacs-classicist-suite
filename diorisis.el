@@ -1228,6 +1228,42 @@ work is in `diorisis--style-all', which is what a framework displays, and
 (add-to-list 'completion-category-overrides
              '(tei-diorisis-lemma (styles tei-diorisis-greek)))
 
+(defcustom diorisis-lemma-greek-width 18
+  "How wide the Greek column is in the lemma prompt, in display columns.
+
+The beta code follows the Greek in each candidate -- see
+`diorisis--lemma-completion-table\=' for why it is there and not in an
+annotation -- and this pads the Greek so that the beta lines up down the page.
+A column that wandered with the length of each Greek word would be harder to
+read than no column at all.
+
+Eighteen, because `a)/nqrwpos\=' converted is nine and the compounds run to
+about eighteen.  Nil for a single space and no alignment."
+  :type '(choice (const :tag "No column, one space" nil) integer)
+  :group 'diorisis)
+
+(defun diorisis--lemma-candidate (greek beta)
+  "GREEK and BETA as one completion candidate.
+
+BOTH IN THE CANDIDATE, because nothing matches against an annotation.  The
+beta code was one, so `le/gw\=' matched no candidate and the prompt relied on
+the framework passing an unmatched string through to
+`diorisis--approximate\=' -- which vertico does and helm does not.  In the
+candidate it matches by substring under either, and under anything else."
+  (if (and beta (not (string= beta greek)))
+      (concat (if diorisis-lemma-greek-width
+                  (truncate-string-to-width
+                   greek diorisis-lemma-greek-width nil ?\s)
+                greek)
+              "  " beta)
+    greek))
+
+(defun diorisis--lemma-candidate-greek (candidate)
+  "The Greek part of CANDIDATE, which is what the tables are keyed on.
+Two spaces separate it from the beta code, and neither a Greek lemma nor a
+beta one contains two spaces."
+  (car (split-string candidate "  " t)))
+
 (defun diorisis--lemma-completion-table (candidates counts beta)
   "CANDIDATES as a completion table that announces our category.
 
@@ -1235,20 +1271,33 @@ AND IN OUR OWN ORDER.  `display-sort-function' is `identity' so that the
 frequencies decide what a reader sees first: filtered to forty candidates, the
 one wanted is far likelier to be the common word than the alphabetically first
 one."
-  (lambda (string predicate action)
+  ;; THE BETA IN THE CANDIDATE AND THE COUNT IN THE ANNOTATION.  Nothing
+  ;; matches against an annotation, so the beta was unmatchable and the prompt
+  ;; relied on the framework passing an unmatched string through -- which
+  ;; vertico does and helm does not.  The count stays out of the matching
+  ;; because nobody searches by frequency.
+  (let* ((shown (mapcar (lambda (greek)
+                          (diorisis--lemma-candidate
+                           greek (gethash greek beta)))
+                        candidates))
+         (greek-of (let ((h (make-hash-table :test 'equal)))
+                     (dolist (candidate shown h)
+                       (puthash candidate
+                                (diorisis--lemma-candidate-greek candidate)
+                                h)))))
+   (lambda (string predicate action)
     (pcase action
       ('metadata
        `(metadata
-         (category . tei-diorisis-lemma)
+         (category . diorisis-lemma)
          (annotation-function
           . ,(lambda (candidate)
-               (let ((count (gethash candidate counts))
-                     (raw (gethash candidate beta)))
-                 (concat (and raw (format "   %s" raw))
-                         (and count (format "   %d" count))))))
+               (let ((count (gethash (gethash candidate greek-of candidate)
+                                     counts)))
+                 (and count (format "   %d" count)))))
          (display-sort-function . identity)
          (cycle-sort-function . identity)))
-      (_ (complete-with-action action candidates string predicate)))))
+      (_ (complete-with-action action shown string predicate))))))
 
 (defun diorisis--approximate (input)
   "The lemmata INPUT might mean, as (BETA GREEK COUNT), likeliest first.
@@ -1405,6 +1454,13 @@ optional): ")
     ;; WHAT COMES BACK may be a candidate, or whatever was typed where the
     ;; framework allowed it through.  Both are handled below, in order of how
     ;; exact they are.
+    ;;
+    ;; A CANDIDATE NOW CARRIES ITS BETA CODE, so that beta matches under any
+    ;; framework -- see `diorisis--lemma-candidate'.  The Greek is cut back
+    ;; out here, the tables below being keyed on it, and a string that was
+    ;; typed rather than chosen has no two spaces in it and comes through
+    ;; unchanged.
+    (setq answer (diorisis--lemma-candidate-greek answer))
     (or
      ;; A lemma chosen from the list.
      (gethash answer beta)
@@ -4103,7 +4159,7 @@ both work and the diacritics typed are the ones required."
          (table (lambda (string predicate action)
                   (pcase action
                     ('metadata
-                     '(metadata (category . tei-diorisis-lemma)
+                     '(metadata (category . diorisis-lemma)
                                 (display-sort-function . identity)
                                 (cycle-sort-function . identity)))
                     (_ (complete-with-action action (mapcar #'car pairs)
