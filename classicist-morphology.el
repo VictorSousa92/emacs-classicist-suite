@@ -113,7 +113,16 @@
 ;;; ... in a dedicated NXML buffer
 
 
-;;;###autoload
+;; NO AUTOLOAD COOKIE HERE.  An autoloaded form is copied into the package
+;; autoloads, where it runs BEFORE the file it came from has loaded -- so
+;; this called a function of classicist-lookup that did not exist yet, and
+;; the require at the head of this file never got a chance.  Symbol s
+;; function definition is void, at the first doom sync anybody ran.
+;;
+;; AND IT NEEDS NO COOKIE: the registration belongs to this file loading,
+;; which is when the dictionaries it names are wanted.  The cookie only made
+;; it happen too early.  Third time in this work that an autoloaded form
+;; asked something of its own file.
 
 
 (classicist--lookup-register-shipped-dictionaries)

@@ -749,6 +749,17 @@
      menu (hold Shift) gives what these boxes want. Backslashes are turned into
      forward slashes, which Emacs accepts and which keeps the generated
      configuration readable.</p>
+  <div class="field">
+    <span>One folder for them all, if they share one
+      <em>type it once and a name is enough in each box below &mdash;
+      <code>OLD.pdf</code>, <code>TLL/</code>. A path that begins with a slash,
+      a <code>~</code> or a drive letter is left alone, so a dictionary kept
+      somewhere else still works. The boxes keep what you type; the joining
+      happens in the block, so moving this moves them all.</em></span>
+    <input type="text" id="c-dictroot" placeholder="/path/to/Dictionaries/"
+           data-drop="1">
+  </div>
+
   <div id="c-dicts"></div>
 
   <h2 data-feature="lexica">Reading</h2>
@@ -2900,7 +2911,7 @@ function configText() {
     // Windows path types backslashes, and a backslash in an Emacs string is an
     // escape -- `"C:\dir"' is `C:dir' with a tab in it, or worse.  Forward
     // slashes work on every platform Emacs runs on.
-    const v = normalisePath(i.value) || i.value.trim();
+    const v = underDictRoot(i.value);
     if (v) paths.push(`  (setq ${i.dataset.path} ${JSON.stringify(v)})`);
   });
   const dpath = (normalisePath(el('c-path').value) || '');
@@ -3754,6 +3765,23 @@ function warnFor(key, context) {
 // string is an escape, so a path is written with forward slashes -- which Emacs
 // accepts on Windows and which spares the reader a line full of doubled
 // backslashes.
+// A NAME IS ENOUGH WHERE THEY SHARE A FOLDER.  Thirteen dictionaries and
+// eighteen path boxes; a reader who keeps them together typed the folder
+// eighteen times.
+//
+// AN ABSOLUTE PATH IS LEFT ALONE -- a leading slash, a `~', or a drive letter
+// means the reader has said where it is.  And the joining happens here rather
+// than in the boxes, so they keep what was typed and moving the folder moves
+// them all.
+function underDictRoot(value) {
+  const v = normalisePath(value) || (value || '').trim();
+  if (!v) return v;
+  if (/^([\/~]|[A-Za-z]:)/.test(v)) return v;
+  const root = normalisePath(el('c-dictroot') && el('c-dictroot').value);
+  if (!root) return v;
+  return root.replace(/\/+$/, '') + '/' + v.replace(/^\/+/, '');
+}
+
 function normalisePath(raw) {
   if (!raw) return null;
   let s = String(raw).trim();
