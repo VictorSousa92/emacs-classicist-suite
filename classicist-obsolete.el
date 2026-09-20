@@ -197,8 +197,15 @@
                                 'classicist-browser-reinsert-hyphenation "0.1")
 (define-obsolete-function-alias 'diogenes-browser-remove-hyphenation
                                 'classicist-browser-remove-hyphenation "0.1")
-(define-obsolete-variable-alias 'diogenes-browser-show-citations
-                                'classicist-browser-show-citations "0.1")
+;; A TENTH, and this one is a defcustom that something makes buffer-local at
+;; runtime -- so it is invisible to a check that looks for defvar-local,
+;; make-local-variable and setq-local in the source.  Emacs still refuses.
+;;
+;; THIS ONE IS PUBLIC, unlike the nine: a reader's configuration may well say
+;; diogenes-browser-show-citations, and the alias was for them.  So the loss
+;; is real, and the note in the README should say the option was renamed.
+;; (define-obsolete-variable-alias 'diogenes-browser-show-citations
+;;                                 'classicist-browser-show-citations "0.1")
 (define-obsolete-function-alias 'diogenes-browser-toggle-citations
                                 'classicist-browser-toggle-citations "0.1")
 (define-obsolete-variable-alias 'diogenes-browser-turn-keys
