@@ -556,39 +556,45 @@ otherwise, prompt the user for input."
 This is the main dispatcher function that starts the transient
 user interface."
   [["SEARCH"
-    :if (lambda () (classicist-feature-p 'texts))
+    ;; ANY OF ITS MEMBERS, not `texts' alone: the appends from
+    ;; diorisis.el and tei-browser.el land in this group, so asking
+    ;; for `texts' hid the corpora that want no Diogenes data.
+    :if (lambda () (or (classicist-feature-p 'texts) (classicist-feature-p 'diorisis) (classicist-feature-p 'treebank)))
     ("sg" "Search the Greek TLG"
      (lambda () (interactive) (transient-setup 'diogenes--search--select-mode nil nil
 					  :scope (list :type "tlg")))
-     :transient transient--do-recurse)
+     :transient transient--do-recurse :if (lambda () (classicist-feature-p 'texts)))
     ("sl" "Search the Latin PHI"
      (lambda () (interactive) (transient-setup 'diogenes--search--select-mode nil nil
 					  :scope (list :type "phi")))
-     :transient transient--do-recurse)
+     :transient transient--do-recurse :if (lambda () (classicist-feature-p 'texts)))
     ("sd" "Search the Duke Documentary Papyri"
      (lambda () (interactive) (transient-setup 'diogenes--search--select-mode nil nil
 					  :scope (list :type "ddp")))
-     :transient transient--do-recurse)
+     :transient transient--do-recurse :if (lambda () (classicist-feature-p 'texts)))
     ("si" "Search the Classical Inscriptions"
      (lambda () (interactive) (transient-setup 'diogenes--search--select-mode nil nil
 					  :scope (list :type "ins")))
-     :transient transient--do-recurse)
+     :transient transient--do-recurse :if (lambda () (classicist-feature-p 'texts)))
     ("sc" "Search the Christian Inscriptions"
      (lambda () (interactive) (transient-setup 'diogenes--search--select-mode nil nil
 					  :scope (list :type "chr")))
-     :transient transient--do-recurse)
+     :transient transient--do-recurse :if (lambda () (classicist-feature-p 'texts)))
     ("sm" "Search the Miscellaneous PHI Texts"
      (lambda () (interactive) (transient-setup 'diogenes--search--select-mode nil nil
 					  :scope (list :type "misc")))
-     :transient transient--do-recurse)]
+     :transient transient--do-recurse :if (lambda () (classicist-feature-p 'texts)))]
    ["BROWSE"
-    :if (lambda () (classicist-feature-p 'texts))
-    ("bg" "Browse the Greek TLG" diogenes-browse-tlg)
-    ("bl" "Browse the Latin PHI" diogenes-browse-phi)
-    ("bd" "Browse the Duke Documentary Papyri" diogenes-browse-ddp)
-    ("bi" "Browse the Classical Inscriptions" diogenes-browse-ins)
-    ("bc" "Browse the Christian Inscriptions" diogenes-browse-chr)
-    ("bm" "Browse the Miscellaneous PHI Texts" diogenes-browse-misc)]]
+    ;; ANY OF ITS MEMBERS, not `texts' alone: the appends from
+    ;; diorisis.el and tei-browser.el land in this group, so asking
+    ;; for `texts' hid the corpora that want no Diogenes data.
+    :if (lambda () (or (classicist-feature-p 'texts) (classicist-feature-p 'diorisis) (classicist-feature-p 'tei-corpora)))
+    ("bg" "Browse the Greek TLG" diogenes-browse-tlg :if (lambda () (classicist-feature-p 'texts)))
+    ("bl" "Browse the Latin PHI" diogenes-browse-phi :if (lambda () (classicist-feature-p 'texts)))
+    ("bd" "Browse the Duke Documentary Papyri" diogenes-browse-ddp :if (lambda () (classicist-feature-p 'texts)))
+    ("bi" "Browse the Classical Inscriptions" diogenes-browse-ins :if (lambda () (classicist-feature-p 'texts)))
+    ("bc" "Browse the Christian Inscriptions" diogenes-browse-chr :if (lambda () (classicist-feature-p 'texts)))
+    ("bm" "Browse the Miscellaneous PHI Texts" diogenes-browse-misc :if (lambda () (classicist-feature-p 'texts)))]]
   [["MORPHOLOGY & DICTIONARY LOOKUP"
     :if (lambda () (classicist-feature-p 'lexica))
     ("lg" "Look up Greek word (LSJ; C-u to choose)" diogenes-lookup-greek)
