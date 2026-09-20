@@ -499,7 +499,18 @@ word list cannot be read, so a caller may use this unconditionally."
       (let* ((pairs (ignore-errors (diogenes-complete--pairs lang))))
         (if (not pairs)
             (diogenes-complete--as-stored (read-from-minibuffer prompt) lang)
-          (let* ((diogenes-complete--pairs pairs)
+          (let* ((pairs
+                  ;; EACH CANDIDATE CARRIES ITS GREEK AND ITS BARE LETTERS,
+                  ;; unseen, so that helm can match them: it uses no
+                  ;; completion style and this file does all its matching in
+                  ;; one.  The style is unaffected -- the beta is still the
+                  ;; prefix it compares, and the bare is still the cdr.
+                  (mapcar (lambda (pair)
+                            (cons (diogenes-complete--candidate
+                                   (car pair) (cdr pair))
+                                  (cdr pair)))
+                          pairs))
+                 (diogenes-complete--pairs pairs)
                  (candidates (mapcar #'car pairs))
                  (shown
                   ;; GREEK IS SHOWN AS GREEK, AND FIRST.  The list is beta
@@ -539,7 +550,12 @@ word list cannot be read, so a caller may use this unconditionally."
               ;; WHAT COMES BACK is either a candidate -- already the word
               ;; list's own spelling -- or whatever was typed, which is
               ;; converted here, once, at the end.
-              (diogenes-complete--as-stored (string-trim answer) lang))))))))
+              ;; CUT BACK TO THE BETA, the hidden Greek and bare letters
+              ;; being for the matching and nothing else.  A string typed
+              ;; rather than chosen has none and comes through unchanged.
+              (diogenes-complete--as-stored
+               (diogenes-complete--candidate-beta (string-trim answer))
+               lang))))))))
 
 (defcustom diogenes-complete-greek-width 20
   "How wide the Greek column is, in display columns.
@@ -551,11 +567,43 @@ Greek word would be harder to read than no column at all.  Twenty, because
   :type 'integer
   :group 'diogenes-complete)
 
+(defun diogenes-complete--candidate (beta bare)
+  "BETA as a candidate, with its Greek and its BARE letters unseen.
+
+HELM DOES NOT USE COMPLETION STYLES, and this file does all its matching in
+one -- so under helm nothing but literal beta ever matched.  The Greek and the
+bare letters go into the candidate to be found there instead.
+
+THE BETA STAYS FIRST, because the style orders prefixes before middles and a
+candidate beginning with Greek would have no beta prefix to find.  The rest is
+invisible: it has to be in the string to be matched and would undo the display
+otherwise."
+  (let* ((greek (and (fboundp 'diogenes--beta-to-utf8)
+                     (ignore-errors (diogenes--beta-to-utf8 beta))))
+         (extra (string-join
+                 (delq nil (list (and greek (not (string= greek beta)) greek)
+                                 (and bare (not (string= bare beta)) bare)))
+                 "  ")))
+    (if (string-empty-p extra)
+        beta
+      (concat beta (propertize (concat "  " extra) 'invisible t)))))
+
+(defun diogenes-complete--candidate-beta (candidate)
+  "The beta code CANDIDATE begins with.
+Two spaces separate it from the hidden Greek and bare letters, and beta code
+contains no space.  A string typed rather than chosen has none either and
+comes back unchanged."
+  (car (split-string candidate "  " t)))
+
 (defun diogenes-complete--affix (candidates)
   "CANDIDATES as (BETA GREEK-PREFIX EMPTY-SUFFIX), for the completion display."
   (mapcar
    (lambda (candidate)
-     (let* ((greek (diogenes--beta-to-utf8 candidate))
+     (let* ((beta (diogenes-complete--candidate-beta candidate))
+            ;; THE BETA PART ONLY.  The candidate carries its Greek and its
+            ;; bare letters invisibly -- see `diogenes-complete--candidate'
+            ;; -- and converting the whole of it would convert those too.
+            (greek (diogenes--beta-to-utf8 beta))
             (pad (max 1 (- diogenes-complete-greek-width
                            (string-width greek)))))
        (list candidate
