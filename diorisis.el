@@ -4640,6 +4640,16 @@ links."
                (list author work))))
        t))
 
+
+;; AND WHEN THE MENU IS DEFINED, which replaces the prefix whole and takes
+;; every appended suffix with it.  The forms above stay: a reader may have
+;; the base and not this suite's menu, and the entries belong there too.
+;; Each append asks transient-get-suffix first, so twice is free.
+;;;###autoload
+(with-eval-after-load 'classicist
+  (add-hook 'classicist-menu-defined-hook #'diorisis--add-to-diogenes-menu)
+  (add-hook 'classicist-menu-defined-hook #'diorisis--add-browse-to-diogenes-menu))
+
 (provide 'diorisis)
 
 ;;; diorisis.el ends here

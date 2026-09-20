@@ -566,6 +566,19 @@ otherwise, prompt the user for input."
 ;;
 ;; The hook runs after the base by definition, so this is
 ;; deterministic under every manager.
+(defvar classicist-menu-defined-hook nil
+  "Run when `classicist-define-menu\=' has defined the menu.
+
+WHY A HOOK AND NOT A GUESS.  Defining a transient prefix replaces it whole,
+and with it every suffix anything had appended -- the Diorisis entries, the
+annotated trees, the TEI corpora, all of which are appends.  They fired on
+`classicist\=' and on `diogenes\=', which was a guess about when the prefix
+was stable, and the guess became wrong the moment the definition moved into
+a function called later than either.
+
+So the definition says when it is done and the appends listen.  Each asks
+`transient-get-suffix\=' before appending, so being run again costs nothing.")
+
 (defun classicist-define-menu ()
   "Define the `diogenes\=' menu, this package\='s version of it.
 
@@ -642,7 +655,11 @@ Idempotent: defining a transient prefix again simply replaces it."
     ;; them under `Going between the windows and frames'.
     ["CUSTOM CORPORA"
       :if (lambda () (classicist-feature-p 'texts))
-     ("c" "Manage custom search corpora" diogenes-manage-user-corpora)]))
+     ("c" "Manage custom search corpora" diogenes-manage-user-corpora)])
+  ;; AND WHATEVER HAS SOMETHING TO APPEND.  The definition above replaced
+  ;; the prefix whole and took every appended suffix with it, so this is the
+  ;; moment they are wanted -- stated, rather than guessed at.
+  (run-hooks 'classicist-menu-defined-hook))
 
 ;;;###autoload
 ;; AFTER THE BASE, whichever loaded first.  The autoload above reaches
