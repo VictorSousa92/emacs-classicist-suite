@@ -1200,3 +1200,190 @@ Neither was a fault in the elisp. Both were a reader being handed a
 configuration that worked and did less than it could, which is the hardest
 kind to notice: nothing errors, and the feature simply is not there.
 
+---
+
+## Replacing something of the base's: which mechanism for which case
+
+This suite replaces commands, a transient prefix, internal functions and a
+display layer, all under the base's own names. Six times in one session that
+went wrong, each time differently, and the answers are not
+interchangeable.
+
+**A command: advise it.** `advice-add ... :override` needs only that the base
+has loaded, which `with-eval-after-load` guarantees. The twenty-one browse,
+search and dump commands work this way, installed by
+`classicist-install-overrides` and removable by
+`classicist-remove-overrides` -- which a redefinition could never be.
+
+**A definition: defer the definition.** A `transient-define-prefix` is not a
+call, so advice cannot reach it, and whichever file defines it last wins.
+`(symbol-file 'diogenes 'defun)` said `diogenes.elc` on Spacemacs and
+`classicist.el` on Doom: package.el activates alphabetically, straight does
+not, and the same commit behaved oppositely. The prefix lives in
+`classicist-define-menu` now, called from a hook that by definition runs
+after the base.
+
+**And a `require` makes it worse, not better.** Loading this file when the
+base loads makes our definition run EARLIER -- the base is part way through
+its own file and defines its prefix after we have finished with ours. The
+same form in our own autoloads can also fire before `provide` and recurse,
+which a previous session diagnosed, wrote down, and which was reproduced
+anyway.
+
+**Something appended: publish a hook.** Defining a prefix replaces it whole
+and discards every appended suffix. The appends had fired on a feature, which
+is a guess about when the prefix is stable, and the guess became wrong the
+moment the definition moved. `classicist-menu-defined-hook` is run at the end
+of the definition and anything with something to append listens.
+
+**When order matters, say it. Do not infer it from a load.**
+
+**Top-level code: set the value, not the function.** The base validates its
+lexicon at load. Every `with-eval-after-load` fires after that, so no advice
+and no redefinition can affect what the validator reads. Three downstream
+workarounds were tried and all were wrong; the fix was patch twenty, in the
+base.
+
+**And a file's own requires run before its own code.** `classicist.el`
+requires a dozen of the base's libraries, one of which pulls in
+`diogenes.el`. So anything that must precede the base has to precede the
+`require` -- not merely be in the same file. `:demand t` in a reader's
+configuration cannot help: the base is not loaded after us, it is loaded
+during us.
+
+---
+
+## Where a cache belongs
+
+Three kinds, and the distinction decides whether one file can serve two
+machines.
+
+**A cache of what a program computed** belongs with the program.
+`classicist-books.eld` holds what Perl said about a work and sits under
+`user-emacs-directory`, which is right: a new Emacs should build its own, and
+it names no files.
+
+**A cache about files** belongs with the files, and must name them RELATIVE to
+their own root. `tei-index.eld` recorded absolute paths, so an index built on
+Linux named nothing a macOS reader could open -- `/mnt/archive` and
+`/Volumes/shared` being the same disk. It now records paths relative to the
+directory it was built from, and `tei--resolve` joins them to
+`tei-directory`.
+
+`passow-index.eld` and `tgl-index.eld` still hold absolute paths, five and
+six, one per scanned volume. See `lexicon-index-paths.md`.
+
+**A cache of content** travels either way. `diorisis-vocabulary.eld` holds
+beta code and nothing else, and has never cared where it sat -- which is
+worth knowing, because reading it is what a slow mount makes expensive.
+
+**And the trap in making a path relative**: check the real path and store the
+portable one, in that order. `os.path.exists` on a relative path asks the
+working directory, so storing before checking made every text fail as
+declared-and-absent and the index came out with nothing in it.
+
+---
+
+## Completion: the candidate is the only thing every framework sees
+
+Two prompts hid their matching where no framework could reach it, and both
+now put everything in the candidate.
+
+**Not in an annotation.** The Diorisis prompt had accented Greek as its
+candidates and the beta code in an `annotation-function`, and nothing matches
+an annotation. `le/gw` matched no candidate at all: the prompt worked only
+because `diorisis-read-lemma` takes whatever was typed and hands it to
+`diorisis--approximate` after the prompt closes -- which depends on the
+framework letting a non-candidate through. Vertico does. Helm does not: it
+offers it as an `Unknown candidate` source a reader must select.
+
+**Not in a completion style either.** `diogenes-complete.el` does all its
+matching in a style registered for its own category -- and helm uses no
+styles at all, while Doom sets `completion-category-overrides` after we do:
+`(alist-get 'diogenes-lemma completion-category-overrides)` is nil there and
+`completion-styles` is `(orderless basic)`. So the style is dead code on that
+path and its careful prefix-first ordering with it.
+
+**And not in the ordering a style computes.** With the candidates matching at
+last, `leg` showed `a)le/gw` before `le/gw`: the word list is alphabetical and
+nothing was ranking. Frequency is not available -- the list's second field is
+an offset into the analyses, not a count -- so the candidates are sorted
+shorter first, which is a good proxy: a compound is always longer than what it
+compounds.
+
+**A style is a request; the candidate list is a fact.** Anything a reader
+must be able to type belongs in the candidate, invisibly where it would be
+noise: `λέγω  le/gw  legw`, with the bare letters propertized `invisible`.
+
+---
+
+## Two machines, one disk
+
+The suite is developed on Linux and read on a macOS VM sharing one disk over
+9p, which taught two things.
+
+**9p is fine for reading a text and hopeless for compiling a package.**
+`doom sync` sat twenty-five minutes on `Building classicist...` with zero
+`.elc` files written -- not slow, blocked -- and finished in 6.7 seconds once
+the recipe pointed at a local clone. So:
+
+    the code           a local clone on each machine, pulled
+    the corpora        on the share, read a file at a time
+    the databases      on the share
+    the caches         per the rule above
+
+**And a bulk read is the pattern a slow mount handles worst.** The Diorisis
+lemma prompt reads 63,718 rows; with no `diorisis-vocabulary.eld` beside the
+database it does that every session, across the mount. Building the cache once
+on the fast machine serves both -- it is portable -- provided both
+configurations name the same physical database.
+
+---
+
+## [PENDING] A variable-declaration check
+
+`make declare` verifies that every `declare-function` names a function that
+exists. Nothing does the same for variables, and a bare `(defvar NAME)` says
+exactly the same kind of thing: this name is defined elsewhere.
+
+Six dictionary files pushed handlers onto
+`diogenes--dict-xml-handlers-extra`, which a rename had made
+`classicist--dict-xml-handlers-extra`. Twenty-three references, each with a
+`(defvar)` above it silencing the compiler, and all six silent until a Bailly
+entry was rendered.
+
+And the same shape bit once more: a `declare-function` for
+`diogenes--dict-file` satisfied the compiler while nothing in the file
+required the library that defines it, so Doom would not boot. **A declaration
+is a promise to the compiler and no help at all at runtime.**
+
+---
+
+## How to edit this suite
+
+`make check` runs seven gates and is the first thing after any edit. After any
+scripted change to elisp, `python3 tools/check-elisp-balance.py FILE` --
+because paren counting is the only method that has worked. Three attempts at
+one file cut into a neighbouring docstring, whose prose then compiled as code:
+ninety-two warnings about a free variable named `THE`.
+
+A docstring holds blank lines and lines at column zero, so neither is the end
+of a form. Find the end by counting parens, with a string-and-comment state
+machine, or do not find it at all.
+
+Edits are made by Python scripts with asserts on what they expect. **A script
+that writes nothing when its assert fires has cost nothing; one that writes
+half a change has cost an hour**, and there were three of those.
+
+And when something does not work, ask the running Emacs before reading the
+source:
+
+    (symbol-file 'NAME 'defun)          which file defined what is running
+    major-mode                          what this buffer really is
+    (boundp 'NAME)   (featurep 'NAME)   whether the new code is even loaded
+    (alist-get ... completion-category-overrides)
+    classicist-display-debug             the display log, which answers
+                                         where a buffer went and why
+
+Every one of those settled in seconds what reading had failed to settle in an
+hour. The gates verify shapes; only a running Emacs verifies order.
