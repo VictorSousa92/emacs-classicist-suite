@@ -171,16 +171,15 @@ Please set it to the root directory of your Diogenes installation!")))
   (warn "Could not find a working Diogenes installation in %s"
 	 (diogenes--path)))
 
-;; THE BASE'S OWN, and it tries every name the data ships under since patch
-;; twenty -- so this suite no longer needs a copy of it, and the validation
-;; below asks the same function the lookups do.
-(declare-function diogenes--dict-file "diogenes" (lang))
-
-(mapc (lambda (lang)
-	(unless (file-exists-p (diogenes--dict-file lang))
-	  (warn "Could not find %s lexicon at %s."
-		 lang (diogenes--dict-file lang))))
-      '("greek" "latin"))
+;; THE LEXICA ARE THE BASE'S TO CHECK, and since patch twenty it checks them
+;; against every name the data ships under.  This suite had its own copy of
+;; that validation, which could only ever disagree -- and calling the base's
+;; function here was worse than duplicating it: nothing in this file requires
+;; diogenes.el, only its libraries, so diogenes--dict-file was void and Doom
+;; would not boot.
+;;
+;; The four .txt files below are still checked here, the base not checking
+;; those.
 
 (mapc (lambda (file)
 	(unless (file-exists-p (file-name-concat (diogenes--perseus-path)
