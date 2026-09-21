@@ -4214,6 +4214,7 @@ const FEATURE_LABEL = {
   dictionaries: 'the printed dictionaries', diorisis: 'the Diorisis corpus',
   treebank: 'treebank annotation', 'tei-corpora': 'the TEI editions',
   books: 'a work at one of its books',
+  lemmata: 'completing a lemma prompt',
   notes: 'notes in org', windows: 'where the buffers go'
 };
 const ALL_FEATURES = Object.keys(FEATURE_LABEL);
@@ -4436,7 +4437,8 @@ const START = {
   },
   all: {
     features: ['texts', 'lexica', 'dictionaries', 'diorisis', 'treebank',
-               'tei-corpora', 'notes', 'windows', 'books'],
+               'tei-corpora', 'notes', 'windows', 'books',
+               'lemmata'],
     'c-useroam': true,
     // The above, plus what the package is for.
     'c-headerline': true, 'c-citations': true, 'c-analysis': true,

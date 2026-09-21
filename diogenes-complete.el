@@ -511,7 +511,26 @@ word list cannot be read, so a caller may use this unconditionally."
                                   (cdr pair)))
                           pairs))
                  (diogenes-complete--pairs pairs)
-                 (candidates (mapcar #'car pairs))
+                 (candidates
+                  ;; SHORTER FIRST, because the list is alphabetical and a
+                  ;; reader typing `leg' was shown a)le/gw before le/gw --
+                  ;; every compound and every alpha privative of a word
+                  ;; sorting before the word itself.
+                  ;;
+                  ;; FREQUENCY WOULD BE BETTER and is not available: the word
+                  ;; list's second field is an offset into the analyses, not a
+                  ;; count.  Length is a good proxy for a word list -- a
+                  ;; compound is always longer than what it compounds, and the
+                  ;; simple verb is what a short input usually means.
+                  ;;
+                  ;; AND IT HAS TO BE HERE rather than in the completion
+                  ;; style: this file registers one, and Doom sets
+                  ;; completion-category-overrides after we do, so ours is
+                  ;; gone and orderless matches instead.  An order in the
+                  ;; candidate list survives whatever style a reader has,
+                  ;; display-sort-function being identity already.
+                  (sort (mapcar #'car pairs)
+                        (lambda (a b) (< (length a) (length b)))))
                  (shown
                   ;; GREEK IS SHOWN AS GREEK, AND FIRST.  The list is beta
                   ;; code and a reader completing on `memuk' is completing on
