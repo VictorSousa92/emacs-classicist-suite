@@ -81,8 +81,8 @@
 (declare-function classicist-open-passage "classicist-browser"
                   (corpus author work &optional passage))
 (declare-function classicist-citation-interval-from-key "classicist-citation" (key))
-(declare-function diogenes-lookup-greek "classicist" (word &optional dictionary))
-(declare-function diogenes-lookup-latin "classicist" (word &optional dictionary))
+(declare-function classicist-lookup-greek "classicist" (word &optional dictionary))
+(declare-function classicist-lookup-latin "classicist" (word &optional dictionary))
 
 (defvar diogenes-browser-mode-hook)
 (defvar diogenes-lookup-mode-hook)
@@ -479,8 +479,8 @@ calling a private function, and the boundary is worth keeping on both sides."
   "Open the dictionary entry PARTS names: (LANGUAGE KEY)."
   (let ((language (nth 0 parts))
         (key (nth 1 parts)))
-    (cond ((equal language "greek") (diogenes-lookup-greek key))
-          ((equal language "latin") (diogenes-lookup-latin key))
+    (cond ((equal language "greek") (classicist-lookup-greek key))
+          ((equal language "latin") (classicist-lookup-latin key))
           (t (user-error "No dictionary for language `%s'" language)))))
 
 (defun diogenes-org--follow-page (parts)

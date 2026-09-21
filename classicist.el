@@ -382,7 +382,7 @@ Uses the Diogenes Perl module."
 ;; a Greek word in German or French rather than in English.
 
 ;;;###autoload
-(defun diogenes-lookup-greek (word &optional dictionary)
+(defun classicist-lookup-greek (word &optional dictionary)
   "Search for a greek word in the LSJ Greek Dictionary.
 Accepts both Unicode and Beta Code as input.
 
@@ -394,7 +394,7 @@ With a prefix argument, ask which Greek dictionary to search instead; see
     (classicist--lookup-dict word "greek")))
 
 ;;;###autoload
-(defun diogenes-lookup-latin (word &optional dictionary)
+(defun classicist-lookup-latin (word &optional dictionary)
   "Search for a latin word in the Lewis & Short Latin Dictionary.
 
 With a prefix argument, ask which Latin dictionary to search instead; see
@@ -406,7 +406,7 @@ With a prefix argument, ask which Latin dictionary to search instead; see
 
 ;;; MORPHEUS PARSING
 ;;;###autoload
-(defun diogenes-parse-and-lookup-greek (word &optional dictionary)
+(defun classicist-parse-and-lookup-greek (word &optional dictionary)
   "Try to parse a greek word and look it up.
 
 With a prefix argument, ask which Greek dictionary to show it in.  The word
@@ -420,7 +420,7 @@ recorded, there being no offset for any dictionary but its own."
 				"greek")))
 
 ;;;###autoload
-(defun diogenes-parse-and-lookup-latin (word &optional dictionary)
+(defun classicist-parse-and-lookup-latin (word &optional dictionary)
   "Try to parse a latin word and look it up.
 
 With a prefix argument, ask which Latin dictionary to show it in; see
@@ -431,7 +431,7 @@ With a prefix argument, ask which Latin dictionary to show it in; see
     (classicist--parse-and-lookup word "latin")))
 
 ;;;###autoload
-(defun diogenes-parse-greek (query)
+(defun classicist-parse-greek (query)
   "Parse a greek word and display the results.
 QUERY is interpreted as a regular expression which must match the forms."
   (interactive (list (read-from-minibuffer "Parse Greek word: "
@@ -440,7 +440,7 @@ QUERY is interpreted as a regular expression which must match the forms."
 			      "greek"))
 
 ;;;###autoload
-(defun diogenes-parse-latin (query)
+(defun classicist-parse-latin (query)
   "Parse a latin word and display the results.
 QUERY is interpreted as a regular expression which must match the forms."
   (interactive (list (read-from-minibuffer "Parse Latin word: "
@@ -448,26 +448,26 @@ QUERY is interpreted as a regular expression which must match the forms."
   (classicist--parse-and-show query "latin"))
 
 ;;;###autoload
-(defun diogenes-show-all-forms-greek (lemma)
+(defun classicist-show-all-forms-greek (lemma)
   "Show all attested forms of a Greek lemma."
   (interactive (list (diogenes-read-lemma "greek" "Show all forms of: ")))
   (classicist--show-all-forms (diogenes--greek-ensure-beta lemma) "greek"))
 
 ;;;###autoload
-(defun diogenes-show-all-forms-latin (lemma)
+(defun classicist-show-all-forms-latin (lemma)
   "Show all attested forms of a Latin lemma."
   (interactive (list (diogenes-read-lemma "latin" "Show all forms of: ")))
   (classicist--show-all-forms lemma "latin"))
 
 ;;;###autoload
-(defun diogenes-show-all-lemmata-greek (query)
+(defun classicist-show-all-lemmata-greek (query)
   "Show all Greek lemmata and forms that match QUERY."
   (interactive (list (diogenes-read-lemma
                       "greek" "Show all lemmata matching: ")))
   (classicist--show-all-lemmata (diogenes--greek-ensure-beta query) "greek"))
 
 ;;;###autoload
-(defun diogenes-show-all-lemmata-latin (query)
+(defun classicist-show-all-lemmata-latin (query)
   "Show all Latin lemmata and forms that match QUERY."
   (interactive (list (diogenes-read-lemma
                       "latin" "Show all lemmata matching: ")))
@@ -764,6 +764,22 @@ decline.  Without it they get Diogenes\=' own plain prompt."
         (push (cons (intern (format "diogenes-%s-%s" family corpus))
                     (intern (format "classicist-%s-%s" family corpus)))
               out)))
+    ;; AND THE TEN THAT FIT NO PATTERN.  The loop above is three families of
+    ;; seven, which is tidy and was incomplete: the lookups, the parses, the
+    ;; forms and the lemmata are redefined under the base's names too, and
+    ;; were left racing.  (symbol-file 'diogenes-lookup-greek 'defun) said
+    ;; diogenes.elc, so the base's lookup ran and its buffer matched no role
+    ;; -- a new frame for every word looked up.
+      (push (cons 'diogenes-lookup-greek 'classicist-lookup-greek) out)
+      (push (cons 'diogenes-lookup-latin 'classicist-lookup-latin) out)
+      (push (cons 'diogenes-parse-and-lookup-greek 'classicist-parse-and-lookup-greek) out)
+      (push (cons 'diogenes-parse-and-lookup-latin 'classicist-parse-and-lookup-latin) out)
+      (push (cons 'diogenes-parse-greek 'classicist-parse-greek) out)
+      (push (cons 'diogenes-parse-latin 'classicist-parse-latin) out)
+      (push (cons 'diogenes-show-all-forms-greek 'classicist-show-all-forms-greek) out)
+      (push (cons 'diogenes-show-all-forms-latin 'classicist-show-all-forms-latin) out)
+      (push (cons 'diogenes-show-all-lemmata-greek 'classicist-show-all-lemmata-greek) out)
+      (push (cons 'diogenes-show-all-lemmata-latin 'classicist-show-all-lemmata-latin) out)
     (nreverse out))
   "The base's command names, and ours that answer for them.
 An alist of (THEIRS . OURS), built rather than written out: three families of

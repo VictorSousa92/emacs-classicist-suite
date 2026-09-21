@@ -55,9 +55,9 @@
 (declare-function classicist-open-passage "classicist-browser"
                   (corpus author work &optional passage))
 
-(declare-function diogenes-lookup-greek "classicist" (word &optional dictionary))
+(declare-function classicist-lookup-greek "classicist" (word &optional dictionary))
 
-(declare-function diogenes-parse-and-lookup-greek "classicist" (word &optional dictionary))
+(declare-function classicist-parse-and-lookup-greek "classicist" (word &optional dictionary))
 
 (declare-function classicist-display-buffer "classicist-windows" t)
 
@@ -2444,7 +2444,7 @@ homographs in the word list is dropped: the LSJ has one entry for both and
                 (and (locate-library "diogenes") (require 'diogenes nil t)))
       (user-error "Diogenes is not installed, so there is no LSJ to look %s up in"
                   (diorisis--greek lemma)))
-    (diogenes-lookup-greek lemma)))
+    (classicist-lookup-greek lemma)))
 
 (defun diorisis--token (hit word)
   "What the corpus records for WORD in HIT's sentence, or nil.
@@ -2524,14 +2524,14 @@ having meant the hit."
                (let ((confidence (nth 4 token)))
                  (if confidence (format " (%.2f)" confidence)
                    " (one lemma only)")))
-      (diogenes-lookup-greek
+      (classicist-lookup-greek
        (diorisis--lemma-for-lookup (nth 1 token))))
      ;; NOTHING RECORDED FOR IT, so the parser after all: a word outside the
      ;; sentence -- the snippet's ellipsis, a neighbouring hit -- or one the
      ;; two conversions spell differently enough to miss.
      ((fboundp 'diogenes-parse-and-lookup-greek)
-      (diogenes-parse-and-lookup-greek word))
-     (t (diogenes-lookup-greek word)))))
+      (classicist-parse-and-lookup-greek word))
+     (t (classicist-lookup-greek word)))))
 
 (defun diorisis-next-hit (&optional n)
   "Move to the next hit, or the Nth after this one."

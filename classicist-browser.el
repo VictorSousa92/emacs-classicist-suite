@@ -36,9 +36,9 @@
 ;; required.  `classicist-browser-lookup' calls whichever of the two the
 ;; passage's language names; both were assembled with `intern' until now, and
 ;; a declaration cannot cover a name that does not exist until it is called.
-(declare-function diogenes-parse-and-lookup-greek "classicist"
+(declare-function classicist-parse-and-lookup-greek "classicist"
                   (word &optional dictionary))
-(declare-function diogenes-parse-and-lookup-latin "classicist"
+(declare-function classicist-parse-and-lookup-latin "classicist"
                   (word &optional dictionary))
 
 ;; Called across files that cannot be required from here without a
@@ -622,8 +622,8 @@ presses on a passage -- calling `thing-at-point\=' as before, and looking up
     ;; would have done.  `classicist--browser-language' is set from the corpus,
     ;; and nothing promises it is one of two.
     (funcall (pcase classicist--browser-language
-               ("greek" #'diogenes-parse-and-lookup-greek)
-               ("latin" #'diogenes-parse-and-lookup-latin)
+               ("greek" #'classicist-parse-and-lookup-greek)
+               ("latin" #'classicist-parse-and-lookup-latin)
                (lang (user-error "No lookup for language %s"
                                  (or lang "unknown"))))
              (replace-regexp-in-string "[^[:alpha:]]" "" word))))
