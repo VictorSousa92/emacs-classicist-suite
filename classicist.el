@@ -131,9 +131,20 @@
   :group 'diogenes)
 
 
-(defcustom diogenes-preferred-lsj-file "grc.lsj.logeion.xml"
-  "Filename of the preferred version of the LSJ dictionary."
-  :type 'string
+(defcustom diogenes-lexicon-files
+  '(("greek" "grc.lsj.logeion.xml" "grc.lsj.xml")
+    ("latin" "lat.ls.perseus-eng1.xml" "lat.ls.xml"))
+  "Filenames to try for each language\='s lexicon, in order.
+
+MORE THAN ONE NAME, because the same data ships under different ones.  The
+Linux build produces grc.lsj.logeion.xml and lat.ls.perseus-eng1.xml; the
+macOS app bundle carries grc.lsj.xml and lat.ls.xml.  A reader on a Mac was
+told the Greek lexicon could not be found while it sat in that directory
+under a shorter name -- and the Latin name was not an option at all, being
+written into the code, so there was nothing to set.
+
+The first that exists is used."
+  :type '(alist :key-type string :value-type (repeat string))
   :group 'diogenes)
 
 (defun diogenes--path ()
@@ -149,12 +160,20 @@ Please set it to the root directory of your Diogenes installation!")))
 					 "data")))
 
 (defun diogenes--dict-file (lang)
-  (pcase lang
-    ("greek" (file-name-concat (diogenes--perseus-path)
-			       diogenes-preferred-lsj-file))
-    ("latin" (file-name-concat (diogenes--perseus-path)
-			       "lat.ls.perseus-eng1.xml"))
-    (_ (error "Undefined language %s" lang))))
+  "The lexicon file for LANG: the first name in `diogenes-lexicon-files\='
+that exists, or the first name whatever happens.
+
+THE FIRST THAT EXISTS, because the same data ships under different names --
+see the option.  Falling back to the first rather than to nil so that a
+reader who has none of them is told which was looked for, the checker and
+the warnings both naming the file."
+  (let ((names (cdr (assoc lang diogenes-lexicon-files))))
+    (unless names
+      (error "Undefined language %s" lang))
+    (let ((dir (diogenes--perseus-path)))
+      (or (seq-find #'file-exists-p
+                    (mapcar (lambda (n) (file-name-concat dir n)) names))
+          (file-name-concat dir (car names))))))
 
 
 ;;; Validate that all data is present
