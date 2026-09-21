@@ -175,6 +175,41 @@ the warnings both naming the file."
                     (mapcar (lambda (n) (file-name-concat dir n)) names))
           (file-name-concat dir (car names))))))
 
+(defun classicist--tell-the-base-its-lexicon-name ()
+  "Set the base\='s own option to the Greek lexicon that is there.
+
+THE BASE HAS ITS OWN COPY of the lookup and its own validator, and both read
+`diogenes-preferred-lsj-file\=', whose default is the name the Linux build
+produces.  The macOS app ships the same data as grc.lsj.xml, so on a Mac the
+base warned at startup and looked in the wrong place afterwards.
+
+AND AN OVERRIDE WOULD NOT HELP.  The validator is top-level code: it runs
+while diogenes.el is loading, before any `with-eval-after-load\=' can advise
+anything.  Setting the option is the one thing that reaches it, and it reaches
+the base\='s own lookup as well.
+
+Only where the default is absent and another name is there, so a reader who
+set it themselves is left alone."
+  (when (and (boundp 'diogenes-preferred-lsj-file)
+             (not (file-exists-p
+                   (file-name-concat (diogenes--perseus-path)
+                                     diogenes-preferred-lsj-file))))
+    (when-let* ((found (seq-find
+                        #'file-exists-p
+                        (mapcar
+                         (lambda (n)
+                           (file-name-concat (diogenes--perseus-path) n))
+                         (cdr (assoc "greek" diogenes-lexicon-files))))))
+      (setq diogenes-preferred-lsj-file (file-name-nondirectory found)))))
+
+;; AT LOAD AND AGAIN WHEN THE BASE LOADS, whichever of the two is first: the
+;; option is right by the time anything reads it.  No cookie -- an autoloaded
+;; form cannot name a function in its own file, and this one has to.
+(classicist--tell-the-base-its-lexicon-name)
+
+(with-eval-after-load 'diogenes
+  (classicist--tell-the-base-its-lexicon-name))
+
 
 ;;; Validate that all data is present
 (unless (file-exists-p (file-name-concat (diogenes--path)
