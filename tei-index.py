@@ -44,6 +44,12 @@ CTS = "{http://chs.harvard.edu/xmlns/cts}"
 
 # --------------------------------------------------------------- the corpora
 
+# THE DIRECTORY THE INDEX WAS BUILT FROM, so the paths in it can be written
+# relative to it.  Set in main and read in versions; a module-level name
+# rather than a parameter threaded through three functions that do not
+# otherwise care.
+BASE = "."
+
 CORPORA = [
     {
         "id": "perseus-greek",
@@ -147,15 +153,28 @@ def read_work(path):
         for element in root.findall(CTS + tag):
             urn = element.get("urn") or ""
             name = urn.split(":")[-1]
-            # ABSOLUTE, so the index does not depend on where it was built
-            # from.  Run with `.' for the directory it held `./canonical-...',
-            # which resolves against whatever buffer a command runs in.
-            file = os.path.abspath(os.path.join(here, name + ".xml"))
-            if not os.path.exists(file):
+            # RELATIVE TO THE DIRECTORY THIS WAS BUILT FROM, so one index
+            # serves every machine reading the disk.  It was absolute, and
+            # the comment said that was so the index did not depend on
+            # where it was built FROM -- which it did not, and it depended
+            # on the operating system instead: /mnt/archive on Linux and
+            # /Volumes/shared on macOS are the same disk, and an index
+            # built on one named nothing the other could open.
+            #
+            # tei--resolve joins a relative path to tei-directory, which is
+            # where the corpora are by definition, and passes an absolute
+            # one through -- so an index built before this goes on working.
+            # THE REAL PATH IS CHECKED AND THE PORTABLE ONE STORED, in that
+            # order: os.path.exists on a relative path asks the working
+            # directory, which is wherever the script was run from -- so every
+            # text failed the check below and the index came out empty.
+            full = os.path.join(here, name + ".xml")
+            if not os.path.exists(full):
                 # DECLARED AND ABSENT.  The declarations outrun the texts --
                 # a version named but not yet published -- and an index that
                 # offered it would offer a file that is not there.
                 continue
+            file = os.path.relpath(full, BASE)
             label, _ = best_title(element, "label")
             out.append({
                 "urn": urn,
@@ -263,6 +282,8 @@ def write_index(out, corpora):
 
 def main():
     root = sys.argv[1] if len(sys.argv) > 1 else "."
+    global BASE
+    BASE = os.path.abspath(root)
     wanted = sys.argv[2:] or None
     found = []
     for corpus in CORPORA:
