@@ -76,7 +76,7 @@
 ;; going to be cut, and now that it has been it wants a home in one of the
 ;; four.
 (declare-function diogenes--perseus-path "classicist" ())
-(declare-function diogenes--dict-file "classicist" (lang))
+(declare-function diogenes--dict-file "diogenes" (lang))
 
 ;; OPTIONAL, from `rng-valid', and called only when a reader has just tried to
 ;; submit invalid XML.  `check-declare' reports "file not found" for it and the

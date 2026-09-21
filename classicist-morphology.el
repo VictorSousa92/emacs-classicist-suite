@@ -43,7 +43,7 @@
 (defvar classicist-browser-join-broken-words)
 (declare-function classicist--browse-work "classicist-browser" (options passage))
 (declare-function diogenes--perseus-path "classicist" ())
-(declare-function diogenes--dict-file "classicist" (lang))
+(declare-function diogenes--dict-file "diogenes" (lang))
 (declare-function classicist--get-all-analyses "classicist-lookup" (lang))
 (declare-function classicist--get-all-lemmata "classicist-lookup" (lang))
 (declare-function classicist--get-analyses-index "classicist-lookup" (lang))

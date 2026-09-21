@@ -66,22 +66,6 @@
 ;; None of the four needs anything but `diogenes-path', which a reader
 ;; sets before the package loads.
 
-(defcustom diogenes-lexicon-files
-  '(("greek" "grc.lsj.logeion.xml" "grc.lsj.xml")
-    ("latin" "lat.ls.perseus-eng1.xml" "lat.ls.xml"))
-  "Filenames to try for each language\='s lexicon, in order.
-
-MORE THAN ONE NAME, because the same data ships under different ones.  The
-Linux build produces grc.lsj.logeion.xml and lat.ls.perseus-eng1.xml; the
-macOS app bundle carries grc.lsj.xml and lat.ls.xml.  A reader on a Mac was
-told the Greek lexicon could not be found while it sat in that directory
-under a shorter name -- and the Latin name was not an option at all, being
-written into the code, so there was nothing to set.
-
-The first that exists is used."
-  :type '(alist :key-type string :value-type (repeat string))
-  :group 'diogenes)
-
 (defun diogenes--path ()
   (if diogenes-path
       (expand-file-name diogenes-path)
@@ -92,35 +76,6 @@ Please set it to the root directory of your Diogenes installation!")))
   (directory-file-name (file-name-concat (diogenes--path)
 					 "dependencies"
 					 "data")))
-
-(defun classicist--tell-the-base-its-lexicon-name ()
-  "Set the base\='s own option to the Greek lexicon that is there.
-
-THE BASE HAS ITS OWN COPY of the lookup and its own validator, and both read
-`diogenes-preferred-lsj-file\=', whose default is the name the Linux build
-produces.  The macOS app ships the same data as grc.lsj.xml, so on a Mac the
-base warned at startup and looked in the wrong place afterwards.
-
-AND AN OVERRIDE WOULD NOT HELP.  The validator is top-level code: it runs
-while diogenes.el is loading, before any `with-eval-after-load\=' can advise
-anything.  Setting the option is the one thing that reaches it, and it reaches
-the base\='s own lookup as well.
-
-Only where the default is absent and another name is there, so a reader who
-set it themselves is left alone."
-  (when (and (boundp 'diogenes-preferred-lsj-file)
-             (not (file-exists-p
-                   (file-name-concat (diogenes--perseus-path)
-                                     diogenes-preferred-lsj-file))))
-    (when-let* ((found (seq-find
-                        #'file-exists-p
-                        (mapcar
-                         (lambda (n)
-                           (file-name-concat (diogenes--perseus-path) n))
-                         (cdr (assoc "greek" diogenes-lexicon-files))))))
-      (setq diogenes-preferred-lsj-file (file-name-nondirectory found)))))
-
-(classicist--tell-the-base-its-lexicon-name)
 
 (require 'diogenes-lisp-utils)
 (require 'diogenes-utils)
@@ -205,29 +160,9 @@ set it themselves is left alone."
   :group 'diogenes)
 
 
-(defun diogenes--dict-file (lang)
-  "The lexicon file for LANG: the first name in `diogenes-lexicon-files\='
-that exists, or the first name whatever happens.
-
-THE FIRST THAT EXISTS, because the same data ships under different names --
-see the option.  Falling back to the first rather than to nil so that a
-reader who has none of them is told which was looked for, the checker and
-the warnings both naming the file."
-  (let ((names (cdr (assoc lang diogenes-lexicon-files))))
-    (unless names
-      (error "Undefined language %s" lang))
-    (let ((dir (diogenes--perseus-path)))
-      (or (seq-find #'file-exists-p
-                    (mapcar (lambda (n) (file-name-concat dir n)) names))
-          (file-name-concat dir (car names))))))
-
 ;; AT LOAD AND AGAIN WHEN THE BASE LOADS, whichever of the two is first: the
 ;; option is right by the time anything reads it.  No cookie -- an autoloaded
 ;; form cannot name a function in its own file, and this one has to.
-(with-eval-after-load 'diogenes
-  (classicist--tell-the-base-its-lexicon-name))
-
-
 ;;; Validate that all data is present
 (unless (file-exists-p (file-name-concat (diogenes--path)
 					 "server"
@@ -235,6 +170,11 @@ the warnings both naming the file."
 					 "Base.pm"))
   (warn "Could not find a working Diogenes installation in %s"
 	 (diogenes--path)))
+
+;; THE BASE'S OWN, and it tries every name the data ships under since patch
+;; twenty -- so this suite no longer needs a copy of it, and the validation
+;; below asks the same function the lookups do.
+(declare-function diogenes--dict-file "diogenes" (lang))
 
 (mapc (lambda (lang)
 	(unless (file-exists-p (diogenes--dict-file lang))

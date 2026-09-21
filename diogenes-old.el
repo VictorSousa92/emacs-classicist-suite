@@ -454,7 +454,7 @@ swallowing later words that merely share their opening letters.")
                   (dict-file comp-fn key-fn word &optional start stop))
 (declare-function classicist--ascii-sort-function "classicist-lexicon" (a b))
 (declare-function classicist--xml-key-fn "classicist-lexicon" (buf))
-(declare-function diogenes--dict-file "classicist" (lang))
+(declare-function diogenes--dict-file "diogenes" (lang))
 
 (defun diogenes-old--headword-p (guide)
   "Non-nil if GUIDE is a Latin headword in its own right.
