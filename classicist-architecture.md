@@ -324,10 +324,10 @@ learn that from a stack trace, so it is declared and documented.
 `diogenes-browser.el` requires this file and `diogenes.el` requires that, so
 requiring back closes a circle.
 
-## The upstream series: fourteen commits
+## The upstream series: twenty commits
 
-Ready on a branch, unpushed. Suggested grouping, because thirteen at once is
-not a review:
+On classicist-base and pushed.  Suggested grouping for review, because
+twenty at once is not a review:
 
 | branch | commits | pitch |
 |---|---|---|
@@ -1166,7 +1166,16 @@ the load order independently of the graph.
   obvious fourteenth patch; it is also why that worktree kept going dirty and
   why one compile read an out-of-date file.
 
-## The Python scripts are unreachable from an installed package
+## The Python scripts, and which of them the elisp runs
+
+DONE FOR THE ONE THAT MATTERS.  `tei--script` searches the checkout a build
+directory implies, so a reader who installs rather than clones can read a TEI
+text with no option set.  And only `tei-read.py` is ever run from elisp:
+`tei-index.py` and `diorisis-index.py` are named in messages and run in a
+shell, which is why this was one option and not four.
+
+What follows was the state before that, and the reasoning still holds for the
+viewer's files, which nothing has addressed.
 
 A package manager builds .el files into a build directory and leaves
 everything else in the checkout.  So tei-read.py, tei-index.py,
