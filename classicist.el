@@ -5,7 +5,6 @@
 ;;
 ;; Author: Michael Neidhart <mayhoth@gmail.com>
 ;; Keywords: classics, tools, philology, humanities
-;;
 ;; Version: 0.1
 ;; Package-Requires: ((emacs "28.1") (diogenes "0.61"))
 

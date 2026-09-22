@@ -62,6 +62,11 @@ NOT_SYMBOLS = {
     "classicist",               # the feature
     "classicist-base",          # a git BRANCH on the fork, not a symbol
     "diogenes-roam",            # a package of its own, not in this suite
+    # SPACEMACS READS IT AND NOTHING HERE DEFINES IT.  A layer declares its
+    # own `LAYER-packages' in the file Spacemacs loads, so the builder writes
+    # that name as part of a layer rather than naming a symbol this suite
+    # has.  Same for the init functions below, which Spacemacs calls by name.
+    "classicist-packages",
     "classicist-roam",           # its branch that works with this suite
     "classicist-suite",         # part of the repository name
                                 # emacs-classicist-suite, caught by the regexp

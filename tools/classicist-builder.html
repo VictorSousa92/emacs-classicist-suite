@@ -845,6 +845,17 @@
     <label for="c-joinwords">Rejoin a word broken across a line
       <em><code>classicist-browser-join-broken-words</code> &mdash; on by default, and off means a hyphenated word cannot be looked up.</em></label>
   </div>
+  <div class="row" data-distro="spacemacs">
+    <input type="checkbox" id="c-spacelayer">
+    <label for="c-spacelayer">As a layer rather than as two blocks to paste
+      <em>Spacemacs expects a suite of packages to arrive as a
+      <b>layer</b>: one directory, one file, and its name in
+      <code>dotspacemacs-configuration-layers</code> &mdash; which keeps
+      thirty settings that are not yours out of your own
+      <code>init.el</code>. The two blocks are the shorter path for trying
+      the suite out; a layer is what you want once you keep it.</em></label>
+  </div>
+
   <div class="row" data-feature="lemmata">
     <input type="checkbox" id="c-completelemmata" checked>
     <label for="c-completelemmata">Complete lemmata at the search prompt
@@ -3443,6 +3454,10 @@ function configText() {
     out.push(';; C-h k and then the key, and Emacs will name whatever holds it.');
     out.push(';; A scanned dictionary answers differently, being a viewer\'s buffer.');
   }
+  // AND AS A LAYER, where a reader asked for one: the block is assembled as
+  // it is for any distro and re-wrapped, so none of the logic above changes.
+  if (distro === 'spacemacs' && el('c-spacelayer') && el('c-spacelayer').checked)
+    out = asSpacemacsLayer(out);
   return out.join('\n');
 }
 
@@ -4223,6 +4238,57 @@ function featureOn(f) {
   const box = document.getElementById('f-' + f);
   return !!(box && box.checked);
 }
+// A LAYER IS THE SAME ANSWER DIFFERENTLY DRESSED.  The block is assembled as
+// it is for any distro and re-wrapped here: the recipes become
+// classicist-packages, each use-package becomes a classicist/init-NAME
+// function, and the settings are indented one level further in.  Which
+// touches none of the logic that assembled them -- a second branch through
+// that would be a second thing to keep in step.
+function asSpacemacsLayer(lines) {
+  const out = [];
+  const recipes = [];
+  const bodies = new Map();       // package name -> its use-package lines
+  let current = null;
+
+  for (const raw of lines) {
+    const line = raw.replace(/^;;\s?/, '');       // the recipes are commented
+    // A RECIPE, which the pasted form puts in dotspacemacs-additional-packages
+    const rec = line.match(/^\s*\((\S+)\s+:location\s+\(recipe/);
+    if (rec || (recipes.length && /^\s*;;\s+[:)]/.test(raw))) {
+      recipes.push(line.replace(/^\s{0,4}/, '    '));
+      continue;
+    }
+    const up = raw.match(/^\(use-package!?\s+(\S+?)\)?$/);
+    if (up) { current = up[1].replace(/[()]/g, ''); bodies.set(current, []); continue; }
+    if (current) {
+      if (/^\S/.test(raw) && raw.trim() !== '') { current = null; }
+      else { bodies.get(current).push(raw); continue; }
+    }
+    if (!rec) out.push(raw);
+  }
+
+  const res = [];
+  res.push(';; ---- ~/.emacs.d/private/classicist/packages.el ----');
+  res.push(';;');
+  res.push(";; AND ADD `classicist' TO dotspacemacs-configuration-layers, which is");
+  res.push(';; the only change your own dotfile needs.');
+  res.push('');
+  res.push('(defconst classicist-packages');
+  res.push("  '(" + (recipes.length ? '' : ')'));
+  for (const r of recipes) res.push(r);
+  if (recipes.length) res.push('    ))');
+  res.push('');
+  for (const [name, body] of bodies) {
+    res.push('(defun classicist/init-' + name + ' ()');
+    res.push('  (use-package ' + name);
+    for (const l of body) res.push('  ' + l);
+    res.push('  ))');
+    res.push('');
+  }
+  for (const l of out) if (l.trim()) res.push(l);
+  return res;
+}
+
 function featuresChosen() {
   return ALL_FEATURES.filter(featureOn);
 }
@@ -4285,6 +4351,16 @@ if ('IntersectionObserver' in window) {
 }
 
 function showSections() {
+  // A ROW THAT BELONGS TO ONE DISTRO.  Nothing else in the builder hides a
+  // row this way -- the sections go by feature -- so data-distro has its own
+  // line here rather than joining theirs.
+  // ONLY ROWS.  data-distro is already taken: line 2802 toggles an `on'
+  // class on the distro labels with the same attribute, and its comment
+  // records what went wrong when that selector was narrowed the other way.
+  // So this asks for .row and leaves the labels alone.
+  document.querySelectorAll('.row[data-distro]').forEach(row => {
+    row.hidden = (row.dataset.distro !== (document.querySelector('input[name=distro]:checked') || {}).value);
+  });
   document.querySelectorAll('#panel-config h2[data-feature], #panel-config h3[data-feature]').forEach(h2 => {
     const on = featureOn(h2.dataset.feature);
     // NOT WHAT A BOX OWNS.  c-roamopts is hidden until its own checkbox is
