@@ -1145,6 +1145,22 @@
     <button class="ghost" id="c-download">Download</button>
     <span class="note" id="c-copied"></span>
   </div>
+  <div id="c-split-wrap" hidden>
+    <p class="note" id="c-split-note-1"></p>
+    <pre id="c-split-1"></pre>
+    <div class="actions" id="c-split-acts-1">
+      <button id="c-split-copy-1">Copy</button>
+      <button class="ghost" id="c-split-dl-1">Download</button>
+      <span class="note" id="c-split-said-1"></span>
+    </div>
+    <p class="note" id="c-split-note-2"></p>
+    <pre id="c-split-2"></pre>
+    <div class="actions" id="c-split-acts-2">
+      <button id="c-split-copy-2">Copy</button>
+      <button class="ghost" id="c-split-dl-2">Download</button>
+      <span class="note" id="c-split-said-2"></span>
+    </div>
+  </div>
   <div id="c-layer-wrap" hidden>
     <p class="note"><b>One.</b> Add the layer&rsquo;s name to
        <code>dotspacemacs-configuration-layers</code> in your
@@ -4237,6 +4253,79 @@ function renderWarnings() {
     show(k[0], document.querySelector(`input[data-focuskey="${k[0]}"]`)));
 }
 
+// TWO BLOCKS IN TWO BOXES, so neither is pasted into the wrong file.  Doom
+// installs from packages.el and configures in config.el; Spacemacs installs
+// from dotspacemacs-additional-packages and configures in
+// dotspacemacs/user-config.  The emit already writes `;; ---- in ... ----'
+// above each half -- so the split is on a line this code produced, not on
+// anything inferred from a reader's settings.
+const SPLIT_WHERE = {
+  doom: [
+    ['<b>One.</b> In <code>~/.config/doom/packages.el</code>. Then ' +
+     '<code>doom sync -u</code>.', 'packages.el'],
+    ['<b>Two.</b> In <code>~/.config/doom/config.el</code>.', 'config.el'],
+  ],
+  spacemacs: [
+    ['<b>One.</b> In <code>dotspacemacs-additional-packages</code>, in your ' +
+     '<code>.spacemacs</code> or <code>init.el</code>. The recipes are shown ' +
+     'commented; uncomment them inside the list.', 'additional-packages.el'],
+    ['<b>Two.</b> In <code>dotspacemacs/user-config</code>, at the foot of the ' +
+     'same file.', 'user-config.el'],
+  ],
+};
+
+function splitConfig(text) {
+  const lines = text.split('\n');
+  // THE SECOND HEADER, and not the first: the first is the top of the block.
+  const heads = [];
+  lines.forEach((l, n) => { if (/^;; ---- in /.test(l)) heads.push(n); });
+  if (heads.length < 2) return null;
+  return [lines.slice(0, heads[1]).join('\n').replace(/\n+$/, ''),
+          lines.slice(heads[1]).join('\n').replace(/\n+$/, '')];
+}
+
+function renderSplit() {
+  // ONE OF THREE SHOWS, and this decides which: the layer's two boxes, the
+  // split's two, or the single block.  Both renderLayer and this one were
+  // hiding and unhiding c-out, and switching from a layer back to blocks left
+  // all three.
+  const distro = (document.querySelector('input[name=distro]:checked') || {}).value;
+  const layer = (typeof layerPicked === 'function') && layerPicked()
+                && distro === 'spacemacs';
+  const where = SPLIT_WHERE[distro];
+  const halves = (!layer && where) ? splitConfig(configText()) : null;
+
+  const wrap = el('c-split-wrap');
+  if (wrap) wrap.hidden = !halves;
+  const pre = el('c-out'), acts = el('c-acts');
+  const single = !layer && !halves;
+  if (pre) pre.hidden = !single;
+  if (acts) acts.style.display = single ? '' : 'none';
+  if (!halves) return;
+  for (const i of [0, 1]) {
+    el('c-split-note-' + (i + 1)).innerHTML = where[i][0];
+    el('c-split-' + (i + 1)).textContent = halves[i];
+    el('c-split-dl-' + (i + 1)).dataset.name = where[i][1];
+  }
+}
+
+
+for (const i of [1, 2]) {
+  const dl = el('c-split-dl-' + i), cp = el('c-split-copy-' + i);
+  if (dl) dl.addEventListener('click', () => {
+    const blob = new Blob([el('c-split-' + i).textContent], {type: 'text/plain'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = dl.dataset.name || 'config.el';
+    a.click();
+  });
+  if (cp) cp.addEventListener('click', async () => {
+    await navigator.clipboard.writeText(el('c-split-' + i).textContent);
+    el('c-split-said-' + i).textContent = 'copied';
+    setTimeout(() => el('c-split-said-' + i).textContent = '', 1500);
+  });
+}
+
 function renderWhereNote() {
   const distro = (document.querySelector('input[name=distro]:checked') || {}).value
                  || 'vanilla';
@@ -4488,17 +4577,9 @@ function renderLayer() {
     f.hidden = (f.dataset.distro !== distro));
   const wrap = el('c-layer-wrap');
   if (wrap) wrap.hidden = !on;
-  // AND THE BLOCKS FORM IS HIDDEN WHILE THE LAYER IS SHOWN, the two being
-  // answers to one question and a reader wanting whichever they picked.
-  const pre = el('c-out');
-  // THE BUTTONS BY THEIR OWN IDS, nextElementSibling having found something
-  // else and left a ghost Copy and Download above the layer.
-  if (pre) pre.hidden = on;
-  // BY display AND NOT hidden: .actions is a flex row, and a flex container
-  // ignores the hidden attribute -- so the buttons stayed while the block
-  // above them went.
-  const acts = el('c-acts');
-  if (acts) acts.style.display = on ? 'none' : '';
+  // WHICH OF THE THREE SHOWS IS renderSplit'''s, and only its: this one and
+  // that one were both writing c-out, and switching from a layer back to
+  // blocks left all three visible.
   if (!on) return;
   el('c-layer-name').textContent = 'classicist';
   el('c-layer-out').textContent = asSpacemacsLayer(configText().split('\n'))
@@ -4508,6 +4589,7 @@ function renderLayer() {
 function renderConfig() {
   el('c-out').textContent = configText();
   renderLayer();
+  renderSplit();
   renderWhereNote();
   installPathHelpers();
   installKeyCapture();
