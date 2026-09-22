@@ -845,6 +845,12 @@
     <label for="c-joinwords">Rejoin a word broken across a line
       <em><code>classicist-browser-join-broken-words</code> &mdash; on by default, and off means a hyphenated word cannot be looked up.</em></label>
   </div>
+  <!-- HALF-BUILT, AND HIDDEN UNTIL IT IS NOT.  A layer wants two outputs:
+       a line for dotspacemacs-configuration-layers and the file itself, with
+       its own download and a word about where the directory goes.  The
+       transform emits one undifferentiated block and has never been checked
+       setq by setq against the pasted form, which is its failure mode.
+       See tools/pending-spacemacs-layer.py.
   <div class="row" data-distro="spacemacs">
     <input type="checkbox" id="c-spacelayer">
     <label for="c-spacelayer">As a layer rather than as two blocks to paste
@@ -855,6 +861,7 @@
       <code>init.el</code>. The two blocks are the shorter path for trying
       the suite out; a layer is what you want once you keep it.</em></label>
   </div>
+  -->
 
   <div class="row" data-feature="lemmata">
     <input type="checkbox" id="c-completelemmata" checked>
@@ -2798,10 +2805,14 @@ document.addEventListener('change', e => {
     // labels in a .distro div too, and this cleared their 'on' class every
     // time the distribution changed -- so the patched base stayed checked
     // and stopped looking it.
-    document.querySelectorAll('[data-distro]').forEach(l =>
+    document.querySelectorAll('label[data-distro]').forEach(l =>
       l.classList.toggle('on', l.dataset.distro === distro));
     if (distro === 'doom') el('c-evil').checked = true;
     else if (distro === 'vanilla') el('c-evil').checked = false;
+    // AND THE ROWS THAT BELONG TO ONE DISTRO.  showSections hides them and
+    // ran once at startup, so the layer option stayed hidden however the
+    // distribution changed.
+    showSections();
     renderConfig();
   }
   if (e.target.id === 'c-evil') renderConfig();
