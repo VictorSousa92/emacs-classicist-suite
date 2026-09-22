@@ -179,6 +179,23 @@
                                 'classicist-browser-lookup "0.1")
 (define-obsolete-function-alias 'diogenes-browser-mode
                                 'classicist-browser-mode "0.1")
+;; THIS ONE WARNS ON VANILLA, and the warning is accurate.  The base defines
+;; its own diogenes-browser-mode-map with bindings in it, and an alias over a
+;; bound name discards the value -- which is what we want, ours being the
+;; browser that runs, and which defvaralias says so about:
+;;
+;;     Overwriting value of 'diogenes-browser-mode-map' by aliasing to
+;;     'classicist-browser-mode-map'
+;;
+;; NOWHERE ELSE, because the order differs: under straight and quelpa this
+;; file loads before the base defines the map, and the alias is made against
+;; an unbound name.  On vanilla the suite is demanded and the base has come
+;; in through our own requires already.
+;;
+;; LEFT ALONE.  with-no-warnings does not reach a runtime message, and making
+;; the alias before the base loads would mean loading this file before the
+;; requires that load the base -- the sixth shape of one ordering problem, for
+;; a line a reader sees once at startup about something done on purpose.
 (define-obsolete-variable-alias 'diogenes-browser-mode-map
                                 'classicist-browser-mode-map "0.1")
 (define-obsolete-variable-alias 'diogenes-browser-mouse-keys
