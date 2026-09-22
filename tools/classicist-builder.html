@@ -845,23 +845,6 @@
     <label for="c-joinwords">Rejoin a word broken across a line
       <em><code>classicist-browser-join-broken-words</code> &mdash; on by default, and off means a hyphenated word cannot be looked up.</em></label>
   </div>
-  <!-- HALF-BUILT, AND HIDDEN UNTIL IT IS NOT.  A layer wants two outputs:
-       a line for dotspacemacs-configuration-layers and the file itself, with
-       its own download and a word about where the directory goes.  The
-       transform emits one undifferentiated block and has never been checked
-       setq by setq against the pasted form, which is its failure mode.
-       See tools/pending-spacemacs-layer.py.
-  <div class="row" data-distro="spacemacs">
-    <input type="checkbox" id="c-spacelayer">
-    <label for="c-spacelayer">As a layer rather than as two blocks to paste
-      <em>Spacemacs expects a suite of packages to arrive as a
-      <b>layer</b>: one directory, one file, and its name in
-      <code>dotspacemacs-configuration-layers</code> &mdash; which keeps
-      thirty settings that are not yours out of your own
-      <code>init.el</code>. The two blocks are the shorter path for trying
-      the suite out; a layer is what you want once you keep it.</em></label>
-  </div>
-  -->
 
   <div class="row" data-feature="lemmata">
     <input type="checkbox" id="c-completelemmata" checked>
@@ -1143,11 +1126,43 @@
              data-drop="1">
     </div>
   </div>  <h2 id="s-config">Your configuration</h2>
+  <div class="field" data-distro="spacemacs">
+    <span>Spacemacs takes this two ways</span>
+    <div class="distro" id="c-layerpick">
+      <label class="on" data-layerpick="blocks">
+        <input type="radio" name="c-spacelayer" value="blocks" checked>
+        Two blocks to paste
+      </label>
+      <label data-layerpick="layer">
+        <input type="radio" name="c-spacelayer" value="layer">
+        A layer
+      </label>
+    </div>
+  </div>
   <pre id="c-out"></pre>
-  <div class="actions">
+  <div class="actions" id="c-acts">
     <button id="c-copy">Copy</button>
     <button class="ghost" id="c-download">Download</button>
     <span class="note" id="c-copied"></span>
+  </div>
+  <div id="c-layer-wrap" hidden>
+    <p class="note"><b>One.</b> Add the layer&rsquo;s name to
+       <code>dotspacemacs-configuration-layers</code> in your
+       <code>.spacemacs</code> or <code>init.el</code>, beside the layers that
+       are already there.</p>
+    <pre id="c-layer-name"></pre>
+    <p class="note"><b>Two.</b> Save the file below as
+       <code>packages.el</code> in a directory named after the layer:
+       <code>~/.emacs.d/private/classicist/packages.el</code>. Create
+       <code>private/classicist/</code> if it is not there &mdash; Spacemacs
+       looks for a layer by that name and reads that file. Restart, and
+       Spacemacs will offer to install what the layer asks for.</p>
+    <pre id="c-layer-out"></pre>
+    <div class="actions">
+      <button id="c-layer-download">Download packages.el</button>
+      <button class="ghost" id="c-layer-copy">Copy</button>
+      <span class="note" id="c-layer-copied"></span>
+    </div>
   </div>
   <p class="note">Only what differs from the default is written, so the block
      says what is particular about your installation and nothing else.</p>
@@ -1671,9 +1686,9 @@ const LOOKUP_KEYS = [
 // through `diogenes-pdf-search-mode' so no unrelated PDF is affected.
 const SCAN_KEYS = [
   ['diogenes-pdf-search-key', 'L',
-   'look a word up \u2014 with a prefix, its root, or a TGL index reference'],
+   'look a word up &mdash; with a prefix, its root, or a TGL index reference'],
   ['diogenes-tgl-index-key', 'i',
-   "volume V's index, around the word you are on \u2014 TGL volumes only"],
+   "volume V's index, around the word you are on &mdash; TGL volumes only"],
 ];
 
 // Only where evil is in use, which the answer at the top of this tab decides.
@@ -1692,11 +1707,11 @@ const SINGLE_KEYS = SCAN_KEYS.concat(EVIL_KEYS);
 // bound, being short chords in a common shape.
 const FOCUS_KEYS = [
   ['classicist-focus-browser', 'C-c C-b',
-   'go to the text \u2014 raising its frame if it is in one'],
+   'go to the text &mdash; raising its frame if it is in one'],
   ['classicist-focus-lookup', 'C-c C-l',
-   'go to the entry \u2014 raising its frame if it is in one'],
+   'go to the entry &mdash; raising its frame if it is in one'],
   ['classicist-focus-morphology', 'C-c C-a',
-   'go to the analysis \u2014 raising its frame if it is in one'],
+   'go to the analysis &mdash; raising its frame if it is in one'],
 ];
 
 // The scanned page belongs in the same GROUP, doing the same thing, and in a
@@ -1706,7 +1721,7 @@ const FOCUS_KEYS = [
 // not by which variable holds it.
 const DICTIONARY_KEY = [
   ['diogenes-old-visit-dictionary-key', 'C-c C-e',
-   'go to the scanned page \u2014 the one opened from this entry if there is one, ' +
+   'go to the scanned page &mdash; the one opened from this entry if there is one, ' +
    'else any open scan; pressed inside a scan, the next one'],
 ];
 
@@ -1717,11 +1732,11 @@ const BEHAVIOURS = {
   frames: 'a frame of its own, later ones gathered',
 };
 const KINDS = [
-  ['browser', 'Texts', 'passages from the corpora \u2014 Diogenes\u2019, the TEI editions, Diorisis'],
+  ['browser', 'Texts', 'passages from the corpora &mdash; Diogenes&rsquo;, the TEI editions, Diorisis'],
   ['lookup', 'Entries', 'dictionary entries'],
   ['dictionary', 'Scans', 'pages of the printed dictionaries'],
-  ['morphology', 'Analyses', 'what ml and mg produce \u2014 an analysis, or a list of forms'],
-  ['search', 'Searches', 'Diogenes\u2019 search results, and Diorisis hit lists'],
+  ['morphology', 'Analyses', 'what ml and mg produce &mdash; an analysis, or a list of forms'],
+  ['search', 'Searches', 'Diogenes&rsquo; search results, and Diorisis hit lists'],
   ['treebank', 'Trees', 'a sentence annotated as a dependency tree'],
 ];
 
@@ -1735,7 +1750,7 @@ const KIND_ROW = (k, name, blurb) => `
   <label for="k-${k}"><b>${name}</b></label>
   <select id="k-${k}" data-kind="${k}">
     ${Object.entries(BEHAVIOURS).map(([v, d]) =>
-      `<option value="${v}">${v} \u2014 ${d}</option>`).join('')}
+      `<option value="${v}">${v} &mdash; ${d}</option>`).join('')}
   </select>`;
 
 document.addEventListener('change', e => {
@@ -1838,14 +1853,14 @@ function renderCompanionNote() {
       ? 'The default: the analysis appears under whatever lookup window is open, ' +
         'even when <code>ml</code> was pressed while reading a passage. Not ' +
         'necessarily an analysis <em>of</em> the entry showing there &mdash; you ' +
-        'may analyse one word while another\u2019s entry is open &mdash; but the two ' +
+        'may analyse one word while another&rsquo;s entry is open &mdash; but the two ' +
         'belong in the same column, being the same sort of consultation. The ' +
         'relation reads both ways: with an analysis showing and no lookup window, ' +
-        'an entry divides the analysis\u2019s.'
+        'an entry divides the analysis&rsquo;s.'
       : beside === 'selected'
       ? 'Whatever you are looking at is divided. Simple, but <code>ml</code> from ' +
         'a passage will divide the passage rather than putting the analysis in the ' +
-        'lookup window\u2019s column.'
+        'lookup window&rsquo;s column.'
       : beside === ''
       ? 'An analysis takes a window by the ordinary rules, like any other kind.'
       : 'An analysis appears beside the ' + (beside === 'browser' ? 'text' : 'scanned page') +
@@ -1859,12 +1874,12 @@ function renderProportions() {
     box.innerHTML = '';
     el('propshint').textContent = '';
     el('propsnote').innerHTML =
-      'Nothing is divided with these settings \u2014 every kind either shares a ' +
+      'Nothing is divided with these settings &mdash; every kind either shares a ' +
       'window or has a frame of its own, and an undivided window has no ' +
       'proportion to set.';
     return;
   }
-  el('propshint').textContent = '\u2014 or drag the dividers';
+  el('propshint').textContent = '&mdash; or drag the dividers';
   box.innerHTML = bs.map((b, i) => `
     <div class="prop">
       <div class="top"><b>${b.label}</b><span>${Math.round(b.value * 100)}%</span></div>
@@ -2037,15 +2052,15 @@ function place(k, label, opts = {}) {
     fresh = companion.win;
     return say(k === 'entry'
       ? 'An analysis was on the screen and no entry, so the entry divides the ' +
-        '<em>analysis\u2019s</em> window \u2014 the same rule read the other way. The two ' +
+        '<em>analysis&rsquo;s</em> window &mdash; the same rule read the other way. The two ' +
         'belong together, and whichever arrives second joins the first.'
-      : 'The analysis divides the entry\u2019s window, downward.');
+      : 'The analysis divides the entry&rsquo;s window, downward.');
   }
   const home = soleHome();
   if (home) {
     put(home, k, label);
     return say('The frame held nothing but the startup screen, so that window is used. ' +
-      'This holds whatever else is set \u2014 there was a window going spare.');
+      'This holds whatever else is set &mdash; there was a window going spare.');
   }
   // A printed dictionary replaces the entry it was consulted from, unless the
   // reader has asked for it to go elsewhere.  This is asked BEFORE the rest,
@@ -2055,7 +2070,7 @@ function place(k, label, opts = {}) {
     if (entry) {
       entry.win.replaced = entry.win.label;
       put(entry.win, k, label);
-      return say('The page takes the window the entry was in \u2014 which is what ' +
+      return say('The page takes the window the entry was in &mdash; which is what ' +
         '<code>diogenes-old-display-in-other-window</code> nil means, and it is the ' +
         'default. <code>q</code> brings the entry back to that window. The behaviour ' +
         'chosen for scans is not consulted at all while this is so.');
@@ -2069,9 +2084,9 @@ function place(k, label, opts = {}) {
       `once and not again.`);
   }
   if (framesFor(kindOf(k))) {
-    const f = newFrame(k === 'browser' ? 'Diogenes \u2014 text'
-                     : k === 'entry' ? 'Diogenes \u2014 entries'
-                     : 'Diogenes \u2014 dictionary');
+    const f = newFrame(k === 'browser' ? 'Diogenes &mdash; text'
+                     : k === 'entry' ? 'Diogenes &mdash; entries'
+                     : 'Diogenes &mdash; dictionary');
     f.wins.push({ kind: k, label });
     fresh = f.wins[0]; f.isFresh = true;
     return say(`<em>${behaviour}</em> for this kind, so a frame is made and later ones ` +
@@ -2084,7 +2099,7 @@ function place(k, label, opts = {}) {
     put(f.wins[0], k, label);
     f.wins.length = 1;
     return say('<em>reuse</em> keeps one window: what was there is replaced, and its ' +
-      'buffer stays alive \u2014 <code>q</code> gets you back to it.');
+      'buffer stays alive &mdash; <code>q</code> gets you back to it.');
   }
   const f = scene[0] || newFrame('Emacs');
   f.wins.push({ kind: k, label });
@@ -2105,20 +2120,20 @@ function place(k, label, opts = {}) {
   }
   return say('<em>defer</em> hands the question to whatever you have installed: ' +
     'window-purpose, a popup manager, or plain Emacs. Drawn here is the plain-Emacs ' +
-    'answer; with purpose loaded it would be purpose\u2019s.');
+    'answer; with purpose loaded it would be purpose&rsquo;s.');
 }
 
 const STEPS = {
   browse: () => place('browser', 'Cicero, In Catilinam I'),
-  lookup: () => place('entry', 'arte \u2014 ars, artis, f.'),
-  again:  () => place('entry', 'siderum \u2014 sidus, eris, n.'),
-  chain:  () => place('entry', 'caelum \u2014 caelum, i, n.', { chain: true }),
+  lookup: () => place('entry', 'arte &mdash; ars, artis, f.'),
+  again:  () => place('entry', 'siderum &mdash; sidus, eris, n.'),
+  chain:  () => place('entry', 'caelum &mdash; caelum, i, n.', { chain: true }),
   analyse: () => {
     const behaviour = kind.morphology;
     const entry = findWin('entry');
     if (behaviour === 'reuse' && entry) {
       put(entry.win, 'morphology', 'siderum: neut gen pl');
-      return say('<code>reuse</code> puts the analysis in the entry\u2019s own window. ' +
+      return say('<code>reuse</code> puts the analysis in the entry&rsquo;s own window. ' +
         'The analysis is what you asked for, and the entry is a keypress away.');
     }
     if (behaviour === 'split' && entry) {
@@ -2127,7 +2142,7 @@ const STEPS = {
       entry.win.nested = true;
       entry.win.nestedLabel = 'siderum: neut gen pl';
       fresh = entry.win;
-      return say('The analysis divides the <em>lookup</em> window, downward \u2014 not ' +
+      return say('The analysis divides the <em>lookup</em> window, downward &mdash; not ' +
         'the window you pressed the key in. Ask for one while reading a passage and ' +
         'it still appears there, entries and analyses being the same sort of ' +
         'consultation and belonging in one column. The frame gains no third column.');
@@ -2154,7 +2169,7 @@ const STEPS = {
     if (d.win.replaced) {
       put(d.win, 'entry', d.win.replaced);
       d.win.replaced = null;
-      return say('<code>q</code> puts the entry back in the window the page took \u2014 ' +
+      return say('<code>q</code> puts the entry back in the window the page took &mdash; ' +
         'the entry it was opened from, not whatever the window held before that, which ' +
         'is what plain <code>quit-window</code> would have done.');
     }
@@ -2317,7 +2332,7 @@ function readPresetFile(text) {
   if (took.length) parts.push('Took ' + took.join(', ') + '.');
   if (left.length)
     parts.push('Did not read: ' + left.sort().join(', ')
-               + ' \u2014 set those by hand, or keep your file and edit it.');
+               + ' &mdash; set those by hand, or keep your file and edit it.');
   el('p-openreport').textContent =
     parts.length ? parts.join(' ') : 'Nothing in that file this page sets.';
 }
@@ -2428,13 +2443,13 @@ function render() {
   el('scannote').innerHTML = own
     ? 'The <b>Scans</b> row above decides which window or frame it gets.'
     : 'The default. While this is chosen, the <b>Scans</b> row above has no ' +
-      'effect \u2014 <code>diogenes-old-display-in-other-window</code> is asked first, ' +
+      'effect &mdash; <code>diogenes-old-display-in-other-window</code> is asked first, ' +
       'and it says the page goes where the entry is.';
   document.getElementById('k-dictionary').disabled = !own;
   const dictLabel = document.querySelector('label[for="k-dictionary"]');
   if (dictLabel) dictLabel.classList.toggle('dim', !own);
   const u = uniform();
-  el('mixedhint').textContent = u ? '' : '\u2014 mixed';
+  el('mixedhint').textContent = u ? '' : '&mdash; mixed';
   el('mixednote').innerHTML = u
     ? 'All three the same, so the preset says it in one word.'
     : 'Different per kind, so the preset says it as an alist. A kind set to ' +
@@ -2816,6 +2831,12 @@ document.addEventListener('change', e => {
     renderConfig();
   }
   if (e.target.id === 'c-evil') renderConfig();
+  // AND THE LAYER SWITCH, which changes which output is shown.
+  if (e.target.name === 'c-spacelayer') {
+    document.querySelectorAll('label[data-layerpick]').forEach(l =>
+      l.classList.toggle('on', l.dataset.layerpick === e.target.value));
+    renderLayer();
+  }
 });
 
 // The evil group is shown only where evil is in use.  A key for leaving Emacs
@@ -2909,7 +2930,7 @@ const PRESETS = [
     blurb: 'Nothing loaded at startup; M-x diogenes-load-preset when you want one.',
     mini: '<div class="mini"></div>' },
   { id: 'defer', name: 'defer',
-    blurb: 'Whatever you have installed decides \u2014 window-purpose, a popup manager, plain Emacs.',
+    blurb: 'Whatever you have installed decides &mdash; window-purpose, a popup manager, plain Emacs.',
     mini: '<div class="mini"><div class="mf"><div class="mw browser"></div></div></div>' },
   { id: 'reuse', name: 'reuse',
     blurb: 'One window for entries, each replacing the last.',
@@ -3368,7 +3389,7 @@ function configText() {
     const bookNote = el('c-booknote');
     if (bookNote)
       bookNote.textContent = wantsBooks
-        ? 'An index divided into books wants the books feature above \u2014 '
+        ? 'An index divided into books wants the books feature above &mdash; '
           + 'turn on "A work at one of its books", or the index will be one '
           + 'flat list.'
         : '';
@@ -3465,10 +3486,6 @@ function configText() {
     out.push(';; C-h k and then the key, and Emacs will name whatever holds it.');
     out.push(';; A scanned dictionary answers differently, being a viewer\'s buffer.');
   }
-  // AND AS A LAYER, where a reader asked for one: the block is assembled as
-  // it is for any distro and re-wrapped, so none of the logic above changes.
-  if (distro === 'spacemacs' && el('c-spacelayer') && el('c-spacelayer').checked)
-    out = asSpacemacsLayer(out);
   return out.join('\n');
 }
 
@@ -3516,11 +3533,11 @@ const VIEWERS = {
   'pdf-tools': [
     [/^[np]$/, 'the next or previous page in pdf-tools'],
     [/^[gG]$/, 'the first or last page in pdf-tools'],
-    [/^o$/, '`pdf-outline\u2019, the bookmark tree'],
+    [/^o$/, '`pdf-outline&rsquo;, the bookmark tree'],
     [/^b$/, 'a bookmark in pdf-tools'],
     [/^[WPh]$/, 'fit width, page or height in pdf-tools'],
     [/^r$/, 'revert, in pdf-tools'],
-    [/^s/, 'a prefix in pdf-tools \u2014 slicing and scrolling'],
+    [/^s/, 'a prefix in pdf-tools &mdash; slicing and scrolling'],
     [/^[+=-]$/, 'zoom in pdf-tools'],
     [/^SPC$/, 'scroll forward in pdf-tools'],
     [/^DEL$/, 'scroll back in pdf-tools'],
@@ -3561,21 +3578,21 @@ function viewerTables() {
 
 const CLASHES = {
   emacs: [
-    [/^C-x/, 'a prefix in Emacs: `C-x\u2019 opens the whole file and buffer map'],
+    [/^C-x/, 'a prefix in Emacs: `C-x&rsquo; opens the whole file and buffer map'],
     [/^C-h/, 'the help prefix'],
     [/^C-g$/, 'quit, and never worth taking'],
     [/^M-x$/, 'the command prompt'],
     [/^C-c$/, 'a prefix, not a key'],
     [/^C-[svwykaefbnpdlqzt]$/, 'an ordinary Emacs editing key, though harmless in a read-only buffer'],
-    [/^C-o$/, '`open-line\u2019, though harmless in a read-only buffer'],
+    [/^C-o$/, '`open-line&rsquo;, though harmless in a read-only buffer'],
     [/^C-u$/, 'the prefix argument'],
   ],
   evilNormal: [
-    [/^[hjkl]$/, 'a motion in evil\u2019s normal state'],
+    [/^[hjkl]$/, 'a motion in evil&rsquo;s normal state'],
     [/^[ibcdopPGVvxXsSrRuU]$/, 'an evil command in normal state'],
     [/^[wea0$^]$/, 'an evil motion in normal state'],
     [/^g$/, 'a prefix in evil, and one Doom hangs a great deal from'],
-    [/^[/?nN*]$/, 'evil\u2019s search'],
+    [/^[/?nN*]$/, 'evil&rsquo;s search'],
     [/^C-[oidufbev]$/, 'an evil scrolling or jump key in normal state'],
   ],
   doom: [
@@ -3636,7 +3653,7 @@ function leaderReasons(key, distro, evil) {
   const name = distro === 'doom' ? 'Doom' : 'Spacemacs';
   // The leader itself.
   if (chords.length === 1)
-    return [`the leader in ${name} \u2014 taking it would shadow everything under it`];
+    return [`the leader in ${name} &mdash; taking it would shadow everything under it`];
   const first = chords[1];
   const known = spec.taken[first];
   // DEPTH FIRST: `SPC f p' is not `SPC f'.  A prefix being taken says nothing
@@ -3648,26 +3665,26 @@ function leaderReasons(key, distro, evil) {
     const second = chords[2];
     const deeper = (LEADER_2[distro] || {})[first];
     if (deeper && deeper[second])
-      return [`<code>${spec.leader} ${first} ${second}</code> is ${name}\u2019s ` +
+      return [`<code>${spec.leader} ${first} ${second}</code> is ${name}&rsquo;s ` +
               `${deeper[second]}`];
     if (deeper)
-      return [`under ${name}\u2019s <code>${spec.leader} ${first}</code> ` +
+      return [`under ${name}&rsquo;s <code>${spec.leader} ${first}</code> ` +
               `(${known || 'a prefix'}), and <code>${second}</code> is not one ` +
-              `this tool knows of there \u2014 press ` +
+              `this tool knows of there &mdash; press ` +
               `<code>${spec.leader} ${first}</code> and which-key will list what ` +
               `is taken`];
-    return [`under ${name}\u2019s leader \u2014 press ` +
+    return [`under ${name}&rsquo;s leader &mdash; press ` +
             `<code>${spec.leader} ${first}</code> and which-key will list what is ` +
             `taken there`];
   }
   if (known)
-    return [`under ${name}\u2019s leader, and <code>${spec.leader} ${first}</code> ` +
-            `is its ${known} prefix \u2014 a longer sequence under it, such as ` +
+    return [`under ${name}&rsquo;s leader, and <code>${spec.leader} ${first}</code> ` +
+            `is its ${known} prefix &mdash; a longer sequence under it, such as ` +
             `<code>${spec.leader} ${first} d</code>, may well be free`];
   // Not among the ones we know of.  Which is not the same as free: it depends
   // on the modules enabled, and only the reader's own Emacs can say.
-  return [`under ${name}\u2019s leader, and <code>${spec.leader} ${first}</code> is ` +
-          `not one this tool knows of \u2014 press ${spec.leader} in your Emacs and ` +
+  return [`under ${name}&rsquo;s leader, and <code>${spec.leader} ${first}</code> is ` +
+          `not one this tool knows of &mdash; press ${spec.leader} in your Emacs and ` +
           `check that ${first} is unused before settling on it`];
 }
 
@@ -3728,7 +3745,7 @@ function chordRules(key) {
   const chords = key.split(/\s+/).filter(Boolean);
   if (chords[0] === 'C-c') {
     if (chords.length === 1)
-      return ['a prefix rather than a key: `C-c\u2019 begins a sequence'];
+      return ['a prefix rather than a key: `C-c&rsquo; begins a sequence'];
     const second = chords[1];
     // The Emacs conventions RESERVE `C-c' plus an unmodified letter for users,
     // and no package may take it.  That is a rule rather than an observation,
@@ -3757,8 +3774,8 @@ function chordRules(key) {
     if (chords.length === 1) return ['a prefix rather than a key'];
     const what = map[chords[1]];
     return what
-      ? [`<code>C-x ${chords[1]}</code> is Emacs\u2019s own \u2014 ${what}`]
-      : [`under <code>C-x</code>, which is Emacs\u2019s own map \u2014 press ` +
+      ? [`<code>C-x ${chords[1]}</code> is Emacs&rsquo;s own &mdash; ${what}`]
+      : [`under <code>C-x</code>, which is Emacs&rsquo;s own map &mdash; press ` +
          `<code>C-x C-h</code> to see what is free there`];
   }
   return out;
@@ -3800,7 +3817,7 @@ function warnFor(key, context) {
   const found = clashesFor(key, context);
   if (!key) return '';
   if (!found.length)
-    return '<span class="kwarn fine">Nothing known wants it \u2014 check with ' +
+    return '<span class="kwarn fine">Nothing known wants it &mdash; check with ' +
            '<code>C-h k</code> in your own Emacs.</span>';
   const soft = found.every(w => /harmless in a read-only buffer/.test(w));
   return `<span class="kwarn ${soft && context === 'lookup' ? 'fine' : 'clash'}">` +
@@ -3853,8 +3870,8 @@ function normalisePath(raw) {
   // Quotes of every kind that a `copy as path' produces: Explorer's double,
   // the Finder's single, and the curly pair that macOS and several editors
   // substitute for straight ones.
-  s = s.replace(/^["'\u2018\u2019\u201c\u201d`]+/, '')
-       .replace(/["'\u2018\u2019\u201c\u201d`]+$/, '');
+  s = s.replace(/^["'\u2018&rsquo;\u201c\u201d`]+/, '')
+       .replace(/["'\u2018&rsquo;\u201c\u201d`]+$/, '');
   if (!s) return null;
   // A BACKSLASH-ESCAPED SPACE is a shell's quoting, not a separator: dragging
   // into a Terminal gives `/Users/x/Diogenes\ Data', and turning that
@@ -4289,14 +4306,30 @@ function asSpacemacsLayer(lines) {
   for (const r of recipes) res.push(r);
   if (recipes.length) res.push('    ))');
   res.push('');
+  // ONE PER PACKAGE IN THE LIST, and not only those with a body: Spacemacs
+  // calls classicist/init-NAME for every name in classicist-packages, and a
+  // missing one is an error at startup.  diogenes has no settings of its own
+  // and still needs its function.
+  for (const r of recipes) {
+    const m = r.match(/^\s*\((\S+)\s/);
+    if (m && !bodies.has(m[1])) bodies.set(m[1], null);
+  }
   for (const [name, body] of bodies) {
     res.push('(defun classicist/init-' + name + ' ()');
-    res.push('  (use-package ' + name);
-    for (const l of body) res.push('  ' + l);
-    res.push('  ))');
+    res.push('  (use-package ' + name + (body ? '' : '))'));
+    if (body) {
+      // THE LAST LINE CLOSES use-package ALREADY, the blocks form having
+      // written it -- so only the defun's own paren is added.
+      for (const l of body) res.push('  ' + l);
+      res.push('  )');
+    }
     res.push('');
   }
-  for (const l of out) if (l.trim()) res.push(l);
+  // AND NOT THE BLOCKS FORM'S OWN HEADERS, which name places a layer does
+  // not use.
+  for (const l of out)
+    if (l.trim() && !/^;; ---- in dotspacemacs/.test(l)
+        && !/^;;\s+;; The base, which/.test(l)) res.push(l);
   return res;
 }
 
@@ -4419,8 +4452,46 @@ function setFeatures(list) {
   showSections();
 }
 
+// THE LAYER, WHICH IS THE SAME ANSWER DIFFERENTLY DRESSED.  Two outputs where
+// the blocks form has one: the layer's name, which goes in
+// dotspacemacs-configuration-layers, and the file, which goes in a directory
+// named after it.  Both are shown only for Spacemacs and only when the switch
+// asks for them.
+function layerPicked() {
+  const r = document.querySelector('input[name=c-spacelayer]:checked');
+  return r && r.value === 'layer';
+}
+
+function renderLayer() {
+  const distro = (document.querySelector('input[name=distro]:checked') || {}).value;
+  const on = (distro === 'spacemacs') && layerPicked();
+  // AND THE SWITCH ITSELF, which belongs to one distribution.  Nothing else
+  // in the builder hides a field by distro -- the sections go by feature --
+  // so this is done here rather than in showSections.
+  document.querySelectorAll('.field[data-distro]').forEach(f =>
+    f.hidden = (f.dataset.distro !== distro));
+  const wrap = el('c-layer-wrap');
+  if (wrap) wrap.hidden = !on;
+  // AND THE BLOCKS FORM IS HIDDEN WHILE THE LAYER IS SHOWN, the two being
+  // answers to one question and a reader wanting whichever they picked.
+  const pre = el('c-out');
+  // THE BUTTONS BY THEIR OWN IDS, nextElementSibling having found something
+  // else and left a ghost Copy and Download above the layer.
+  if (pre) pre.hidden = on;
+  // BY display AND NOT hidden: .actions is a flex row, and a flex container
+  // ignores the hidden attribute -- so the buttons stayed while the block
+  // above them went.
+  const acts = el('c-acts');
+  if (acts) acts.style.display = on ? 'none' : '';
+  if (!on) return;
+  el('c-layer-name').textContent = 'classicist';
+  el('c-layer-out').textContent = asSpacemacsLayer(configText().split('\n'))
+                                    .join('\n');
+}
+
 function renderConfig() {
   el('c-out').textContent = configText();
+  renderLayer();
   renderWhereNote();
   installPathHelpers();
   installKeyCapture();
@@ -4506,6 +4577,24 @@ el('c-download').addEventListener('click', () => {
   a.href = URL.createObjectURL(blob); a.download = 'diogenes-config.el'; a.click();
   URL.revokeObjectURL(a.href);
 });
+
+// THE LAYER'S FILE, named as Spacemacs looks for it.  A reader saving
+// this into ~/.emacs.d/private/classicist/ has the whole layer.
+el('c-layer-download') && el('c-layer-download')
+  .addEventListener('click', () => {
+    const blob = new Blob([el('c-layer-out').textContent],
+                          {type: 'text/plain'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'packages.el';
+    a.click();
+  });
+el('c-layer-copy') && el('c-layer-copy')
+  .addEventListener('click', async () => {
+    await navigator.clipboard.writeText(el('c-layer-out').textContent);
+    el('c-layer-copied').textContent = 'copied';
+    setTimeout(() => el('c-layer-copied').textContent = '', 1500);
+  });
 
 // ---------- where to start ----------
 // The two starting points SET the controls; they hold no values of their own,
