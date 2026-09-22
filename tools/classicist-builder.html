@@ -3055,6 +3055,22 @@ function configText() {
     out.push('(use-package classicist');
     out.push('  :init');
   } else {
+    // A FIRST :vc INSTALL LOADS THE BASE WHILE INSTALLING IT, before the
+    // suite's :init below has run -- and diogenes--path raises rather than
+    // returning nil, so the file stops with
+    //     diogenes/:catch: diogenes-path is not set!
+    // Harmless on every start after; the difference between a working
+    // install and a stopped one on the first.
+    out.push(';; THE PATH FIRST, for the first start.  :vc loads the base while');
+    out.push(';; installing it, before the :init below has run, and the base');
+    out.push(';; raises at load if this is unset.');
+    out.push(`(setq diogenes-path ${JSON.stringify(dpath || "/path/to/diogenes")})`);
+    out.push('');
+    // AND A WORD ON :rev :newest, beside the recipes it belongs to.  It was
+    // written into the Doom branch, which uses no :vc at all.
+    out.push(';; :rev :newest BECAUSE NEITHER REPOSITORY HAS A TAG: :vc installs');
+    out.push(';; the last RELEASE by default, and with no tag package-desc gets a');
+    out.push(';; nil version -- Version must be a string, and the file stops.');
     out.push(';; The base, which this suite extends and needs installed.');
     out.push('(use-package diogenes');
     out.push(`  :vc (:url ${JSON.stringify('https://github.com/' + baseRepo)}`
