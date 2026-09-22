@@ -68,6 +68,20 @@
 (eval-when-compile (require 'cl-lib))
 (require 'seq)
 
+;; PULSE'S, DECLARED AND NOT REQUIRED -- AND NOT COSMETIC.  The pulse
+;; branch of `diogenes-org--highlight-now' does `(require \='pulse nil t)'
+;; inside its own condition, at run time, and then binds these two in a
+;; `let' to slow the pulse down.  But whether a `let' binds lexically or
+;; dynamically is settled AT COMPILE TIME, and the compiler cannot see a
+;; `require' in a function body -- so the compiled file bound both
+;; LEXICALLY, `pulse-momentary-highlight-region' read the global values,
+;; and the 0.06 and the 14 did nothing.  Interpreted it worked, compiled
+;; it did not, which is the worst way round.  These two declarations make
+;; them special at compile time without loading pulse at load time, so the
+;; lazy `require' stays lazy.
+(defvar pulse-delay)
+(defvar pulse-iterations)
+
 ;; THE SUITE FEATURE LIST.  Declared and not required, as in the three
 ;; files beside it: absent the suite the guards fall back to what they did
 ;; before the list existed, which is why the autoloaded one asks fboundp.
