@@ -3312,7 +3312,7 @@ function configText() {
       lines.push(`  (setq classicist-lookup-open-latin-with '(${latin}))`);
     if (lines.length) {
       out.push('');
-      out.push(';; Where a citation in an entry opens, tried in order.');
+      out.push('  ;; Where a citation in an entry opens, tried in order.');
       out.push(...lines);
     }
   }
@@ -3450,7 +3450,7 @@ function configText() {
     if (el('r-idxopen').value !== 'default')
       rblock.push(`  (setq diogenes-roam-index-open-in '${el('r-idxopen').value})`);
     out.push('');
-    out.push(';; PASSAGE NOTES FILED BY AUTHOR AND WORK are their own package.');
+    out.push('  ;; PASSAGE NOTES FILED BY AUTHOR AND WORK are their own package.');
     out.push('  (with-eval-after-load \'diogenes-roam');
     out.push('    (diogenes-roam-mode 1)');
     // AND THE INDEX MODE, WHICH IS A SEPARATE ONE.  diogenes-roam-mode is
@@ -4394,7 +4394,12 @@ function asSpacemacsLayer(lines) {
     const up = raw.match(/^\(use-package!?\s+(\S+?)\)?$/);
     if (up) { current = up[1].replace(/[()]/g, ''); bodies.set(current, []); continue; }
     if (current) {
-      if (/^\S/.test(raw) && raw.trim() !== '') { current = null; }
+      // A TOP-LEVEL FORM ENDS THE BODY, and a comment at column zero does
+      // not: the emit writes several of those inside the :init block, and
+      // /^\S/ matched the semicolon -- so the tail of the settings landed
+      // outside the use-package, and a :bind at top level gave
+      // Wrong type argument: listp, diogenes.
+      if (/^[(]/.test(raw)) { current = null; }
       else { bodies.get(current).push(raw); continue; }
     }
     if (!rec) out.push(raw);
