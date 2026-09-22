@@ -3082,17 +3082,26 @@ function configText() {
     out.push(';; raises at load if this is unset.');
     out.push(`(setq diogenes-path ${JSON.stringify(dpath || "/path/to/diogenes")})`);
     out.push('');
-    // AND A WORD ON :rev :newest, beside the recipes it belongs to.  It was
-    // written into the Doom branch, which uses no :vc at all.
-    out.push(';; :rev :newest BECAUSE NEITHER REPOSITORY HAS A TAG: :vc installs');
-    out.push(';; the last RELEASE by default, and with no tag package-desc gets a');
-    out.push(';; nil version -- Version must be a string, and the file stops.');
+    // :rev :newest ON ALL THREE RECIPES.  Without it package-vc-default-rev
+    // is :last-release, so package-vc--clone calls package-vc--release-rev
+    // on a package-desc whose :version is still nil -- the checkout does not
+    // exist yet, so no Version: header has been read -- and that reaches
+    // expand-file-name(nil).  Seen on MacPorts Emacs, --debug-init:
+    //     Wrong type argument: stringp, nil
+    //   package-vc--release-rev(#s(package-desc :name classicist
+    //                             :version nil ...))
+    // A Version: header in the file does NOT prevent this, which is what an
+    // earlier reading of it got wrong.  :rev :newest skips that function.
+    out.push(';; :rev :newest BECAUSE NEITHER REPOSITORY HAS A TAG: :vc takes the');
+    out.push(';; last RELEASE by default, and looking for one on a checkout that');
+    out.push(';; does not exist yet stops the file with');
+    out.push(';;     Wrong type argument: stringp, nil');
     out.push(';; The base, which this suite extends and needs installed.');
     out.push('(use-package diogenes');
-    out.push(`  :vc (:url ${JSON.stringify('https://github.com/' + baseRepo)}`
-             + (baseBranch ? '' : '))   ; Emacs 30 and later'));
+    out.push(`  :vc (:url ${JSON.stringify('https://github.com/' + baseRepo)}`);
     if (baseBranch)
-      out.push(`       :branch ${JSON.stringify(baseBranch)}))   ; Emacs 30 and later`);
+      out.push(`       :branch ${JSON.stringify(baseBranch)}`);
+    out.push('       :rev :newest))   ; Emacs 30 and later');
     out.push('');
     if (wantRoam()) {
       out.push('');
@@ -3100,11 +3109,18 @@ function configText() {
       out.push(';; own, which this suite neither requires nor notices.');
       out.push('(use-package diogenes-roam');
       out.push(`  :vc (:url ${JSON.stringify('https://github.com/' + ROAM_REPO)}`);
-      out.push(`       :branch ${JSON.stringify(ROAM_BRANCH)}))   ; Emacs 30 and later`);
+      out.push(`       :branch ${JSON.stringify(ROAM_BRANCH)}`);
+      out.push('       :rev :newest)   ; Emacs 30 and later');
+      // :demand BECAUSE NOTHING ELSE WOULD LOAD IT.  The two modes below are
+      // all this package is here for, and neither is reached by a key or a
+      // hook -- so without this the with-eval-after-load waits on a file
+      // that never loads, and the notes are silently not filed.
+      out.push('  :demand t)');
       out.push('');
     }
     out.push('(use-package classicist');
-    out.push(`  :vc (:url ${JSON.stringify('https://github.com/' + SUITE)})   ; Emacs 30 and later`);
+    out.push(`  :vc (:url ${JSON.stringify('https://github.com/' + SUITE)}`);
+    out.push('       :rev :newest)   ; Emacs 30 and later');
     out.push('  :init');
   }
   out.push(`  (setq diogenes-path ${JSON.stringify(dpath || "/path/to/diogenes")})`);
@@ -3451,6 +3467,11 @@ function configText() {
       rblock.push(`  (setq diogenes-roam-index-open-in '${el('r-idxopen').value})`);
     out.push('');
     out.push('  ;; PASSAGE NOTES FILED BY AUTHOR AND WORK are their own package.');
+    // THE OPTIONS BEFORE THE MODES.  The roam recipe above is :demand, so the
+    // package is loaded by the time this runs and the with-eval-after-load
+    // body fires at once -- which means anything a mode reads at activation
+    // has to be set before it, not after.
+    if (rblock.length) out.push(...rblock);
     out.push('  (with-eval-after-load \'diogenes-roam');
     out.push('    (diogenes-roam-mode 1)');
     // AND THE INDEX MODE, WHICH IS A SEPARATE ONE.  diogenes-roam-mode is
@@ -3459,7 +3480,6 @@ function configText() {
     // Without it an index on screen goes stale the moment a note is saved,
     // which is how the omission was found.
     out.push('    (diogenes-roam-index-global-mode 1))');
-    if (rblock.length) out.push(...rblock);
   }
 
   out.push('');
