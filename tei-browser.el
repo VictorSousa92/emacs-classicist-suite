@@ -300,6 +300,22 @@ is what some package managers make."
                         "tei-read.py"
                         (file-name-directory (locate-library "tei-browser"))))))
         (and library (file-exists-p library) library))
+      ;; AND THROUGH THE SYMLINK, which is the straight case and answers it
+      ;; exactly.  straight SYMLINKS the .el files into
+      ;; straight/build-VERSION/NAME and leaves every other file in the
+      ;; repository, so both places tried above are inside a build and hold
+      ;; no .py -- but the symlink's target IS the file in the repository,
+      ;; and the script sits beside that wherever the repository happens to
+      ;; be.  The search below cannot reach it when the recipe says
+      ;; `:local-repo' and the repository is nowhere near straight/repos:
+      ;; found that way on Doom, with the repository on a mounted share,
+      ;; where the reader was told to set `tei-read-script' by hand.
+      (let ((true (ignore-errors
+                    (expand-file-name
+                     "tei-read.py"
+                     (file-name-directory
+                      (file-truename (locate-library "tei-browser")))))))
+        (and true (file-exists-p true) true))
       ;; AND THE SOURCE CHECKOUT, which is where a .py actually is.  A
       ;; package manager builds .el files into a build directory and leaves
       ;; everything else where it cloned -- straight keeps
