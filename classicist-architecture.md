@@ -1396,3 +1396,38 @@ source:
 
 Every one of those settled in seconds what reading had failed to settle in an
 hour. The gates verify shapes; only a running Emacs verifies order.
+
+## [PENDING] Four things the builder hands a stranger and should not
+
+Each cost a restart while installing on vanilla, and each would cost a
+stranger the same or worse.  All four want the browser open.
+
+**1. diogenes-roam is emitted before the suite and should be last.** org-roam
+pulls magit-section and cond-let, and a stale MELPA entry for either is a
+LOADING error: the init file stops and everything after it never runs.  Three
+starts in a row lost the whole suite to a package it does not depend on.
+
+**2. diogenes-path wants emitting once above the three forms.** The base
+raises at load if it is unset -- diogenes--path errors rather than returning
+nil -- and on a first :vc install use-package loads the base WHILE installing
+it, before the suite's :init has run.  Harmless on every start after, and the
+difference between a working install and a stopped one on the first.
+
+**3. org-roam-directory has no box at all.** It has no default: Doom's org
+module supplies one and vanilla does not, so a config ported from Doom reads a
+variable nobody was asked for.  diogenes-roam-index--setup reads it from
+find-file-hook, which makes it a message on every file opened.  A text box
+beside the other paths, emitted BEFORE the packages, org-roam reading it at
+load.
+
+**4. A configuration that cannot work should say so.** A feature awake whose
+required path is empty: texts and diogenes-path, diorisis and
+diorisis-database, tei-corpora and tei-directory, notes and
+org-roam-directory.  A line above the block rather than a refusal to write it
+-- a reader fills the form in whatever order they like.
+
+THE DICTIONARIES ARE NOT IN THAT LIST, deliberately:
+classicist-declared-dictionaries offers a key on every entry whatever the
+paths say, so that the key explains what to set rather than doing nothing.
+That is documented behaviour, not an oversight.
+
