@@ -1,7 +1,7 @@
 # Handover: four configurations, and what installing taught
 
 Two days ago the suite did not install. It now installs and works on four
-configurations. Nothing in this file is inference; everything in it was found
+configurations. Nothing in this file is inference: everything in it was found
 by starting an Emacs, or opening the builder, and looking.
 
 ## Where it stands
@@ -10,15 +10,11 @@ by starting an Emacs, or opening the builder, and looking.
     Spacemacs / Linux    everything, with helm rather than vertico
     Doom / macOS         everything, from a LOCAL clone of the suite
     vanilla / Linux      everything, the suite by :load-path
+    Spacemacs / macOS     as a LAYER, the suite from the share
+    vanilla / macOS      in progress -- see the open item below
     Windows              never tried
 
-The corpora browse with a header line and citations beside the text; six
-printed dictionaries answer a word; 3,283 TEI texts are indexed portably and
-read in both Perseus vintages; Diorisis and the word list complete on beta
-code under either completion framework; thirty existing notes are found by
-author and work.
-
-**Ten features, seven gates, twenty-three patches on `classicist-base`.**
+Ten features, seven gates, twenty-three patches on `classicist-base`.
 
 ## The one sentence worth keeping
 
@@ -26,6 +22,27 @@ author and work.
 almost every fault of these two days lived in the gap.** Every one that took
 more than one attempt was invisible to seven checks and obvious to one
 question asked of a running Emacs, or one look at a page.
+
+## [OPEN] The thing to pick up first
+
+**The builder is not emitting `:rev :newest` on the vanilla recipes**, though
+it emits the comment explaining it -- so a downloaded config still stops with
+`Version must be a string`. The note went in and the four recipe lines did
+not, or a revert took them. First thing to check:
+
+    grep -n ":rev :newest" tools/classicist-builder.html
+
+Four emit lines should carry it: the base with and without a branch, roam, and
+the suite. Without it `:vc` installs the last RELEASE, neither repository has
+a tag, `package-desc` gets a nil version, and `version-to-list` is handed
+`(0)`.
+
+**And the vanilla config the builder writes is a fragment, not an init.el.**
+It lacks the preamble, which only vanilla needs:
+
+    (require 'package)
+    (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
+    (package-initialize)
 
 ## The three patches that mattered most
 
@@ -52,19 +69,13 @@ returning a neighbour: most datives, most subjunctives.
 the library header block, so `lm-header` never saw `Version:` or
 `Package-Requires:`; and `Package-Requires` read `(cl-lib thingatpt seq
 transient)` -- a bare list of symbols where the header wants
-`((NAME VERSION) ...)`, on which `package-buffer-info` fails outright. Either
-alone gives `:version nil`, `version-to-list` is handed `(0)`, and the init
-file stops with *Version must be a string*.
+`((NAME VERSION) ...)`, on which `package-buffer-info` fails outright.
 
 **Nothing else would ever have found these.** straight, quelpa and
 `:load-path` ignore those headers entirely. Only `package-vc` reads them, and
-only a reader installing into vanilla uses that -- which is exactly why
-vanilla was on the list.
+only a reader installing into vanilla uses that.
 
 ## The load-order problem, in six shapes
-
-It came up six times and wants six different answers. Read this before
-touching anything the base also defines.
 
 **A command: advise it.** `advice-add ... :override` needs only that the base
 has loaded. Thirty-one commands work this way now.
@@ -72,13 +83,12 @@ has loaded. Thirty-one commands work this way now.
 **A definition: defer the definition.** A `transient-define-prefix` is not a
 call, so advice cannot reach it, and whichever file defines it last wins.
 `(symbol-file 'diogenes 'defun)` said `diogenes.elc` on Spacemacs and
-`classicist.el` on Doom: package.el activates alphabetically, straight does
-not. The prefix lives in `classicist-define-menu`, called from a hook that by
-definition runs after.
+`classicist.el` on Doom. The prefix lives in `classicist-define-menu`, called
+from a hook that by definition runs after.
 
-**And a `require` makes it worse.** Loading this file when the base loads makes
-our definition run EARLIER -- the base is part way through its own file. The
-same form in our own autoloads can fire before `provide` and recurse.
+**And a `require` makes it worse** -- our definition then runs EARLIER, the
+base being part way through its own file; and the same form in our own
+autoloads can fire before `provide` and recurse.
 
 **Something appended: publish a hook.** Defining a prefix discards every
 appended suffix. `classicist-menu-defined-hook` runs at the end of the
@@ -86,68 +96,53 @@ definition. **When order matters, say it; do not infer it from a load.**
 
 **A file's own requires run before its own code.** `classicist.el` requires a
 dozen of the base's libraries and one pulls in `diogenes.el`. So `:demand t`
-in a reader's configuration cannot help: the base is not loaded after us, it
-is loaded DURING us.
+cannot help: the base is not loaded after us, it is loaded DURING us.
 
 **And top-level code cannot be reached at all.** The base validates at load;
 every `with-eval-after-load` fires later. The only remedy is to set the value
-it reads -- which is what patch twenty does, in the base.
+it reads -- patch twenty, in the base.
 
 ## The ten commands the override table left racing
 
 `classicist--overridden-commands` was built from a LOOP over three families of
-seven -- browse, search, dump -- and ten more commands were redefined under
-the base's names and never in it: the lookups, the parses, the forms, the
-lemmata. `(symbol-file 'diogenes-lookup-greek 'defun)` said `diogenes.elc`,
-so the base's lookup ran, its buffer matched no `classicist-role-regexps`
-entry, and every entry got fresh placement -- a new frame for each word looked
-up.
+seven -- browse, search, dump -- and ten more were redefined under the base's
+names and never in it: the lookups, the parses, the forms, the lemmata. So the
+base's lookup ran, its buffer matched no `classicist-role-regexps` entry, and
+every entry got fresh placement -- a new frame for each word looked up.
 
-**The table was built from a pattern and everything outside the pattern was
-silently left racing.** It is now a list of what the suite actually redefines.
-A gate would have caught all ten and does not exist.
+**The table was built from a pattern and everything outside it was silently
+left racing.** A gate would have caught all ten and does not exist.
 
 ## Completion: the candidate is the only thing every framework sees
 
-**Not in an annotation.** The Diorisis prompt had accented Greek as candidates
-and the beta in an `annotation-function`, and nothing matches an annotation.
-It worked only because vertico passes an unmatched string through to
-`diorisis--approximate`; helm offers it as an `Unknown candidate` instead.
+**Not in an annotation** -- the Diorisis prompt had the beta in one, and
+nothing matches an annotation; vertico passed the unmatched string through and
+helm did not.
 
-**Not in a completion style either.** `diogenes-complete.el` does all its
-matching in a style registered for its own category -- and helm uses no
-styles, while Doom sets `completion-category-overrides` after we do:
-`(alist-get 'diogenes-lemma completion-category-overrides)` is nil there and
-`completion-styles` is `(orderless basic)`.
+**Not in a completion style** -- helm uses none, and Doom sets
+`completion-category-overrides` after we do: `(alist-get 'diogenes-lemma
+completion-category-overrides)` is nil there.
 
-**And not in the ordering a style computes.** With the candidates matching at
-last, `leg` showed `a)le/gw` before `le/gw`. Frequency is not available -- the
-word list's second field is an offset into the analyses, not a count -- so the
-candidates are sorted SHORTER FIRST, a compound always being longer than what
-it compounds.
+**And not in the ordering a style computes** -- `leg` showed `a)le/gw` before
+`le/gw`. Frequency is not available (the word list's second field is an offset
+into the analyses, not a count), so candidates are sorted SHORTER FIRST.
 
 **A style is a request; the candidate list is a fact.**
 
 ## Caches, and where each belongs
 
     a cache of what a program COMPUTED   with the program
-                                         classicist-books.eld, under
-                                         user-emacs-directory: right as it is
-
-    a cache ABOUT FILES                  with the files, naming them RELATIVE
-                                         to their own root
-
+    a cache ABOUT FILES                  with the files, RELATIVE to their root
     a cache of CONTENT                   either way
-                                         diorisis-vocabulary.eld is beta code
 
 `tei-index.eld` held absolute paths, so an index built on Linux named nothing
-a Mac could open -- `/mnt/archive` and `/Volumes/shared` being the same disk.
-It now records paths relative to the directory it was built from.
-
-**The trap in that fix:** `os.path.exists` on a relative path asks the working
+a Mac could open. It now records them relative to the directory it was built
+from. **The trap:** `os.path.exists` on a relative path asks the working
 directory, so storing before checking made every text fail as
-declared-and-absent and the index came out empty -- 0 of 3,283, which the
-counts showed at once. Check the real path, store the portable one.
+declared-and-absent -- 0 of 3,283. Check the real path, store the portable one.
+
+`passow-index.eld` and `tgl-index.eld` still hold absolute paths, five and six
+-- see `lexicon-index-paths.md`.
 
 ## Two machines, one disk
 
@@ -159,84 +154,83 @@ the recipe pointed at a local clone.
     the code        a local clone on each machine, pulled
     the corpora     on the share
     the databases   on the share
-    the caches      per the rule above
 
-**And a bulk read is what a slow mount handles worst.** The Diorisis lemma
-prompt reads 63,718 rows; with no `diorisis-vocabulary.eld` beside the
-database it does that every session, across the mount. It is portable, so
-building it once on the fast machine serves both.
+**And quelpa's `:fetcher file` is a COPY, not a live tree**: editing the share
+does not reach Spacemacs until `SPC f e U`. Doom's `:local-repo` and
+Spacemacs' `:location local` with a symlink are the live kind.
+
+**`diorisis-vocabulary.eld` was absent on the Mac**, so every lemma prompt read
+63,718 rows across the mount. It is portable -- build it once on the fast
+machine.
 
 ## macOS, in particular
 
 `~/.config/emacs` is Doom, `~/.config/doom` its config,
-`~/.config/emacs/.local/straight/` the packages. Emacs is MacPorts' at
+`~/.config/spacemacs-emacs` Spacemacs with its dotfile at `~/.spacemacs`, and
+`~/.config/emacs-vanilla` vanilla. Emacs is MacPorts' at
 `/Applications/MacPorts/Emacs.app/Contents/MacOS/emacs`, on no shell PATH by
-default -- three package managers have left binaries there and `which emacs`
-found none until the export went into `.zshrc`.
+default -- three package managers have left binaries there.
 
 Diogenes is at `~/Downloads/Diogenes.app/Contents`, with `dependencies/`
-directly under `Contents` and no `Resources`. All the data is present.
+directly under `Contents` and no `Resources`. All the data is present, and the
+Greek lexicon is `grc.lsj.xml` rather than Logeion's longer name -- which
+patch twenty fixed in the base.
+
+**The suite is private and the base is public**, so the base can be fetched
+over HTTPS with no key and only the suite needs a local path. Eleven
+interruptions today came from an ssh agent missing in one process; the
+permanent answer is
+
+    ssh-add --apple-use-keychain ~/.ssh/id_ed25519
+
+with `AddKeysToAgent yes` and `UseKeychain yes` in `~/.ssh/config`.
 
 Three launchers exist in `~/Applications`: Doom Emacs, Spacemacs, Vanilla
-Emacs, each a minimal bundle running `emacs --init-directory` against its own
-tree.
+Emacs, each a minimal bundle running `emacs --init-directory`.
 
 ## The builder, which now emits four shapes
 
-    vanilla             one box, :rev :newest, diogenes-path above the forms
+    vanilla             one box  [and see the OPEN item above]
     Doom                two boxes: packages.el, then config.el
     Spacemacs blocks    two boxes: additional-packages, then user-config
     Spacemacs layer     a switch, a name to paste, a file to download
 
-**`:rev :newest` was the one that stopped an install outright**: `:vc`
-installs the last RELEASE by default and neither repository has a tag.
-
 **The two-box split cuts on `;; ---- in ... ----`**, a line the emit writes
 itself -- which is what makes it safer than the layer's transform, which
-re-wraps by pattern and can drop a line it does not recognise. The layer's
-output is verified by `check-parens` and not by reading.
+re-wraps by pattern. The layer's output is verified by `check-parens`.
 
-**And one of three shows, decided in one place.** `renderLayer` and
-`renderSplit` were both writing `c-out`, and switching from a layer back to
-blocks left all three visible.
+**The layer's transform has been wrong twice and both are instructive.** It
+hooked into the PRESET's emit rather than the configuration's, so the switch
+did nothing for four attempts; and it ended a `use-package` body at `/^\S/`,
+which a comment at column zero matches -- so the tail of the settings landed
+outside the form and a `:bind` at top level gave `Wrong type argument: listp,
+diogenes`. Both fixed. **Its failure mode is silence**, so compare the two
+outputs setq by setq after any change to the emit.
 
 ## [PENDING] What is left
 
-**Windows.** Never tried. `INSTALLING.md` has five numbered questions and the
-first is whether `diogenes-perl-executable` finds the bundled Perl, which is
-pending patch sixteen. Expect two more: `python3` may be `python` or the Store
-stub, and `epdfinfo` wants MSYS2, which the nine scanned dictionaries depend
-on and nothing else does.
+**Windows.** `INSTALLING.md` has five questions; the first is whether
+`diogenes-perl-executable` finds the bundled Perl (pending patch sixteen).
+Expect `python3` to be `python` or the Store stub, and `epdfinfo` to want
+MSYS2.
 
 **Two builder faults.** `diogenes-roam` is emitted BEFORE the suite, and
 org-roam pulls magit-section and cond-let: a stale MELPA entry for either is a
-loading error, which stops the init file, so the suite never loads. Three
-starts in a row lost it that way. The fix is NOT to move the recipe below the
-suite's form -- all three branches converge on `(use-package classicist` and
-`:init`, so anything after is inside that body -- but to emit it after the
-whole form closes, which is past the emit function's tail and not yet read.
-
-And `org-roam-directory` has no box at all: it has no default, Doom's org
-module supplies one, and a config ported from Doom reads a variable nobody was
-asked for -- a message on every file opened.
-
-**Two lexicon indexes still hold absolute paths.** `passow-index.eld` five,
-`tgl-index.eld` six, one per scanned volume. `lexicon-index-paths.md` has the
-fix and the reasoning.
+loading error, which stops the init file. Three starts lost the suite that
+way. The fix is NOT to move the recipe below the suite's form -- all three
+branches converge on `(use-package classicist` and `:init`, so anything after
+is inside that body -- but to emit it after the whole form closes, past the
+emit function's tail. And `org-roam-directory` has no box: no default, Doom's
+org module supplies one, and a config ported from Doom reads a variable nobody
+was asked for -- a message on every file opened.
 
 **Two gates.** Every `define-minor-mode` and every member of
-`classicist-features` against what the builder mentions -- the `lemmata`
-feature and `diogenes-roam-index-global-mode` were both absent, so a reader
-got a configuration that worked and did less than it could. And a
-variable-declaration check: a bare `(defvar NAME)` says a name is defined
-elsewhere and nothing verifies it, which is how six dictionaries pushed onto a
-variable that had been renamed.
+`classicist-features` against what the builder mentions; and a
+variable-declaration check, a bare `(defvar NAME)` being unverified.
 
-**A note on a marked stretch.** `diogenes-org-note`'s docstring promises "a
-note on the passage in hand, or on the stretch that is marked", and
-`classicist-browser-reference` already returns `:from` and `:to`. But
-`diogenes-org--reference-string` reads only `:key`, so the range is thrown
-away. The docstring is the specification; the wiring is missing.
+**A note on a marked stretch.** `diogenes-org-note`'s docstring promises it
+and `classicist-browser-reference` returns `:from` and `:to`, but
+`diogenes-org--reference-string` reads only `:key`.
 
 ## How to work on this
 
@@ -247,18 +241,16 @@ attempts at one file cut into a neighbouring docstring, whose prose then
 compiled as code -- ninety-two warnings about a free variable named `THE`.
 
 **A docstring holds blank lines and lines at column zero**, so neither is the
-end of a form. Count parens with a string-and-comment state machine, or do not
-find the end at all.
+end of a form. Count parens with a string-and-comment state machine.
 
 **And `tools/classicist-builder.html` has three parallel branches that look
-alike.** A search that crosses them finds the wrong one -- which it did eight
-times in one evening, once removing Doom's roam recipe while meaning to move
-vanilla's. Anchor inside a branch by its own bounds, or read the whole
-function first.
+alike.** A search that crosses them finds the wrong one -- eight times in one
+evening, once removing Doom's roam recipe while meaning to move vanilla's.
+Anchor inside a branch by its own bounds, or read the whole function first.
 
-Edits are made by Python scripts with asserts on what they expect. **A script
-that writes nothing when its assert fires has cost nothing; one that writes
-half a change has cost an hour**, and there were four of those.
+Edits are made by Python scripts with asserts. **A script that writes nothing
+when its assert fires has cost nothing; one that writes half a change has cost
+an hour**, and there were four of those.
 
 When something does not work, ask the running Emacs before reading the source:
 
@@ -267,6 +259,7 @@ When something does not work, ask the running Emacs before reading the source:
     (boundp 'NAME)   (featurep 'NAME)   whether the new code is even loaded
     (alist-get ... completion-category-overrides)
     classicist-display-debug            the display log
+    check-parens                        on any generated elisp
     (package-desc-version (package-buffer-info))   whether a package is
                                                    installable at all
 
