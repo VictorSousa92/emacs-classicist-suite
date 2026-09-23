@@ -318,6 +318,35 @@ field saying which corpus it is: the name of the reference field says it."
 ;; directly, which takes the directory and asks nothing.  Worth reporting
 ;; upstream: it is every fileless buffer, not just ours.
 
+(defmacro classicist-phi--in-repository (dir &rest body)
+  "Run BODY in a buffer that looks like a file in DIR.
+
+PHI-NOTES ASSUMES IT IS CALLED FROM A NOTE, in more than one place, and a
+Diogenes browser buffer has no file at all.  Two of its functions reach for
+`buffer-file-name\=' without checking:
+
+  `phi-repository-for-path\=', through `phi-new-note\=''s default repository --
+  avoided by calling `phi-create-note\=' directly.
+
+  `phi--grep-tag-list\=', through `phi-read-tags\=', which greps the directory
+  of the current buffer\='s file for the `#hashtags\=' already in use.  That one
+  cannot be avoided: `phi-create-note\=' calls it to offer tag completion.
+
+So the call is made from a temporary buffer carrying a file name inside the
+repository.  Nothing is written to it -- `phi-create-note\=' makes its own
+buffer and does its own `write-file\=' -- and the name is cleared before the
+temporary buffer dies, so nothing offers to save it.
+
+Worth reporting upstream, both of them: it is every fileless buffer and not
+only ours."
+  (declare (indent 1) (debug t))
+  `(with-temp-buffer
+     (setq buffer-file-name
+           (expand-file-name ".classicist-phi-note" ,dir))
+     (unwind-protect (progn ,@body)
+       (set-buffer-modified-p nil)
+       (setq buffer-file-name nil))))
+
 (defun classicist-phi--repository-directory ()
   "The directory a note goes in, by `classicist-phi-repository'."
   (unless (and (boundp 'phi-repository-alist) phi-repository-alist)
@@ -400,17 +429,19 @@ Returns (ID . FILE), or nil if the note came out without an id."
                     (classicist-reference-to-string
                      (list :corpus corpus :author author :work work))
                   (concat author ":" work)))
-         (buffer (apply #'phi-create-note
-                        classicist-phi-note-type
-                        dir
-                        (list :title title
-                              ;; SECTION AND LINE LEFT EMPTY, which is what
-                              ;; says this is the work and not a place in it.
-                              :fields
-                              (list (cons (intern (or field "ref_tlg"))
-                                          (concat author ":" work))
-                                    (cons 'section "")
-                                    (cons 'line ""))))))
+         (buffer
+          (classicist-phi--in-repository dir
+            (apply #'phi-create-note
+                   classicist-phi-note-type
+                   dir
+                   (list :title title
+                         ;; SECTION AND LINE LEFT EMPTY, which is what says
+                         ;; this is the work and not a place in it.
+                         :fields
+                         (list (cons (intern (or field "ref_tlg"))
+                                     (concat author ":" work))
+                               (cons 'section "")
+                               (cons 'line "")))))))
     (when (buffer-live-p buffer)
       (let ((file (buffer-file-name buffer)))
         (when file
@@ -482,7 +513,8 @@ for why they go in `:fields' and not in `:tlg-fields'."
         (user-error "This browser does not record which work it is showing"))
       (let* ((dir (classicist-phi--repository-directory))
              (buffer
-              (apply #'phi-create-note
+              (classicist-phi--in-repository dir
+                (apply #'phi-create-note
                      classicist-phi-note-type
                      dir
                      (append
@@ -497,7 +529,8 @@ for why they go in `:fields' and not in `:tlg-fields'."
                       ;; reader writes it, which is what the note is about.
                       (when (fboundp 'classicist-reference-to-string)
                         (list :title
-                              (classicist-reference-to-string reference)))))))
+                              (classicist-reference-to-string
+                               reference))))))))
         (when (buffer-live-p buffer)
           (switch-to-buffer buffer))
         buffer))))
