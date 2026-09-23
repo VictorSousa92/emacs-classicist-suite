@@ -4024,8 +4024,14 @@ function normalisePath(raw) {
   // Quotes of every kind that a `copy as path' produces: Explorer's double,
   // the Finder's single, and the curly pair that macOS and several editors
   // substitute for straight ones.
-  s = s.replace(/^["'\u2018&rsquo;\u201c\u201d`]+/, '')
-       .replace(/["'\u2018&rsquo;\u201c\u201d`]+$/, '');
+  // \u2019 AND NOT `&rsquo;'.  An HTML entity in a JavaScript regexp is not a
+  // character: inside a class it is the seven characters & r s q u o ; -- so
+  // this stripped a trailing `s' from every path that ended in one.
+  // `C:/Program Files (x86)/Diogenes' became `...Diogene', silently, and the
+  // reader saw a paste that had been cut short.  Found by a reader pasting
+  // exactly that.
+  s = s.replace(/^["'\u2018\u2019\u201c\u201d`]+/, '')
+       .replace(/["'\u2018\u2019\u201c\u201d`]+$/, '');
   if (!s) return null;
   // A BACKSLASH-ESCAPED SPACE is a shell's quoting, not a separator: dragging
   // into a Terminal gives `/Users/x/Diogenes\ Data', and turning that
