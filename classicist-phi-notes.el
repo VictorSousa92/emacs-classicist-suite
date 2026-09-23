@@ -67,6 +67,7 @@
 ;; itself is a package of its own and may be absent, so every entry point
 ;; checks before it calls.
 (declare-function phi-new-note "phi-notes" (&rest args))
+(declare-function phi-create-note "phi-notes" (type repo-dir &rest args))
 (declare-function phi-get-note-field-contents "phi-notes"
                   (field &optional buffer))
 (declare-function phi-get-fields "phi-notes" (&optional buffer))
@@ -254,6 +255,62 @@ field saying which corpus it is: the name of the reference field says it."
                   :levels levels)))))))
 
 
+;;;; Which repository, resolved here
+
+;; RESOLVED HERE AND NOT BY `phi-new-note', which cannot be called from a
+;; browser at all.  It computes its default repository unconditionally --
+;;
+;;     (def-repository (phi-repository-for-path (buffer-file-name)))
+;;
+;; -- before it looks at the `:repository' it was given, and a Diogenes
+;; browser buffer has no file, so `buffer-file-name' is nil and the chain
+;; ends in `expand-file-name(nil)':
+;;
+;;     phi-in-repository-p(nil "Notes")
+;;     Wrong type argument: stringp, nil
+;;
+;; Passing `:repository' does not help, the default being computed either
+;; way.  So the repository is settled here and `phi-create-note' is called
+;; directly, which takes the directory and asks nothing.  Worth reporting
+;; upstream: it is every fileless buffer, not just ours.
+
+(defun classicist-phi--repository-directory ()
+  "The directory a note goes in, by `classicist-phi-repository'."
+  (unless (and (boundp 'phi-repository-alist) phi-repository-alist)
+    (user-error "No phi-notes repository set -- use `phi-add-repository'"))
+  (let* ((name
+          (cond
+           ((stringp classicist-phi-repository) classicist-phi-repository)
+           ;; `current' CANNOT MEAN THE BROWSER'S, there being no file
+           ;; there; it means the last note visited, and failing that it
+           ;; asks.
+           ((eq classicist-phi-repository 'current)
+            (or (classicist-phi--repository-of-last-note)
+                (completing-read "Note repository: " phi-repository-alist
+                                 nil t)))
+           (t (if (= 1 (length phi-repository-alist))
+                  (car (car phi-repository-alist))
+                (completing-read "Note repository: " phi-repository-alist
+                                 nil t)))))
+         (dir (cadr (assoc name phi-repository-alist))))
+    (unless dir
+      (user-error "No such phi-notes repository: %s" name))
+    dir))
+
+(defun classicist-phi--repository-of-last-note ()
+  "The repository name of the most recent phi-notes buffer, or nil."
+  (when (boundp 'phi-repository-alist)
+    (seq-some
+     (lambda (buffer)
+       (with-current-buffer buffer
+         (and (buffer-file-name)
+              (seq-some (lambda (entry)
+                          (and (file-in-directory-p (buffer-file-name)
+                                                    (cadr entry))
+                               (car entry)))
+                        phi-repository-alist))))
+     (buffer-list))))
+
 ;;;; Making a note
 
 ;;;###autoload
@@ -286,19 +343,22 @@ phi-notes."
          corpus))
       (unless fields
         (user-error "This browser does not record which work it is showing"))
-      (let ((phi-tlg-ref-field field))
-        (apply #'phi-new-note
-               (append
-                (list :type classicist-phi-note-type
-                      :tlg-fields fields)
-                (when classicist-phi-repository
-                  (list :repository classicist-phi-repository))
-                ;; A TITLE OFFERED AND NOT IMPOSED: the citation as a reader
-                ;; writes it, which is what the note is about, and phi-notes
-                ;; lets them edit it.
-                (when (fboundp 'classicist-reference-to-string)
-                  (list :title
-                        (classicist-reference-to-string reference)))))))))
+      (let* ((phi-tlg-ref-field field)
+             (dir (classicist-phi--repository-directory))
+             (buffer
+              (apply #'phi-create-note
+                     classicist-phi-note-type
+                     dir
+                     (append
+                      (list :tlg-fields fields)
+                      ;; A TITLE OFFERED AND NOT IMPOSED: the citation as a
+                      ;; reader writes it, which is what the note is about.
+                      (when (fboundp 'classicist-reference-to-string)
+                        (list :title
+                              (classicist-reference-to-string reference)))))))
+        (when (buffer-live-p buffer)
+          (switch-to-buffer buffer))
+        buffer))))
 
 
 ;;;; What has been said about these lines
