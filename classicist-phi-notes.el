@@ -210,6 +210,44 @@ Ordered by citation, so the index reads down the work."
   :type 'string
   :group 'classicist-phi-notes)
 
+(defcustom classicist-phi-sidebar-side 'ask
+  "Which side of the frame the work note is shown on.
+
+  `ask\='    ask on the first use, and remember the answer for the session;
+            a prefix argument asks again
+  `left\=', `right\=', `above\=', `below\='    always that side
+  ALIST     an action alist of your own, passed to `display-buffer\='
+
+ASKED AND REMEMBERED, because which side is right depends on the frame and
+the reading, and answering it every time would be tiresome by the fifth note.
+One character -- `l\=', `r\=', `a\=', `b\=' -- and `C-u C-c n s\=' moves it.
+
+A SIDE WINDOW IS TRIED FIRST AND IS NOT ALWAYS ALLOWED.
+`display-buffer-in-side-window\=' can return nil -- no error, no window -- and
+phi-notes\=' own `phi-sidebar-create-window\=' has no fallback, so its sidebar
+cannot be shown on such a frame at all.  Seen on a Spacemacs frame where a
+bare
+
+    (display-buffer-in-side-window BUFFER \='((side . left)))
+
+answered nil while `display-buffer-in-direction\=' with the same width opened
+a window.  So each side is tried as a side window and then as a split."
+  :type '(choice (const :tag "Ask, and remember" ask)
+                 (const :tag "Left" left)
+                 (const :tag "Right" right)
+                 (const :tag "Above" above)
+                 (const :tag "Below" below)
+                 (alist :tag "A display-buffer action alist"))
+  :group 'classicist-phi-notes)
+
+(defcustom classicist-phi-sidebar-width 45
+  "How wide, or how tall, the work note\='s window is.
+Columns for `left\=' and `right\=', lines for `above\=' and `below\='.  Nil
+leaves it to `display-buffer\=', and phi-notes\=' own
+`phi-sidebar-display-alist\=' wins where it names a width."
+  :type '(choice (const :tag "Let display-buffer decide" nil) natnum)
+  :group 'classicist-phi-notes)
+
 (defcustom classicist-phi-keys
   '((classicist-phi-note  . "C-c n n")
     (classicist-phi-notes . "C-c n l")
@@ -819,34 +857,119 @@ belongs."
                (length lines) (if (= 1 (length lines)) "" "s")
                (file-name-nondirectory file)))))
 
-;;;###autoload
-(defun classicist-phi-sidebar ()
-  "Show this work\='s note in the phi-notes sidebar.
+(defvar classicist-phi--sidebar-side nil
+  "The side answered for this session, or nil before anything was asked.")
 
-THE WINDOW IS MADE HERE, and not by `phi-sidebar-create-window\='.  Two of
-phi-notes\=' routes to a sidebar want a file buffer, and a Diogenes browser
-has none:
+(defconst classicist-phi--sidebar-sides
+  '((?l . left) (?r . right) (?a . above) (?b . below))
+  "The characters the side prompt takes.")
+
+(defun classicist-phi--ask-side ()
+  "Ask which side, one character, and remember the answer."
+  (let* ((char (read-char-choice
+                "Show the work note: (l)eft (r)ight (a)bove (b)elow "
+                (mapcar #'car classicist-phi--sidebar-sides)))
+         (side (cdr (assq char classicist-phi--sidebar-sides))))
+    (setq classicist-phi--sidebar-side side)
+    side))
+
+(defun classicist-phi--sidebar-side (&optional ask)
+  "The side to show the work note on.
+ASK non-nil asks again even where an answer is remembered."
+  (let ((setting classicist-phi-sidebar-side))
+    (cond
+     ((and (listp setting) setting) setting)   ; an action alist of their own
+     ((memq setting '(left right above below)) setting)
+     ;; `ask': the remembered answer, unless asked to ask.
+     ((or ask (null classicist-phi--sidebar-side)) (classicist-phi--ask-side))
+     (t classicist-phi--sidebar-side))))
+
+(defun classicist-phi--sidebar-size-key (side)
+  "Whether a window on SIDE is measured in columns or in lines."
+  (if (memq side '(above below)) 'window-height 'window-width))
+
+(defun classicist-phi--side-window (buffer side)
+  "BUFFER in a side window on SIDE, as phi-notes would, or nil if refused."
+  (let* ((his (and (boundp 'phi-sidebar-display-alist)
+                   phi-sidebar-display-alist))
+         (size (or (cdr (assq (classicist-phi--sidebar-size-key side) his))
+                   classicist-phi-sidebar-width)))
+    (display-buffer-in-side-window
+     buffer
+     (append (list (cons 'side side))
+             (when size
+               (list (cons (classicist-phi--sidebar-size-key side) size)))
+             ;; HIS, MINUS THE SIDE AND THE SIZE, which this has settled.
+             (seq-remove (lambda (cell)
+                           (memq (car cell)
+                                 '(side window-width window-height)))
+                         his)
+             (when (and (boundp 'phi-sidebar-persistent-window)
+                        phi-sidebar-persistent-window)
+               (list '(window-parameters (no-delete-other-windows . t))))))))
+
+(defun classicist-phi--split-beside (buffer side)
+  "BUFFER in a window on SIDE, by an ordinary split."
+  (let ((size (or (cdr (assq (classicist-phi--sidebar-size-key side)
+                             (and (boundp 'phi-sidebar-display-alist)
+                                  phi-sidebar-display-alist)))
+                  classicist-phi-sidebar-width)))
+    (display-buffer
+     buffer
+     (append (list 'display-buffer-in-direction
+                   (cons 'direction side))
+             (when size
+               (list (cons (classicist-phi--sidebar-size-key side) size)))))))
+
+(defun classicist-phi--close-sidebar (buffer)
+  "Delete the window showing BUFFER, where there is one and it may go.
+
+MOVING SIDES MEANS CLOSING THE OLD ONE, or a second answer leaves two windows
+on the same note.  The only window in the frame is left alone -- deleting it
+would error, and the new display reuses it anyway.  A `no-delete-other-windows'
+parameter, which phi-notes sets when `phi-sidebar-persistent-window' is on, is
+cleared first: it is there to stop `delete-other-windows', and this is not
+that."
+  (let ((window (and (buffer-live-p buffer) (get-buffer-window buffer))))
+    (when (and window (not (one-window-p t)))
+      (set-window-parameter window 'no-delete-other-windows nil)
+      (delete-window window)
+      t)))
+
+(defun classicist-phi--show-beside (buffer side)
+  "Show BUFFER on SIDE, by a side window or failing that a split.
+Returns the window, or nil."
+  (if (and (listp side) side)
+      (display-buffer buffer side)
+    (or (classicist-phi--side-window buffer side)
+        (classicist-phi--split-beside buffer side))))
+
+;;;###autoload
+(defun classicist-phi-sidebar (&optional ask)
+  "Show this work\='s note beside the text.
+
+WHICH SIDE is `classicist-phi-sidebar-side\=': asked on the first use and
+remembered for the session, and a prefix argument ASK asks again.  Choosing a
+different side closes the window the note is in before opening the new one.
+
+THE WINDOW IS MADE HERE, using neither of phi-notes\=' two routes to a sidebar,
+because both want a file buffer and a Diogenes browser has none:
 
   `phi-toggle-sidebar\=' asks `phi-get-linked-project-note-id\=', which reaches
   `phi-get-fields\=', which guesses the note type from
   `(file-name-extension (buffer-file-name buffer))\='.
 
-  `phi-sidebar-create-window\=' takes an id, which avoids that -- and resolves
+  `phi-sidebar-create-window\=' takes an id, which avoids that, and resolves
   it through `phi-matching-file-name\=' and `phi-notes-path\=', which calls
-  `phi--enforce-directory\=', which does
-  `(setq default-directory (file-name-directory buffer-file-name))\='.
+  `phi--enforce-directory\=', which sets `default-directory\=' from
+  `buffer-file-name\='.
 
-Calling the second from a temporary buffer carrying a file name got past the
-error and displayed nothing: a side window made while a `with-temp-buffer\=' is
-current goes when the temporary buffer does.
-
-SO NEITHER IS USED.  `classicist-phi--work-note\=' already knows the file --
-it found it by reading frontmatter -- so `find-file-noselect\=' and
-`display-buffer-in-side-window\=' do the whole job with none of phi-notes\='
-path resolution involved.  His own `phi-sidebar-adjust-buffer\=' is still
-called, so the sidebar looks as his does, and `phi-sidebar-buffer\=' is set, so
-his `phi-toggle-sidebar\=' can close what this opened."
-  (interactive)
+`classicist-phi--work-note\=' already knows the file, having found it by
+reading frontmatter, so `find-file-noselect\=' and `display-buffer\=' do the
+whole job.  His `phi-sidebar-adjust-buffer\=' is still called, so it looks as
+his sidebar does, and `phi-sidebar-buffer\=' is set, so his
+`phi-toggle-sidebar\=' closes what this opens."
+  (interactive "P")
   (classicist-phi--require)
   (let ((reference (and (fboundp 'classicist-browser-reference)
                         (classicist-browser-reference))))
@@ -860,18 +983,22 @@ his `phi-toggle-sidebar\=' can close what this opened."
            (file (cdr found)))
       (unless (and file (file-exists-p file))
         (user-error "No note for this work to show"))
-      (let ((buffer (find-file-noselect file)))
+      (let* ((buffer (find-file-noselect file))
+             (shown (get-buffer-window buffer))
+             (side (classicist-phi--sidebar-side ask)))
         (when (fboundp 'phi-sidebar-adjust-buffer)
           (setq buffer (phi-sidebar-adjust-buffer buffer)))
         (setq phi-sidebar-buffer buffer)
-        (display-buffer-in-side-window
-         buffer
-         (append (and (boundp 'phi-sidebar-display-alist)
-                      phi-sidebar-display-alist)
-                 (when (and (boundp 'phi-sidebar-persistent-window)
-                            phi-sidebar-persistent-window)
-                   (list '(window-parameters
-                           (no-delete-other-windows . t))))))))))
+        ;; ALREADY THERE AND NOT MOVING: select it rather than flickering it
+        ;; shut and open again.
+        (if (and shown
+                 (eq side (window-parameter shown 'window-side))
+                 (not ask))
+            (select-window shown)
+          (classicist-phi--close-sidebar buffer)
+          (or (classicist-phi--show-beside buffer side)
+              (user-error "Could not show %s beside this window"
+                          (buffer-name buffer))))))))
 
 ;;;; The way back
 
