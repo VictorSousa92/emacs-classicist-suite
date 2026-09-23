@@ -4,3 +4,6 @@ __pycache__/
 tools/viewer/node_modules/
 tools/viewer/arethusa
 tools/viewer/trees
+classicist-architecture.md
+handover.md
+shadowing.md

@@ -788,6 +788,35 @@
     </div>
   </dialog>
 
+  <dialog class="ask" id="c-ask-base">
+    <div class="body">
+      <h3>The original will not do yet</h3>
+      <p>The suite relies on corrections to <code>diogenes.el</code> that are
+         not yet in the original, and several it cannot do without. Some are
+         plain defects &mdash; a function called under a name it does not
+         have, a format string given two arguments for one field. Others are
+         <b>extension points</b>: the Perl variables and include flags moved
+         into the Perl interface, the word lists given a file of their own, a
+         way for a caller to place its own buffer. The suite
+         <b>inherits</b> those files rather than replacing them.</p>
+      <p>A configuration built on the original will install, load, and then
+         fail. Some of it fails <b>quietly</b> &mdash; the wrong answer
+         looking like no answer, which is worse than an error.</p>
+      <p>The patched base is <b>upstream plus those corrections</b> and
+         nothing else: every one is a fix or an extension point, not a
+         rewrite, and the intention is that the branch becomes unnecessary.
+         <code>M-x classicist-check-base</code> is the authority on whether a
+         given installation will do &mdash; it probes the quiet ones rather
+         than trusting a version number, which is also why no count is
+         quoted here.</p>
+    </div>
+    <div class="acts">
+      <button type="button" class="ghost"
+              id="c-ask-base-anyway">Use the original anyway</button>
+      <button type="button" id="c-ask-base-patched">Use the patched base</button>
+    </div>
+  </dialog>
+
   <dialog class="ask" id="c-ask-phi">
     <div class="body">
       <h3>phi-notes is installed separately</h3>
@@ -3043,8 +3072,8 @@ el('c-distro').innerHTML = `
       </label>`).join('')}
   </div>
   <p class="note">This suite extends Michael Neidhart's <code>diogenes.el</code>,
-  which it needs installed as well.  Nine of the fixes it relies on are not in
-  the original yet, so there are two places to get it from.</p>
+  which it needs installed as well.  Corrections it relies on are not in the
+  original yet, so there are two places to get it from.</p>
   <div class="distro">
     ${[['base', 'The patched base'], ['upstream', 'The original']]
       .map(([v, label], i) => `
@@ -3055,27 +3084,71 @@ el('c-distro').innerHTML = `
   </div>
   <div class="warnline" id="c-basenote"></div>`;
 
-// WHICH BASE, and why it is asked rather than decided.  Nine of the fifteen
-// patches on `classicist-base' are load-bearing: they touch corpora,
-// user-interface, perl-interface, forms and search, every one of which the
-// suite inherits rather than replaces.  The original will be the right
-// answer the day those merge, and a builder should not need rewriting for
-// that.  `M-x classicist-check-base' says whether an installation will do --
-// it probes the three that fail quietly rather than trusting a version.
+// WHICH BASE, and why it is asked rather than decided.  The corrections on
+// `classicist-base' touch corpora, user-interface, perl-interface, forms and
+// search, every one of which the suite inherits rather than replaces, and
+// several are extension points it calls rather than defects it survives.
+// The original will be the right answer the day they merge, and a builder
+// should not need rewriting for that.  `M-x classicist-check-base' says
+// whether an installation will do -- it probes the ones that fail quietly
+// rather than trusting a version, and is the authority rather than any
+// number written here.
 function baseNote() {
   const from = (document.querySelector('input[name=basefrom]:checked') || {}).value;
+  // NO COUNT.  It was wrong -- `nine of fifteen' when the branch carried
+  // thirty-one commits -- and any replacement goes stale at the next fix.
+  // `classicist-check-base' is the authority, so it is what this points at.
   el('c-basenote').textContent = from === 'upstream'
-    ? 'The original is missing nine fixes the suite needs. M-x classicist-check-base will say which.'
-    : 'Upstream plus the fifteen fixes, nine of them load-bearing.';
+    ? 'The original is missing corrections the suite needs. M-x classicist-check-base will say which.'
+    : 'Upstream plus the corrections the suite needs, and nothing else.';
 }
 document.addEventListener('change', e => {
   if (e.target.name === 'basefrom') {
     document.querySelectorAll('[data-basefrom]').forEach(l =>
       l.classList.toggle('on', l.dataset.basefrom === e.target.value));
     baseNote();
+    // SAID WHERE IT CANNOT BE READ PAST.  The warnline below says the same
+    // thing and is too quiet for what it costs: a reader who picks the
+    // original gets a configuration that installs, loads, and then fails --
+    // some of it silently, which is worse than an error.
+    //
+    // THE RADIO STAYS, though, and this is why it is a dialogue rather than
+    // a removal: the original becomes the right answer the day those patches
+    // merge, and a builder should not need rewriting for that.
+    if (e.target.value === 'upstream') askWhichBase();
   }
 });
 baseNote();
+
+function askWhichBase() {
+  const d = el('c-ask-base');
+  if (d && d.showModal) d.showModal();
+}
+
+{
+  const pick = which => {
+    const d = el('c-ask-base');
+    if (d && d.close) d.close();
+    const r = document.querySelector(`input[name=basefrom][value="${which}"]`);
+    if (r && !r.checked) {
+      r.checked = true;
+      document.querySelectorAll('[data-basefrom]').forEach(l =>
+        l.classList.toggle('on', l.dataset.basefrom === which));
+      baseNote();
+    }
+    renderConfig();
+  };
+  const a = el('c-ask-base-anyway'), b = el('c-ask-base-patched');
+  if (a) a.addEventListener('click', () => pick('upstream'));
+  if (b) b.addEventListener('click', () => pick('base'));
+  // ESCAPE TAKES THE PATCHED BASE, as dismissing the note question takes
+  // org: the answer to a warning nobody answered is the one that works.
+  const d = el('c-ask-base');
+  if (d) d.addEventListener('close', () => {
+    const r = document.querySelector('input[name=basefrom]:checked');
+    if (r && r.value === 'upstream') pick('base');
+  });
+}
 
 // DOOM presumes evil and plain Emacs presumes not.  Spacemacs presumes
 // nothing: it asks at first start -- vim, emacs, or hybrid -- so the box is
@@ -3339,9 +3412,9 @@ function configText() {
   const distro = (document.querySelector('input[name=distro]:checked') || {}).value
                  || 'vanilla';
   // TWO PACKAGES: the base, and this suite on top of it.  The base must be
-  // installed for the suite to load at all -- nine of the fifteen fixes on
-  // the `classicist-base' branch touch files the suite inherits rather than
-  // replaces.
+  // installed for the suite to load at all, and from the `classicist-base'
+  // branch until its corrections are upstream: they touch files the suite
+  // inherits rather than replaces.
   const baseFrom = (document.querySelector('input[name=basefrom]:checked') || {}).value
                    || 'base';
   const baseRepo = baseFrom === 'upstream'
