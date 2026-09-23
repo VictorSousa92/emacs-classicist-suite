@@ -47,6 +47,18 @@ DEFINER = re.compile(
 
 ALIAS = re.compile(r"\(define-obsolete-\w+-alias\s+'(\S+)\s*\n?\s*'(\S+)")
 
+# NAMES THE GENERATOR DEFINES rather than calls.  The Windows block writes a
+# `defun' into the configuration it emits -- the bundled-Perl finder -- so the
+# name is not expected to exist in this repository or in the base: the
+# generated file is where it comes from.
+#
+# READ OUT OF THE BUILDER AND NOT LISTED BY HAND, so that a defun which goes
+# away takes its exception with it.  The note on `classicist-browser' in
+# NOT_SYMBOLS below is what a hand-written exception costs: it outlived the
+# fact that justified it and hid two dead forms for as long as it sat there.
+EMITTED_DEFUN = re.compile(
+    r"\(defun\s+((?:diogenes|classicist|tei)[a-z0-9-]*)\s*\(")
+
 # A symbol in the builder's own prose or in a feature position, which is not a
 # variable or a command and cannot be checked.  Each was looked at by hand.
 NOT_SYMBOLS = {
@@ -132,9 +144,13 @@ def main():
 
     names = sorted(set(re.findall(r"\b(?:diogenes|classicist|tei)-[a-z0-9-]+",
                                   html)))
-    renamed, unknown, base, ok = [], [], [], []
+    emitted_defuns = set(EMITTED_DEFUN.findall(html))
+    renamed, unknown, base, ok, selfdef = [], [], [], [], []
     for n in names:
         if n in NOT_SYMBOLS:
+            continue
+        if n in emitted_defuns:
+            selfdef.append(n)
             continue
         if n in defined:
             ok.append(n)
@@ -153,7 +169,11 @@ def main():
     if not args.quiet:
         print(f"   the builder names {len(names)} symbols: "
               f"{len(ok)} defined here, {len(base)} the base's or another "
-              f"repository's")
+              f"repository's"
+              + (f", {len(selfdef)} the generated config's own"
+                 if selfdef else ""))
+        for n in selfdef:
+            print(f"      defined by the emitted config: {n}")
 
     if renamed:
         print(f"\n   TROUBLE  {len(renamed)} renamed, and the builder emits "

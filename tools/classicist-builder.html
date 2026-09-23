@@ -2783,6 +2783,14 @@ el('c-keys-scan').innerHTML = SCAN_KEYS.map(singleKeyRow).join('');
 el('c-keys-evil').innerHTML = EVIL_KEYS.map(singleKeyRow).join('');
 
 el('c-distro').innerHTML = `
+  <div class="row">
+    <input type="checkbox" id="c-windows">
+    <label for="c-windows">This is Windows
+      <em>Emacs on Windows inherits no shell environment, so nothing is on
+      <code>PATH</code> that was not put there by hand &mdash; not the Perl
+      Diogenes bundles, not <code>git</code>, which <code>:vc</code> shells
+      out to. Ticking this writes the four settings that answer for it.</em></label>
+  </div>
   <div class="distro">
     ${[['vanilla', 'Plain Emacs'], ['doom', 'Doom'], ['spacemacs', 'Spacemacs']]
       .map(([v, label], i) => `
@@ -2989,6 +2997,78 @@ function keyValue(input) {
   return v;
 }
 
+// WHAT WINDOWS NEEDS AND NO OTHER PLATFORM DOES.  Established on one machine
+// -- MSYS2's mingw64 Emacs 30.2, Diogenes 4.x from its own installer -- so the
+// layout is stated rather than probed, and the comments say what to look at
+// when it does not hold.
+//
+// FOUR THINGS, all of them under `diogenes-path':
+//   strawberry/perl/bin/perl.exe    the interpreter; the Windows Diogenes
+//                                   bundles a Strawberry Portable
+//   strawberry/{perl/bin,perl/site/bin,c/bin}   on exec-path and PATH
+//   server/                         Diogenes' own Perl modules
+//   dependencies/CPAN/              the CPAN modules they need
+// Without the last two Perl starts and dies with
+//     Can't locate Diogenes/Base.pm in @INC
+// and the base reports only "Perl exited with errors, no data received!".
+function windowsBlock(indent) {
+  const i = indent || '';
+  return [
+    ';; THE BUNDLED PERL, FOUND RATHER THAN NAMED.  Everything Emacs needs is',
+    ";; under `diogenes-path' above, so setting that is enough.  PERL5LIB is the",
+    ';; one that is easy to miss: without it Perl runs and cannot find',
+    ";; Diogenes' own modules, and the base says only that Perl exited with",
+    ';; errors.',
+    ';;',
+    ";; `diogenes-path' and not `(diogenes--path)': this runs before the base is",
+    ';; loaded, so the base\'s own accessor does not exist yet.',
+    '(defun diogenes--windows-bundled-perl ()',
+    '  "Point Emacs at the Perl the Windows Diogenes bundles.',
+    'Returns the perl.exe, or nil when this is not a Windows install with a',
+    'bundled Strawberry beside it."',
+    "  (when (eq system-type 'windows-nt)",
+    '    (let* ((root (file-name-as-directory diogenes-path))',
+    '           (straw (expand-file-name "strawberry/" root))',
+    '           (perl (expand-file-name "perl/bin/perl.exe" straw)))',
+    '      (when (file-exists-p perl)',
+    '        (setq diogenes-perl-executable perl)',
+    '        (dolist (d (list (expand-file-name "perl/bin" straw)',
+    '                         (expand-file-name "perl/site/bin" straw)',
+    '                         (expand-file-name "c/bin" straw)))',
+    "          (add-to-list 'exec-path d)",
+    '          (setenv "PATH" (concat d ";" (getenv "PATH"))))',
+    '        (setenv "PERL5LIB"',
+    '                (concat (expand-file-name "server" root) ";"',
+    '                        (expand-file-name "dependencies/CPAN" root)))',
+    '        perl))))',
+    '',
+    ';; SAID OUT LOUD WHEN IT FAILS, because the alternative is a Perl error',
+    ';; later that names nothing useful.',
+    "(unless (or (not (eq system-type 'windows-nt))",
+    '            (diogenes--windows-bundled-perl))',
+    '  (warn "No bundled Perl under %s.  Expected strawberry/perl/bin/perl.exe.',
+    'Set diogenes-perl-executable, exec-path and PERL5LIB by hand, or check that',
+    'diogenes-path has no backslashes in it." diogenes-path))',
+    '',
+    ';; GIT ON exec-path.  A GUI Emacs on Windows inherits neither the MSYS2',
+    ";; shell's environment nor a login shell's, so git is invisible however",
+    ';; correctly it is installed and the file stops with',
+    ';;     File is missing: Searching for program, No such file or directory, git',
+    ';;',
+    ';; mingw64 AND ucrt64 AND NOT usr/bin.  Anything in MSYS2\'s /usr/bin is a',
+    ";; Cygwin-style binary and does not know `c:' names a drive: gpg, handed",
+    ';; `c:/.../pubring.kbx\', prefixed its own POSIX home and reported the two',
+    ';; welded together.  There is no mingw64 git package, so install Git for',
+    ';; Windows and drop this, or accept that gpg signature checks will fail.',
+    '(dolist (d \'("c:/msys64/mingw64/bin" "c:/msys64/ucrt64/bin"',
+    '             "c:/Program Files/Git/cmd"))',
+    '  (when (file-directory-p d)',
+    "    (add-to-list 'exec-path d)",
+    '    (setenv "PATH" (concat d ";" (getenv "PATH")))))',
+    ''
+  ].map(l => (l === '' ? '' : i + l));
+}
+
 function configText() {
   const out = [];
   const paths = [];
@@ -3001,6 +3081,11 @@ function configText() {
     if (v) paths.push(`  (setq ${i.dataset.path} ${JSON.stringify(v)})`);
   });
   const dpath = (normalisePath(el('c-path').value) || '');
+  // WINDOWS IS NOT A DISTRIBUTION, so it is a question of its own: any of the
+  // three Emacsen can be the one running there.  Ticked by hand, and ticked
+  // for the reader when the path they gave can only be a Windows one.
+  const windows = !!(el('c-windows') && el('c-windows').checked)
+                  || /^([A-Za-z]:|\/\/)/.test(dpath);
   const morph = (normalisePath(el('c-morpheus').value) || '');
 
   // HOW a package is installed differs by distribution, and writing
@@ -3047,6 +3132,14 @@ function configText() {
       out.push(`           :branch ${JSON.stringify(ROAM_BRANCH)}))`);
     }
     out.push(';; ---- in ~/.config/doom/config.el ----');
+    // BEFORE THE use-package! FORM, and outside it: straight builds the base
+    // during `doom sync', and the Perl is wanted the first time anything asks
+    // a corpus a question.
+    if (windows) {
+      out.push(`(setq diogenes-path ${JSON.stringify(dpath || "/path/to/diogenes")})`);
+      out.push('');
+      out.push(...windowsBlock());
+    }
     out.push('(use-package! classicist');
     out.push('  :init');
   } else if (distro === 'spacemacs') {
@@ -3068,6 +3161,11 @@ function configText() {
     }
     out.push('');
     out.push(';; ---- in dotspacemacs/user-config ----');
+    if (windows) {
+      out.push(`(setq diogenes-path ${JSON.stringify(dpath || "/path/to/diogenes")})`);
+      out.push('');
+      out.push(...windowsBlock());
+    }
     out.push('(use-package classicist');
     out.push('  :init');
   } else {
@@ -3082,6 +3180,10 @@ function configText() {
     out.push(';; raises at load if this is unset.');
     out.push(`(setq diogenes-path ${JSON.stringify(dpath || "/path/to/diogenes")})`);
     out.push('');
+    // AND THE REST OF WHAT WINDOWS NEEDS, in the same place and for the same
+    // reason: :vc loads the base while installing it, so anything the base or
+    // package-vc itself reaches for has to be set before the forms below.
+    if (windows) out.push(...windowsBlock());
     // :rev :newest ON ALL THREE RECIPES.  Without it package-vc-default-rev
     // is :last-release, so package-vc--clone calls package-vc--release-rev
     // on a package-desc whose :version is still nil -- the checkout does not
