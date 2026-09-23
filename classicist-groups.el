@@ -70,6 +70,11 @@ does.
                   reads them
   `notes\='         the org commands: a note on a passage, and what has been
                   said about the lines in front of you
+  `phi-notes\='     the same three things in Bruno Conte\='s `phi-notes\=' instead
+                  -- markdown, a YAML-ish frontmatter and wikilinks.  An
+                  ALTERNATIVE to `notes\=' and not an addition: a reader keeps
+                  one Zettelkasten, not two.  Wants the package, which is its
+                  own
   `windows\='       the suite placing buffers, rather than leaving that to
                   whatever you have arranged
 
@@ -83,7 +88,7 @@ disk and wants nothing of the CD-ROMs; `diorisis\=' reads its own index, and
 will open a hit in its own reader where the browser cannot.  So
 `(diorisis tei-corpora)\=', with no Diogenes data at all, is a working
 answer.
-WHICH WANTS WHICH.  Four of the ten are not free-standing:
+WHICH WANTS WHICH.  Five of the eleven are not free-standing:
 
   `treebank\='      wants `diorisis\=': it annotates that corpus\='s sentences,
                   requires its file, and puts its keys in its results buffer.
@@ -92,7 +97,7 @@ WHICH WANTS WHICH.  Four of the ten are not free-standing:
   `notes\='         wants `texts\=' or `tei-corpora\=': a note is about a
                   passage, and either browser will do.
 
-The other five stand alone.  `diorisis\=' and `tei-corpora\=' in particular
+The other six stand alone.  `diorisis\=' and `tei-corpora\=' in particular
 want nothing of Diogenes\=' own data: both read their own, and a hit in the
 Diorisis corpus opens in its own reader where the browser cannot.  So
 `(diorisis tei-corpora)\=', with no `diogenes-path\=' at all, is a working
@@ -107,6 +112,7 @@ answer.
               (const :tag "Editions as TEI" tei-corpora)
               (const :tag "A work at one of its books" books)
               (const :tag "Notes in org" notes)
+              (const :tag "Notes in phi-notes (markdown)" phi-notes)
               (const :tag "Frame, window and buffer managing" windows))
   :group 'classicist)
 
@@ -135,6 +141,9 @@ reads as a question and the answer can change without editing eleven places."
     ;; lemma.
     (lemmata      texts lexica)
     (notes        texts tei-corpora)
+    ;; THE SAME WANT AS `notes\=', for the same reason: a note is about a
+    ;; passage, and either browser will do.
+    (phi-notes    texts tei-corpora)
     ;; THE BOOKS ARE FOUND BY READING THE WORK, which is a Perl dump of a
     ;; corpus text -- and the declared ones are opened in the browser.  Both
     ;; want Diogenes' own corpora; neither the TEI editions nor Diorisis can
