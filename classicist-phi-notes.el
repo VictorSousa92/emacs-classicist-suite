@@ -211,41 +211,63 @@ Ordered by citation, so the index reads down the work."
   :group 'classicist-phi-notes)
 
 (defcustom classicist-phi-sidebar-side 'ask
-  "Which side of the frame the work note is shown on.
+  "Which edge of the frame the work note sits on, beside the browser.
 
   `ask\='    ask on the first use, and remember the answer for the session;
             a prefix argument asks again
-  `left\=', `right\=', `above\=', `below\='    always that side
+  `right\=', `left\=', `top\=', `bottom\='    always that edge
   ALIST     an action alist of your own, passed to `display-buffer\='
 
 ASKED AND REMEMBERED, because which side is right depends on the frame and
 the reading, and answering it every time would be tiresome by the fifth note.
-One character -- `l\=', `r\=', `a\=', `b\=' -- and `C-u C-c n s\=' moves it.
+One character -- `l\=', `r\=', `t\=', `b\=' -- and `C-u C-c n s\=' moves it,
+closing the window it was in.
 
-A SIDE WINDOW IS TRIED FIRST AND IS NOT ALWAYS ALLOWED.
-`display-buffer-in-side-window\=' can return nil -- no error, no window -- and
-phi-notes\=' own `phi-sidebar-create-window\=' has no fallback, so its sidebar
-cannot be shown on such a frame at all.  Seen on a Spacemacs frame where a
-bare
+`right\=', `left\=', `top\=', `bottom\=' AS `diogenes-roam-index-side\=' NAMES
+THEM, so a reader who has configured that index need not learn a second
+vocabulary.  They are also `display-buffer-in-side-window\='\='s own names;
+`display-buffer-in-direction\=', which is the fallback, wants `above\=' and
+`below\=' instead, and this file translates where it must.
 
-    (display-buffer-in-side-window BUFFER \='((side . left)))
-
-answered nil while `display-buffer-in-direction\=' with the same width opened
-a window.  So each side is tried as a side window and then as a split."
+NOT YET `defer\='.  `diogenes-roam-index-side\=' takes it, and hands the
+placement to `classicist-window-behaviour\=' and `classicist-display-actions\='
+so that a preset reaches the index.  That is the better design and wants the
+suite\='s display machinery rather than a side window of our own."
   :type '(choice (const :tag "Ask, and remember" ask)
-                 (const :tag "Left" left)
-                 (const :tag "Right" right)
-                 (const :tag "Above" above)
-                 (const :tag "Below" below)
+                 (const right) (const left) (const top) (const bottom)
                  (alist :tag "A display-buffer action alist"))
   :group 'classicist-phi-notes)
 
-(defcustom classicist-phi-sidebar-width 45
-  "How wide, or how tall, the work note\='s window is.
-Columns for `left\=' and `right\=', lines for `above\=' and `below\='.  Nil
-leaves it to `display-buffer\=', and phi-notes\=' own
-`phi-sidebar-display-alist\=' wins where it names a width."
-  :type '(choice (const :tag "Let display-buffer decide" nil) natnum)
+(defcustom classicist-phi-sidebar-size 0.35
+  "How much of the frame the work note takes.
+A fraction of the width for `right\=' and `left\=', of the height otherwise.
+An integer is taken as columns or lines instead.
+
+`diogenes-roam-index-size\='\='s own default, for the same reason its side
+names are used."
+  :type 'number
+  :group 'classicist-phi-notes)
+
+(defcustom classicist-phi-sidebar-select t
+  "Whether showing the work note puts the cursor in it.
+Non-nil to follow a link straight away; nil to keep reading and glance over.
+As `diogenes-roam-index-select\='."
+  :type 'boolean
+  :group 'classicist-phi-notes)
+
+(defcustom classicist-phi-sidebar-olivetti nil
+  "Whether olivetti is left on in the work note\='s window.
+
+OFF, BECAUSE AN INDEX IS NOT PROSE.  phi-notes\=' own
+`phi-sidebar-adjust-buffer\=' calls `olivetti-set-width\=' where olivetti is
+on, which is right for reading a note and wrong for a column of one-line
+entries: it centres a narrow body in a window that is already narrow, and the
+citations end up in the middle of nowhere.
+
+His adjuster is still called either way -- it is what buttonises the
+wikilinks, without which `[[0002]]\=' is not clickable -- and olivetti is
+turned off after it where this is nil."
+  :type 'boolean
   :group 'classicist-phi-notes)
 
 (defcustom classicist-phi-keys
@@ -888,18 +910,44 @@ ASK non-nil asks again even where an answer is remembered."
   "Whether a window on SIDE is measured in columns or in lines."
   (if (memq side '(above below)) 'window-height 'window-width))
 
-(defconst classicist-phi--side-window-names
-  '((left . left) (right . right) (above . top) (below . bottom))
-  "The side each direction is called by `display-buffer-in-side-window\='.
+(defconst classicist-phi--split-directions
+  '((left . left) (right . right) (top . above) (bottom . below))
+  "The direction each side is called by `display-buffer-in-direction\='.
 
-TWO VOCABULARIES FOR THE SAME FOUR PLACES.  `display-buffer-in-direction\='
-takes `above\=' and `below\='; `display-buffer-in-side-window\=' takes `top\='
-and `bottom\=' and raises
+TWO VOCABULARIES FOR THE SAME FOUR PLACES.  `display-buffer-in-side-window\='
+takes `top\=' and `bottom\='; `display-buffer-in-direction\=' takes `above\='
+and `below\='.  This file speaks the side window\='s names throughout, those
+being `diogenes-roam-index-side\='\='s as well, and translates here.")
 
-    Invalid side below specified
+(defvar classicist-phi--sidebar-side nil
+  "The side answered for this session, or nil before anything was asked.")
 
-for the others.  This file speaks the direction\='s vocabulary throughout,
-being the one a reader is asked in, and translates here.")
+(defconst classicist-phi--sidebar-sides
+  '((?l . left) (?r . right) (?t . top) (?b . bottom))
+  "The characters the side prompt takes.")
+
+(defun classicist-phi--ask-side ()
+  "Ask which side, one character, and remember the answer."
+  (let* ((char (read-char-choice
+                "Show the work note: (l)eft (r)ight (t)op (b)ottom "
+                (mapcar #'car classicist-phi--sidebar-sides)))
+         (side (cdr (assq char classicist-phi--sidebar-sides))))
+    (setq classicist-phi--sidebar-side side)
+    side))
+
+(defun classicist-phi--sidebar-side (&optional ask)
+  "The side to show the work note on.
+ASK non-nil asks again even where an answer is remembered."
+  (let ((setting classicist-phi-sidebar-side))
+    (cond
+     ((and (listp setting) setting) setting)   ; an action alist of their own
+     ((memq setting '(left right top bottom)) setting)
+     ((or ask (null classicist-phi--sidebar-side)) (classicist-phi--ask-side))
+     (t classicist-phi--sidebar-side))))
+
+(defun classicist-phi--sidebar-size-key (side)
+  "Whether a window on SIDE is measured across or down."
+  (if (memq side '(top bottom)) 'window-height 'window-width))
 
 (defun classicist-phi--side-window (buffer side)
   "BUFFER in a side window on SIDE, as phi-notes would, or nil if refused.
@@ -911,16 +959,13 @@ not recognise and on a slot already taken, and a raise would stop the split
 from ever being tried."
   (let* ((his (and (boundp 'phi-sidebar-display-alist)
                    phi-sidebar-display-alist))
-         (size (or (cdr (assq (classicist-phi--sidebar-size-key side) his))
-                   classicist-phi-sidebar-width))
-         (name (or (cdr (assq side classicist-phi--side-window-names))
-                   side)))
+         (key (classicist-phi--sidebar-size-key side))
+         (size (or classicist-phi-sidebar-size (cdr (assq key his)))))
     (ignore-errors
       (display-buffer-in-side-window
        buffer
-       (append (list (cons 'side name))
-               (when size
-                 (list (cons (classicist-phi--sidebar-size-key side) size)))
+       (append (list (cons 'side side))
+               (when size (list (cons key size)))
                ;; HIS, MINUS THE SIDE AND THE SIZE, which this has settled.
                (seq-remove (lambda (cell)
                              (memq (car cell)
@@ -933,18 +978,19 @@ from ever being tried."
 
 (defun classicist-phi--split-beside (buffer side)
   "BUFFER in a window on SIDE, by an ordinary split.
-SIDE is `left\=', `right\=', `above\=' or `below\=', which is what
-`display-buffer-in-direction\=' itself takes -- no translation wanted here."
-  (let ((size (or (cdr (assq (classicist-phi--sidebar-size-key side)
-                             (and (boundp 'phi-sidebar-display-alist)
-                                  phi-sidebar-display-alist)))
-                  classicist-phi-sidebar-width)))
+SIDE is named as `display-buffer-in-side-window\=' names it;
+`classicist-phi--split-directions\=' translates."
+  (let* ((key (classicist-phi--sidebar-size-key side))
+         (size (or classicist-phi-sidebar-size
+                   (cdr (assq key (and (boundp 'phi-sidebar-display-alist)
+                                       phi-sidebar-display-alist)))))
+         (direction (or (cdr (assq side classicist-phi--split-directions))
+                        side)))
     (display-buffer
      buffer
      (append (list 'display-buffer-in-direction
-                   (cons 'direction side))
-             (when size
-               (list (cons (classicist-phi--sidebar-size-key side) size)))))))
+                   (cons 'direction direction))
+             (when size (list (cons key size)))))))
 
 (defun classicist-phi--close-sidebar (buffer)
   "Delete the window showing BUFFER, where there is one and it may go.
@@ -1013,23 +1059,30 @@ his sidebar does, and `phi-sidebar-buffer\=' is set, so his
              (side (classicist-phi--sidebar-side ask)))
         (when (fboundp 'phi-sidebar-adjust-buffer)
           (setq buffer (phi-sidebar-adjust-buffer buffer)))
+        ;; AFTER HIS ADJUSTER, which is what turned olivetti on.
+        (unless classicist-phi-sidebar-olivetti
+          (with-current-buffer buffer
+            (when (bound-and-true-p olivetti-mode)
+              (olivetti-mode -1))))
         (setq phi-sidebar-buffer buffer)
         ;; ALREADY THERE AND NOT MOVING: select it rather than flickering it
         ;; shut and open again.
         (if (and shown
-                 ;; THE PARAMETER IS THE SIDE WINDOW'S NAME, `top' where the
-                 ;; direction is `above', so it is compared as such -- and it
-                 ;; is nil for an ordinary split, which no direction equals,
-                 ;; so a split is always closed and remade.  Which is right:
+                 ;; THE PARAMETER IS THE SIDE WINDOW'S NAME, which is the
+                 ;; vocabulary this file uses -- so they compare directly.
+                 ;; It is nil for an ordinary split, which no side equals, so
+                 ;; a split is always closed and remade.  Which is right:
                  ;; there is nothing to compare it against.
-                 (eq (cdr (assq side classicist-phi--side-window-names))
-                     (window-parameter shown 'window-side))
+                 (eq side (window-parameter shown 'window-side))
                  (not ask))
-            (select-window shown)
+            (when classicist-phi-sidebar-select (select-window shown))
           (classicist-phi--close-sidebar buffer)
-          (or (classicist-phi--show-beside buffer side)
+          (let ((window (classicist-phi--show-beside buffer side)))
+            (unless window
               (user-error "Could not show %s beside this window"
-                          (buffer-name buffer))))))))
+                          (buffer-name buffer)))
+            (when classicist-phi-sidebar-select
+              (select-window window))))))))
 
 ;;;; The way back
 
