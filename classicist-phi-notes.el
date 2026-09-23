@@ -80,6 +80,10 @@
 (declare-function phi-create-note "phi-notes" (type repo-dir &rest args))
 (declare-function phi-get-note-id-from-file-name "phi-notes" (filename))
 (declare-function phi-sidebar-adjust-buffer "phi-notes" (buffer))
+;; OLIVETTI'S, DECLARED WITH AN UNSPECIFIED ARGLIST.  It is another package
+;; again, wanted only to turn it off in the work note, and asked `boundp'
+;; before it is called.
+(declare-function olivetti-mode "olivetti" t t)
 (defvar phi-sidebar-buffer)
 (defvar phi-sidebar-display-alist)
 (defvar phi-sidebar-persistent-window)
@@ -99,6 +103,9 @@
                   (citation &optional labels))
 (declare-function classicist-reference-to-string "classicist-citation"
                   (reference))
+(declare-function classicist-citation-abbreviation "classicist-citation"
+                  (corpus author &optional work))
+(declare-function classicist-citation-to-key "classicist-citation" (citation))
 (declare-function classicist-open-passage "classicist-browser"
                   (corpus author work &optional passage))
 (declare-function classicist-feature-p "classicist-groups" (feature))
@@ -152,6 +159,33 @@ is in, without asking."
   :type '(choice (const :tag "Ask" nil)
                  (const :tag "The current buffer's" current)
                  (string :tag "Repository name"))
+  :group 'classicist-phi-notes)
+
+(defcustom classicist-phi-tag-functions
+  '(classicist-phi-tag-author
+    classicist-phi-tag-work
+    classicist-phi-tag-code)
+  "Functions that name a passage note's tags.
+Each is called with the reference plist and returns a tag string, or nil to
+add none.  The `#\=' is phi-notes' to add.
+
+THREE BY DEFAULT: the author, the work and the corpus code -- `A.R.\=',
+`Arg.\=', `tlg0001.001\='.  The first two are the abbreviations the
+dictionaries use, so they are the names a classicist would search for; the
+third is exact where an abbreviation is missing or ambiguous, and most of both
+corpora have no abbreviation at all.
+
+ADD YOUR OWN by adding a function.  It is given the whole reference --
+`:corpus\=', `:author\=', `:work\=', `:from\=', `:to\=', `:labels\=',
+`:text\=', `:key\=' -- so a tag can be made of anything in it."
+  :type '(repeat function)
+  :group 'classicist-phi-notes)
+
+(defcustom classicist-phi-extra-tags nil
+  "Tags put on every passage note, whatever it is about.
+Strings, without the `#\='.  For a reader who wants all of these gathered
+under one tag of their own."
+  :type '(repeat string)
   :group 'classicist-phi-notes)
 
 (defcustom classicist-phi-structure-notes t
@@ -308,6 +342,63 @@ it before the browser loads."
   "The frontmatter field CORPUS's references go in, or nil."
   (cdr (assoc corpus classicist-phi-ref-fields)))
 
+(defun classicist-phi--tag-string (text)
+  "TEXT as something phi-notes will accept as a tag, or nil.
+`phi-tag-regex\=' allows letters, digits and a handful of punctuation but no
+space, so runs of whitespace become underscores and anything else that is not
+allowed is dropped."
+  (when (and text (stringp text))
+    (let* ((joined (replace-regexp-in-string "[ \t]+" "_" (string-trim text)))
+           (kept (replace-regexp-in-string "[^[:alnum:]._:/-]" "" joined)))
+      (unless (string-empty-p kept) kept))))
+
+(defun classicist-phi-tag-author (reference)
+  "The author of REFERENCE, as the dictionaries abbreviate him."
+  (when (fboundp 'classicist-citation-abbreviation)
+    (classicist-phi--tag-string
+     (car (classicist-citation-abbreviation
+           (plist-get reference :corpus)
+           (plist-get reference :author))))))
+
+(defun classicist-phi-tag-work (reference)
+  "The work of REFERENCE, as the dictionaries abbreviate it."
+  (when (fboundp 'classicist-citation-abbreviation)
+    (classicist-phi--tag-string
+     (cdr (classicist-citation-abbreviation
+           (plist-get reference :corpus)
+           (plist-get reference :author)
+           (plist-get reference :work))))))
+
+(defun classicist-phi-tag-code (reference)
+  "REFERENCE\='s corpus and numbers, as `tlg0001.001\='.
+
+EXACT WHERE AN ABBREVIATION IS NOT.  Most of both corpora have none -- the
+table covers the five hundred works of the TLG and two hundred and seventy of
+the PHI that the lexicographers had occasion to quote -- so for everything
+else this is the only tag that names the text at all.
+
+A STOP AND NOT A COLON, unlike the reference field\='s `0001:001\='.  A colon
+happens to fall inside `phi-tag-regex\=''s character range, but by accident of
+where `/-_\=' lands in ASCII rather than by anyone\='s intention, and a tag
+should not rest on that."
+  (let ((corpus (plist-get reference :corpus))
+         (author (plist-get reference :author))
+         (work (plist-get reference :work)))
+    (when (and corpus author work)
+      (concat corpus author "." work))))
+
+(defun classicist-phi--tags (reference)
+  "Every tag a passage note about REFERENCE should carry."
+  (delete-dups
+   (delq nil
+         (append (mapcar (lambda (fn)
+                           (and (functionp fn)
+                                (classicist-phi--tag-string
+                                 (funcall fn reference))))
+                         classicist-phi-tag-functions)
+                 (mapcar #'classicist-phi--tag-string
+                         classicist-phi-extra-tags)))))
+
 (defun classicist-phi--level-strings (citation)
   "CITATION with every level as a string.
 
@@ -324,6 +415,37 @@ everything is made a string once, here, rather than guarded at each use."
   (mapcar (lambda (level)
             (if (stringp level) level (format "%s" level)))
           citation))
+
+(defun classicist-phi--line-field (reference)
+  "The `line\=' field for REFERENCE, which may name a span.
+
+A MARKED REGION IS AN INTERVAL, and phi-notes has a `section\=' and a `line\='
+and no notion of a range.  So the range goes in `line\=':
+
+    1.23 alone          23
+    1.23 to 1.24        23-24        the section is the same, so only the
+                                     last level differs
+    1.23 to 2.5         23-2.5       it is not, so the far end is written
+                                     out in full
+
+READ BACK BY TAKING WHAT IS BEFORE THE HYPHEN, which is all
+`classicist-phi-goto-passage\=' wants: a browser opens AT a passage and pages
+from there, so the beginning is the whole of what it needs.  The far end is
+recorded for the reader, not for the machine -- which is also why a form that
+cannot be parsed back is acceptable here and would not be in `section\='."
+  (let* ((from (classicist-phi--level-strings (plist-get reference :from)))
+         (to (classicist-phi--level-strings (plist-get reference :to)))
+         (start (and from (car (last from)))))
+    (cond
+     ((null start) "")
+     ((null to) start)
+     ;; THE SAME EVERYWHERE ABOVE THE LAST LEVEL: only the last differs, so
+     ;; only the last is worth saying.
+     ((equal (butlast from) (butlast to))
+      (if (equal start (car (last to)))
+          start
+        (concat start "-" (car (last to)))))
+     (t (concat start "-" (string-join to "."))))))
 
 (defun classicist-phi--fields-from-reference (reference &optional field)
   "REFERENCE as the fields phi-notes will ask for, or nil.
@@ -356,7 +478,7 @@ settled it for the corpus; nil uses whatever the type declares first."
             (cons 'section (if (cdr from)
                                (string-join (butlast from) ".")
                              ""))
-            (cons 'line (if from (car (last from)) ""))))))
+            (cons 'line (classicist-phi--line-field reference))))))
 
 (defun classicist-phi--reference-from-fields (&optional buffer)
   "The passage the note in BUFFER is about, as a plist, or nil.
@@ -381,16 +503,22 @@ field saying which corpus it is: the name of the reference field says it."
                            phi-tlg-section-field buf)))
                (line (ignore-errors
                        (phi-get-note-field-contents phi-tlg-line-field buf)))
+               ;; BEFORE THE HYPHEN, `line' possibly naming a span -- see
+               ;; `classicist-phi--line-field'.  The beginning is all a
+               ;; browser needs.
+               (start (and line
+                           (car (split-string (string-trim line) "-" t))))
                (levels (append
                         (and section
                              (split-string (string-trim section) "[.]" t))
-                        (and line (not (string-empty-p (string-trim line)))
-                             (list (string-trim line))))))
+                        (and start (not (string-empty-p start))
+                             (list start)))))
           (when (cdr parts)
             (list :corpus (car found)
                   :author (nth 0 parts)
                   :work (nth 1 parts)
                   :levels levels)))))))
+
 
 
 ;;;; Which repository, resolved here
@@ -612,7 +740,8 @@ for why they go in `:fields' and not in `:tlg-fields'."
                      classicist-phi-note-type
                      dir
                      (append
-                      (list :fields fields)
+                      (list :fields fields
+                            :tags (classicist-phi--tags reference))
                       ;; FILED UNDER THE WORK'S OWN NOTE, so that
                       ;; phi-backlinks and the sidebar do the indexing and
                       ;; the breadcrumb gives this note its way up.
@@ -878,37 +1007,6 @@ belongs."
       (message "%d note%s indexed in %s"
                (length lines) (if (= 1 (length lines)) "" "s")
                (file-name-nondirectory file)))))
-
-(defvar classicist-phi--sidebar-side nil
-  "The side answered for this session, or nil before anything was asked.")
-
-(defconst classicist-phi--sidebar-sides
-  '((?l . left) (?r . right) (?a . above) (?b . below))
-  "The characters the side prompt takes.")
-
-(defun classicist-phi--ask-side ()
-  "Ask which side, one character, and remember the answer."
-  (let* ((char (read-char-choice
-                "Show the work note: (l)eft (r)ight (a)bove (b)elow "
-                (mapcar #'car classicist-phi--sidebar-sides)))
-         (side (cdr (assq char classicist-phi--sidebar-sides))))
-    (setq classicist-phi--sidebar-side side)
-    side))
-
-(defun classicist-phi--sidebar-side (&optional ask)
-  "The side to show the work note on.
-ASK non-nil asks again even where an answer is remembered."
-  (let ((setting classicist-phi-sidebar-side))
-    (cond
-     ((and (listp setting) setting) setting)   ; an action alist of their own
-     ((memq setting '(left right above below)) setting)
-     ;; `ask': the remembered answer, unless asked to ask.
-     ((or ask (null classicist-phi--sidebar-side)) (classicist-phi--ask-side))
-     (t classicist-phi--sidebar-side))))
-
-(defun classicist-phi--sidebar-size-key (side)
-  "Whether a window on SIDE is measured in columns or in lines."
-  (if (memq side '(above below)) 'window-height 'window-width))
 
 (defconst classicist-phi--split-directions
   '((left . left) (right . right) (top . above) (bottom . below))
