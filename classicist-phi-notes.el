@@ -888,28 +888,53 @@ ASK non-nil asks again even where an answer is remembered."
   "Whether a window on SIDE is measured in columns or in lines."
   (if (memq side '(above below)) 'window-height 'window-width))
 
+(defconst classicist-phi--side-window-names
+  '((left . left) (right . right) (above . top) (below . bottom))
+  "The side each direction is called by `display-buffer-in-side-window\='.
+
+TWO VOCABULARIES FOR THE SAME FOUR PLACES.  `display-buffer-in-direction\='
+takes `above\=' and `below\='; `display-buffer-in-side-window\=' takes `top\='
+and `bottom\=' and raises
+
+    Invalid side below specified
+
+for the others.  This file speaks the direction\='s vocabulary throughout,
+being the one a reader is asked in, and translates here.")
+
 (defun classicist-phi--side-window (buffer side)
-  "BUFFER in a side window on SIDE, as phi-notes would, or nil if refused."
+  "BUFFER in a side window on SIDE, as phi-notes would, or nil if refused.
+
+NIL AND NOT AN ERROR, whatever goes wrong.  This is the first of two things
+tried, so a failure here is not a failure: `display-buffer-in-side-window\='
+returns nil where a side window is not allowed, but RAISES on a side it does
+not recognise and on a slot already taken, and a raise would stop the split
+from ever being tried."
   (let* ((his (and (boundp 'phi-sidebar-display-alist)
                    phi-sidebar-display-alist))
          (size (or (cdr (assq (classicist-phi--sidebar-size-key side) his))
-                   classicist-phi-sidebar-width)))
-    (display-buffer-in-side-window
-     buffer
-     (append (list (cons 'side side))
-             (when size
-               (list (cons (classicist-phi--sidebar-size-key side) size)))
-             ;; HIS, MINUS THE SIDE AND THE SIZE, which this has settled.
-             (seq-remove (lambda (cell)
-                           (memq (car cell)
-                                 '(side window-width window-height)))
-                         his)
-             (when (and (boundp 'phi-sidebar-persistent-window)
-                        phi-sidebar-persistent-window)
-               (list '(window-parameters (no-delete-other-windows . t))))))))
+                   classicist-phi-sidebar-width))
+         (name (or (cdr (assq side classicist-phi--side-window-names))
+                   side)))
+    (ignore-errors
+      (display-buffer-in-side-window
+       buffer
+       (append (list (cons 'side name))
+               (when size
+                 (list (cons (classicist-phi--sidebar-size-key side) size)))
+               ;; HIS, MINUS THE SIDE AND THE SIZE, which this has settled.
+               (seq-remove (lambda (cell)
+                             (memq (car cell)
+                                   '(side window-width window-height)))
+                           his)
+               (when (and (boundp 'phi-sidebar-persistent-window)
+                          phi-sidebar-persistent-window)
+                 (list '(window-parameters
+                         (no-delete-other-windows . t)))))))))
 
 (defun classicist-phi--split-beside (buffer side)
-  "BUFFER in a window on SIDE, by an ordinary split."
+  "BUFFER in a window on SIDE, by an ordinary split.
+SIDE is `left\=', `right\=', `above\=' or `below\=', which is what
+`display-buffer-in-direction\=' itself takes -- no translation wanted here."
   (let ((size (or (cdr (assq (classicist-phi--sidebar-size-key side)
                              (and (boundp 'phi-sidebar-display-alist)
                                   phi-sidebar-display-alist)))
@@ -992,7 +1017,13 @@ his sidebar does, and `phi-sidebar-buffer\=' is set, so his
         ;; ALREADY THERE AND NOT MOVING: select it rather than flickering it
         ;; shut and open again.
         (if (and shown
-                 (eq side (window-parameter shown 'window-side))
+                 ;; THE PARAMETER IS THE SIDE WINDOW'S NAME, `top' where the
+                 ;; direction is `above', so it is compared as such -- and it
+                 ;; is nil for an ordinary split, which no direction equals,
+                 ;; so a split is always closed and remade.  Which is right:
+                 ;; there is nothing to compare it against.
+                 (eq (cdr (assq side classicist-phi--side-window-names))
+                     (window-parameter shown 'window-side))
                  (not ask))
             (select-window shown)
           (classicist-phi--close-sidebar buffer)
