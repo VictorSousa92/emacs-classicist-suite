@@ -1218,7 +1218,27 @@ is not something to reconstruct by reading the code when it can be printed."
       (message "classicist-phi: side window action %S (sides-vertical %s)"
                action window-sides-vertical))
     (condition-case err
-        (let ((window (display-buffer buffer action)))
+        ;; PAST `display-buffer-overriding-action', WHICH BEATS THE ACTION
+        ;; ARGUMENT.  `display-buffer' consults that variable first, then
+        ;; `display-buffer-alist', and only then what it was passed -- so a
+        ;; package that installs itself there decides where every buffer
+        ;; goes and the action below is never looked at.  window-purpose
+        ;; does exactly that:
+        ;;
+        ;;     display-buffer-overriding-action  =>  (purpose--action-function)
+        ;;
+        ;; and it stays set when `purpose-mode' is turned OFF, which is why
+        ;; turning it off appeared to clear purpose of suspicion.  The action
+        ;; printed was the right one and an ordinary window came back anyway.
+        ;;
+        ;; BOUND ONLY ROUND THIS CALL, and legitimately: a sidebar is
+        ;; furniture, placed by where a reader put it rather than by a
+        ;; buffer-display policy, and purpose has no notion of a side window
+        ;; to express.  Everything else this file shows -- a note opened from
+        ;; the index, a passage -- goes through `display-buffer' untouched
+        ;; and purpose places it as the reader has arranged.
+        (let* ((display-buffer-overriding-action nil)
+               (window (display-buffer buffer action)))
           (cond
            ((null window)
             (when classicist-phi-sidebar-verbose
@@ -1308,13 +1328,67 @@ window that `delete-other-windows\=' declines to clear."
         (set-window-dedicated-p window nil)
         (ignore-errors (delete-window window))))))
 
+(defun classicist-phi--side-windows (&optional frame)
+  "Every side window on FRAME, ours and anyone else\='s."
+  (seq-filter (lambda (window) (window-parameter window 'window-side))
+              (window-list frame)))
+
+(defun classicist-phi--clear-side-windows (&optional keep)
+  "Delete every side window on this frame except KEEP.
+
+BECAUSE THE AXIS IS SHARED AND THE ROOM IS FINITE.  A side window is made
+from the space the frame has left over, and an existing one on the other axis
+can take all of it: with `window-sides-vertical\=' favouring left and right, a
+sidebar wanted on the right has to fit above whatever spans the bottom -- the
+transient menu\='s own side window, for one -- and where it cannot, the
+request is refused and an ordinary window comes back instead.
+
+Which is why closing OUR window was not enough: the thing in the way was
+someone else\='s.  So this is the second pass, run only when the first has
+already come back with something that is not a side window, and it clears the
+axis outright rather than reasoning about who is on it.
+
+Returns how many were deleted."
+  (let ((deleted 0))
+    (dolist (window (classicist-phi--side-windows))
+      (unless (eq window keep)
+        (set-window-parameter window 'no-delete-other-windows nil)
+        (set-window-dedicated-p window nil)
+        (when (and (> (length (window-list)) 1)
+                   (ignore-errors (delete-window window) t))
+          (setq deleted (1+ deleted)))))
+    deleted))
+
 (defun classicist-phi--show-beside (buffer side)
   "Show BUFFER on SIDE, by a side window or failing that a split.
+
+TWICE BEFORE GIVING UP.  The first attempt asks for a side window as it
+stands.  If what comes back is not one -- `display-buffer\=' can answer with
+an ordinary window and call it success -- the frame\='s other side windows are
+cleared and it is asked once more, because they are what takes the room.
+Only then does the split have it.
+
 Returns the window, or nil."
   (if (and (listp side) side)
       (display-buffer buffer side)
-    (or (classicist-phi--side-window buffer side)
-        (classicist-phi--split-beside buffer side))))
+    (let ((window (classicist-phi--side-window buffer side)))
+      (if (and window (window-parameter window 'window-side))
+          window
+        ;; NOT A SIDE WINDOW: clear the axis and ask again.  The window just
+        ;; made is kept out of the clearing -- it holds our own buffer, and
+        ;; deleting it here would only make `display-buffer' reuse something
+        ;; else.
+        (let ((cleared (classicist-phi--clear-side-windows window)))
+          (when (and classicist-phi-sidebar-verbose (> cleared 0))
+            (message "classicist-phi: cleared %d side window%s and retrying"
+                     cleared (if (= 1 cleared) "" "s")))
+          (if (= cleared 0)
+              (or window (classicist-phi--split-beside buffer side))
+            (let ((again (classicist-phi--side-window buffer side)))
+              (cond
+               ((and again (window-parameter again 'window-side)) again)
+               (again again)
+               (t (classicist-phi--split-beside buffer side))))))))))
 
 ;;;###autoload
 (defun classicist-phi-sidebar (&optional ask)
