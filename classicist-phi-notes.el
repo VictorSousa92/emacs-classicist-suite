@@ -181,6 +181,23 @@ it before the browser loads."
   "The frontmatter field CORPUS's references go in, or nil."
   (cdr (assoc corpus classicist-phi-ref-fields)))
 
+(defun classicist-phi--level-strings (citation)
+  "CITATION with every level as a string.
+
+DIOGENES GIVES NEITHER STRINGS NOR ALL ONE TYPE.  A citation comes back with
+some levels as numbers and some as symbols -- `1053a\=' is a symbol, 15 is a
+number.  `classicist-citation-from-key\=' says as much of its own output, and
+it is true of `classicist-browser-reference\='\='s `:from\=' too.  Passing
+that to `string-join\=' reaches `concat\=' with a number in it:
+
+    Wrong type argument: sequencep, 1
+
+and phi-notes would trip on the same thing in `replace-regexp-in-string\='.  So
+everything is made a string once, here, rather than guarded at each use."
+  (mapcar (lambda (level)
+            (if (stringp level) level (format "%s" level)))
+          citation))
+
 (defun classicist-phi--fields-from-reference (reference)
   "REFERENCE as the three values phi-notes keeps, or nil.
 A plist: `:tlg-ref', `:tlg-section' and `:tlg-line', which are the keys
@@ -190,7 +207,8 @@ caller."
   (let* ((corpus (plist-get reference :corpus))
          (author (plist-get reference :author))
          (work (plist-get reference :work))
-         (from (plist-get reference :from)))
+         (from (classicist-phi--level-strings
+                (plist-get reference :from))))
     (when (and corpus author work)
       (list :tlg-ref (concat author ":" work)
             ;; EVERYTHING ABOVE THE LAST LEVEL, joined by stops, because a
