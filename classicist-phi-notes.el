@@ -26,18 +26,28 @@
 ;;
 ;; NOTHING IN `phi-notes' IS MODIFIED, and that is the point of how this is
 ;; written.  It was built with the TLG in mind: `phi-note-types' already has a
-;; `tlg-text' type, and `phi-create-common-note' already takes a `:tlg-fields'
-;; plist and writes three frontmatter fields from it.  So this file fills those
-;; fields and reads them back, and adds nothing to phi-notes' own vocabulary.
+;; `tlg-text' type declaring `(ref_tlg section line)' as its `extra-fields'.
+;; So this file fills those three and reads them back, and adds nothing to
+;; phi-notes' own vocabulary.
+;;
+;; THROUGH `:fields' AND NOT `:tlg-fields', which took two attempts to get
+;; right.  `:tlg-fields' is read by `phi-create-common-note'; the `tlg-text'
+;; type's header function is `phi-md-header', which never sees it.  What
+;; `phi-create-note' does is prompt for each of the type's own `extra-fields',
+;; taking `:fields' as the default for each -- so supplying them means the
+;; prompts arrive filled in and a reader presses return.  Offered and
+;; editable, which is better than imposed.
 ;;
 ;; HIS SPELLING IS KEPT.  The TLG field stays `ref_tlg', so a note this makes
-;; is indistinguishable from one phi-notes made itself, and the other five
-;; corpora follow the same pattern -- `ref_phi', `ref_ddp' and the rest, by
-;; `classicist-phi-ref-fields'.  The field name is settled by LET-BINDING
-;; `phi-tlg-ref-field' around the call, because `phi-create-common-note' reads
-;; that variable when it writes the header; a sibling note type would not have
-;; worked, the header function naming the variable rather than consulting the
-;; type.
+;; is indistinguishable from one phi-notes made itself.  The other corpora are
+;; named by `classicist-phi-ref-fields' -- `ref_phi', `ref_ddp' and the rest.
+;;
+;; WHICH LEAVES ONE THING OPEN.  The field NAMES come from the note type, and
+;; `tlg-text' declares `ref_tlg', so a note on a Latin text is prompted for
+;; `ref_tlg' with a `ref_phi' value offered.  A sibling type per corpus is the
+;; answer and is not written yet: `phi-note-types' is a plain defvar, so five
+;; more entries copied from `tlg-text' with one key changed would do it
+;; without touching phi-notes.
 ;;
 ;; THREE LEVELS INTO TWO FIELDS.  phi-notes gives a citation a `section' and a
 ;; `line', and a work may have two levels or four -- Aristotle is cited by
@@ -68,6 +78,7 @@
 ;; checks before it calls.
 (declare-function phi-new-note "phi-notes" (&rest args))
 (declare-function phi-create-note "phi-notes" (type repo-dir &rest args))
+(declare-function phi-get-note-id-from-file-name "phi-notes" (filename))
 (declare-function phi-get-note-field-contents "phi-notes"
                   (field &optional buffer))
 (declare-function phi-get-fields "phi-notes" (&optional buffer))
@@ -139,6 +150,26 @@ is in, without asking."
                  (string :tag "Repository name"))
   :group 'classicist-phi-notes)
 
+(defcustom classicist-phi-structure-notes t
+  "Whether a passage note is filed under a note for its work.
+
+A STRUCTURE NOTE PER WORK, which is how a Zettelkasten organises rather than
+how a database does.  The work gets a note of its own -- its reference field
+names the work and its section and line are empty, which is what makes it the
+note about the whole of it -- and every passage note links to it as parent.
+phi-notes then does the indexing itself: `phi-backlinks' on the work's note
+lists everything said about that text, the sidebar shows it, and the
+breadcrumb gives each note its way up.
+
+AND THE WORK'S NOTE IS A PAGE, which a query result is not.  That is the
+argument for this over `classicist-phi-notes' alone: somewhere to write what
+you think about the Metaphysics as against what you think about 1053a15.
+
+Nil files nothing and leaves the notes flat, which `classicist-phi-notes' can
+still search."
+  :type 'boolean
+  :group 'classicist-phi-notes)
+
 (defcustom classicist-phi-notes-directories nil
   "Where to look for notes about a passage.
 Nil reads the directories out of `phi-repository-alist', which is what a
@@ -149,7 +180,8 @@ reader with one Zettelkasten wants.  A list of directories overrides it."
 
 (defcustom classicist-phi-keys
   '((classicist-phi-note  . "C-c n n")
-    (classicist-phi-notes . "C-c n l"))
+    (classicist-phi-notes . "C-c n l")
+    (classicist-phi-work-note . "C-c n w"))
   "The keys this file binds in a browser buffer, as (COMMAND . KEY).
 Nil for a KEY binds nothing.  Consulted when the keys are installed, so set
 it before the browser loads."
@@ -199,26 +231,38 @@ everything is made a string once, here, rather than guarded at each use."
             (if (stringp level) level (format "%s" level)))
           citation))
 
-(defun classicist-phi--fields-from-reference (reference)
-  "REFERENCE as the three values phi-notes keeps, or nil.
-A plist: `:tlg-ref', `:tlg-section' and `:tlg-line', which are the keys
-`phi-create-common-note' reads whatever the corpus -- the FIELD those are
-written to is `classicist-phi-ref-fields'' business and is settled by the
-caller."
+(defun classicist-phi--fields-from-reference (reference &optional field)
+  "REFERENCE as the fields phi-notes will ask for, or nil.
+
+AN ALIST KEYED BY THE FIELD SYMBOL, which is what `:fields\=' takes, and NOT
+the `:tlg-fields\=' plist.  `:tlg-fields\=' is read by
+`phi-create-common-note\='; the `tlg-text\=' type\='s header function is
+`phi-md-header\=', which never sees it.  What `phi-create-note\=' does is prompt
+for each of the type\='s own `extra-fields\=' --
+
+    (read-string (format \"%s: \" k) (alist-get k transformed-fields))
+
+-- taking `:fields\=' as the DEFAULT for each.  So supplying them here means
+the three prompts arrive filled in and a reader presses return, which is the
+behaviour wanted: offered, and editable, rather than imposed.
+
+FIELD is the reference field\='s name, `classicist-phi-ref-fields\=' having
+settled it for the corpus; nil uses whatever the type declares first."
   (let* ((corpus (plist-get reference :corpus))
          (author (plist-get reference :author))
          (work (plist-get reference :work))
          (from (classicist-phi--level-strings
                 (plist-get reference :from))))
     (when (and corpus author work)
-      (list :tlg-ref (concat author ":" work)
+      (list (cons (intern (or field "ref_tlg"))
+                  (concat author ":" work))
             ;; EVERYTHING ABOVE THE LAST LEVEL, joined by stops, because a
             ;; work may have two levels or four and phi-notes has two fields.
             ;; Reversible, which is the whole requirement.
-            :tlg-section (if (cdr from)
-                             (string-join (butlast from) ".")
-                           "")
-            :tlg-line (if from (car (last from)) "")))))
+            (cons 'section (if (cdr from)
+                               (string-join (butlast from) ".")
+                             ""))
+            (cons 'line (if from (car (last from)) ""))))))
 
 (defun classicist-phi--reference-from-fields (&optional buffer)
   "The passage the note in BUFFER is about, as a plist, or nil.
@@ -311,6 +355,101 @@ field saying which corpus it is: the name of the reference field says it."
                         phi-repository-alist))))
      (buffer-list))))
 
+
+;;;; The note for a work
+
+(defun classicist-phi--work-note (corpus author work)
+  "The id and file of the structure note for WORK, or nil.
+
+RECOGNISED BY WHAT IT LACKS.  A note whose reference field names this work and
+whose `section\=' and `line\=' are both empty is the note about the work
+itself, not about a passage in it -- no separate marker is wanted, and none
+would survive a reader editing the frontmatter by hand.
+
+Returns (ID . FILE)."
+  (let ((field (classicist-phi--ref-field corpus))
+        (ref (concat author ":" work)))
+    (when field
+      (seq-some
+       (lambda (file)
+         (let* ((fm (ignore-errors (classicist-phi--frontmatter file)))
+                (this (cdr (assoc field fm)))
+                (section (or (cdr (assoc "section" fm)) ""))
+                (line (or (cdr (assoc "line" fm)) ""))
+                (id (or (cdr (assoc "id" fm))
+                        (and (fboundp 'phi-get-note-id-from-file-name)
+                             (phi-get-note-id-from-file-name file)))))
+           (and this (equal (string-trim this) ref)
+                (string-empty-p (string-trim section))
+                (string-empty-p (string-trim line))
+                id
+                (cons (string-trim id) file))))
+       (classicist-phi--note-files)))))
+
+(defun classicist-phi--make-work-note (reference)
+  "Make the structure note for the work REFERENCE names.
+Returns (ID . FILE), or nil if the note came out without an id."
+  (let* ((corpus (plist-get reference :corpus))
+         (author (plist-get reference :author))
+         (work (plist-get reference :work))
+         (field (classicist-phi--ref-field corpus))
+         (dir (classicist-phi--repository-directory))
+         ;; THE WORK AND NOT THE PASSAGE, so the reference is rebuilt without
+         ;; `:text\='.  `Arist. Metaph.\=' and not `Arist. Metaph. 1053a15\='.
+         (title (if (fboundp 'classicist-reference-to-string)
+                    (classicist-reference-to-string
+                     (list :corpus corpus :author author :work work))
+                  (concat author ":" work)))
+         (buffer (apply #'phi-create-note
+                        classicist-phi-note-type
+                        dir
+                        (list :title title
+                              ;; SECTION AND LINE LEFT EMPTY, which is what
+                              ;; says this is the work and not a place in it.
+                              :fields
+                              (list (cons (intern (or field "ref_tlg"))
+                                          (concat author ":" work))
+                                    (cons 'section "")
+                                    (cons 'line ""))))))
+    (when (buffer-live-p buffer)
+      (let ((file (buffer-file-name buffer)))
+        (when file
+          (cons (or (and (fboundp 'phi-get-note-id-from-file-name)
+                         (phi-get-note-id-from-file-name file))
+                    "")
+                file))))))
+
+(defun classicist-phi--work-note-parent (reference)
+  "The `:parent-props\=' a passage note about REFERENCE should carry, or nil.
+Finds the work\='s structure note, making it when there is none."
+  (when classicist-phi-structure-notes
+    (let* ((corpus (plist-get reference :corpus))
+           (author (plist-get reference :author))
+           (work (plist-get reference :work))
+           (found (or (classicist-phi--work-note corpus author work)
+                      (classicist-phi--make-work-note reference))))
+      (when (and found (not (string-empty-p (car found))))
+        (list (cons 'id (car found)))))))
+
+;;;###autoload
+(defun classicist-phi-work-note ()
+  "Visit the structure note for the work in this browser, making it if new.
+The place to write what you think about a text as against a passage of it."
+  (interactive)
+  (classicist-phi--require)
+  (let ((reference (and (fboundp 'classicist-browser-reference)
+                        (classicist-browser-reference))))
+    (unless reference
+      (user-error "Not in a Diogenes browser"))
+    (let* ((corpus (plist-get reference :corpus))
+           (author (plist-get reference :author))
+           (work (plist-get reference :work))
+           (found (or (classicist-phi--work-note corpus author work)
+                      (classicist-phi--make-work-note reference))))
+      (if (and found (cdr found))
+          (find-file (cdr found))
+        (user-error "Could not find or make a note for this work")))))
+
 ;;;; Making a note
 
 ;;;###autoload
@@ -322,11 +461,9 @@ line come from the buffer, which is the point of doing this from a browser
 rather than from the note side.  phi-notes asks for the title and the
 repository as it always does.
 
-The reference field is named for the corpus -- `ref_tlg' for the TLG, as
-phi-notes itself names it -- by let-binding `phi-tlg-ref-field' around the
-call: `phi-create-common-note' reads that variable when it writes the header,
-so this settles the name without a note type of our own and without touching
-phi-notes."
+The three fields arrive as defaults in phi-notes' own prompts, so they can be
+edited before the note is written.  See `classicist-phi--fields-from-reference'
+for why they go in `:fields' and not in `:tlg-fields'."
   (interactive)
   (classicist-phi--require)
   (let ((reference (and (fboundp 'classicist-browser-reference)
@@ -335,7 +472,7 @@ phi-notes."
       (user-error "Not in a Diogenes browser -- there is no passage to note"))
     (let* ((corpus (plist-get reference :corpus))
            (field (classicist-phi--ref-field corpus))
-           (fields (classicist-phi--fields-from-reference reference)))
+           (fields (classicist-phi--fields-from-reference reference field)))
       (unless field
         (user-error
          (concat "No reference field for the `%s' corpus"
@@ -343,14 +480,19 @@ phi-notes."
          corpus))
       (unless fields
         (user-error "This browser does not record which work it is showing"))
-      (let* ((phi-tlg-ref-field field)
-             (dir (classicist-phi--repository-directory))
+      (let* ((dir (classicist-phi--repository-directory))
              (buffer
               (apply #'phi-create-note
                      classicist-phi-note-type
                      dir
                      (append
-                      (list :tlg-fields fields)
+                      (list :fields fields)
+                      ;; FILED UNDER THE WORK'S OWN NOTE, so that
+                      ;; phi-backlinks and the sidebar do the indexing and
+                      ;; the breadcrumb gives this note its way up.
+                      (let ((parent
+                             (classicist-phi--work-note-parent reference)))
+                        (when parent (list :parent-props parent)))
                       ;; A TITLE OFFERED AND NOT IMPOSED: the citation as a
                       ;; reader writes it, which is what the note is about.
                       (when (fboundp 'classicist-reference-to-string)
@@ -390,24 +532,30 @@ it as text is enough to say whether a note is about this passage."
         (forward-line 1))
       (nreverse fields))))
 
+(defun classicist-phi--note-files ()
+  "Every markdown file in the note directories."
+  (let ((out nil))
+    (dolist (dir (classicist-phi--note-directories))
+      (setq out (append out (directory-files-recursively
+                             dir "\\.\\(md\\|markdown\\)\\'"))))
+    out))
+
 (defun classicist-phi--notes-on (corpus author work)
   "Notes about WORK of AUTHOR in CORPUS, as (FILE SECTION LINE TITLE)."
   (let ((field (classicist-phi--ref-field corpus))
         (ref (concat author ":" work))
         (out nil))
     (when field
-      (dolist (dir (classicist-phi--note-directories))
-        (dolist (file (directory-files-recursively
-                       dir "\\.\\(md\\|markdown\\)\\'"))
-          (let* ((fm (ignore-errors (classicist-phi--frontmatter file)))
-                 (this (cdr (assoc field fm))))
-            (when (and this (equal (string-trim this) ref))
-              (push (list file
-                          (or (cdr (assoc "section" fm)) "")
-                          (or (cdr (assoc "line" fm)) "")
-                          (or (cdr (assoc "title" fm))
-                              (file-name-base file)))
-                    out))))))
+      (dolist (file (classicist-phi--note-files))
+        (let* ((fm (ignore-errors (classicist-phi--frontmatter file)))
+               (this (cdr (assoc field fm))))
+          (when (and this (equal (string-trim this) ref))
+            (push (list file
+                        (or (cdr (assoc "section" fm)) "")
+                        (or (cdr (assoc "line" fm)) "")
+                        (or (cdr (assoc "title" fm))
+                            (file-name-base file)))
+                  out)))))
     (nreverse out)))
 
 ;;;###autoload
