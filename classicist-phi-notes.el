@@ -79,6 +79,7 @@
 (declare-function phi-new-note "phi-notes" (&rest args))
 (declare-function phi-create-note "phi-notes" (type repo-dir &rest args))
 (declare-function phi-get-note-id-from-file-name "phi-notes" (filename))
+(declare-function phi-sidebar-create-window "phi-notes" (id))
 (declare-function phi-get-note-field-contents "phi-notes"
                   (field &optional buffer))
 (declare-function phi-get-fields "phi-notes" (&optional buffer))
@@ -178,10 +179,40 @@ reader with one Zettelkasten wants.  A list of directories overrides it."
                  (repeat directory))
   :group 'classicist-phi-notes)
 
+(defcustom classicist-phi-index-markers
+  '("<!-- classicist:index -->" . "<!-- /classicist:index -->")
+  "The lines an index is written between, as (OPENING . CLOSING).
+
+BOTH OR NOTHING.  The index is only ever written where both markers are
+found, and the region replaced is what lies strictly between them.  A work
+note without them gets no index and no complaint -- `classicist-phi-index-work'
+offers to add them, and until it is asked nothing touches the file.
+
+THAT IS THE WHOLE SAFETY ARGUMENT.  This is the only thing here that writes
+into a file a reader also edits by hand, so the failure it must not have is
+eating prose.  Requiring both markers means the worst case is that nothing
+happens."
+  :type '(cons string string)
+  :group 'classicist-phi-notes)
+
+(defcustom classicist-phi-index-line
+  "- [[%i]] %c%t"
+  "How a note is written in the index.
+
+  %i  the note's id, so `%i' inside brackets is a wikilink phi-mode follows
+  %c  its citation -- the section and line as the note records them
+  %t  its title, preceded by an em dash when there is one
+
+Ordered by citation, so the index reads down the work."
+  :type 'string
+  :group 'classicist-phi-notes)
+
 (defcustom classicist-phi-keys
   '((classicist-phi-note  . "C-c n n")
     (classicist-phi-notes . "C-c n l")
-    (classicist-phi-work-note . "C-c n w"))
+    (classicist-phi-work-note . "C-c n w")
+    (classicist-phi-index-work . "C-c n i")
+    (classicist-phi-sidebar . "C-c n s"))
   "The keys this file binds in a browser buffer, as (COMMAND . KEY).
 Nil for a KEY binds nothing.  Consulted when the keys are installed, so set
 it before the browser loads."
@@ -625,6 +656,193 @@ ones about this passage are visible among them."
                       rows nil t)))
           (find-file (cdr (assoc pick rows))))))))
 
+
+
+;;;; An index in the work note
+
+;; WRITTEN INTO THE WORK NOTE and not into a file of its own, which is what
+;; makes it a Zettelkasten index rather than a report: `phi-mode' follows the
+;; wikilinks, `phi-toggle-sidebar' shows it beside the text, and it is a
+;; document to write in as well as to read.
+;;
+;; AND IT IS WHY THE SIDEBAR WORKS AT ALL.  Three of phi-notes' functions
+;; reach for `buffer-file-name' unchecked -- `phi-repository-for-path',
+;; `phi--grep-tag-list' and `phi-basic-type-check-p', the last through
+;; `phi-get-fields' -- so none of them can be called from a Diogenes browser.
+;; A work note is a file, so from there they all work.  Hence an index in the
+;; note, opened in the sidebar, rather than a panel of our own.
+;;
+;; BY HAND FOR NOW.  Refreshing on `after-save-hook' is the obvious next
+;; thing and is deliberately not here yet: a hook that rewrites a buffer
+;; while it is being typed in should be opted into after the writing is
+;; trusted, not before.  `classicist-phi-index-work' is the whole of it.
+
+(defun classicist-phi--index-citation (section line)
+  "SECTION and LINE as one citation for an index line."
+  (let ((s (string-trim (or section "")))
+        (l (string-trim (or line ""))))
+    (cond ((and (string-empty-p s) (string-empty-p l)) "")
+          ((string-empty-p s) l)
+          ((string-empty-p l) s)
+          (t (concat s "." l)))))
+
+(defun classicist-phi--index-sort-key (section line)
+  "A key for sorting an index line, numeric where the levels are numbers."
+  (mapcar (lambda (part)
+            (if (string-match-p "\\`[0-9]+\\'" part)
+                (string-to-number part)
+              part))
+          (append (split-string (string-trim (or section "")) "[.]" t)
+                  (split-string (car (split-string (string-trim (or line ""))
+                                                   "-" t))
+                                "[.]" t))))
+
+(defun classicist-phi--index-less-p (a b)
+  "Whether index entry A cites an earlier passage than B."
+  (let ((x (classicist-phi--index-sort-key (nth 1 a) (nth 2 a)))
+        (y (classicist-phi--index-sort-key (nth 1 b) (nth 2 b))))
+    (catch 'done
+      (while (or x y)
+        (let ((p (car x)) (q (car y)))
+          (cond ((null p) (throw 'done t))
+                ((null q) (throw 'done nil))
+                ((and (numberp p) (numberp q))
+                 (unless (= p q) (throw 'done (< p q))))
+                (t (let ((ps (format "%s" p)) (qs (format "%s" q)))
+                     (unless (string= ps qs)
+                       (throw 'done (string< ps qs)))))))
+        (setq x (cdr x) y (cdr y)))
+      nil)))
+
+(defun classicist-phi--index-lines (corpus author work)
+  "The index of WORK, as a list of strings, the work's own note excluded."
+  (let* ((notes (classicist-phi--notes-on corpus author work))
+         (passages
+          (seq-remove (lambda (n)
+                        ;; THE WORK'S OWN NOTE IS NOT IN ITS OWN INDEX: it is
+                        ;; the one with no section and no line.
+                        (and (string-empty-p (string-trim (nth 1 n)))
+                             (string-empty-p (string-trim (nth 2 n)))))
+                      notes))
+         (sorted (sort (copy-sequence passages)
+                       #'classicist-phi--index-less-p)))
+    (mapcar
+     (lambda (n)
+       (let* ((file (nth 0 n))
+              (id (or (and (fboundp 'phi-get-note-id-from-file-name)
+                           (phi-get-note-id-from-file-name file))
+                      ""))
+              (citation (classicist-phi--index-citation (nth 1 n) (nth 2 n)))
+              (title (string-trim (or (nth 3 n) ""))))
+         (replace-regexp-in-string
+          "%i" id
+          (replace-regexp-in-string
+           "%c" citation
+           (replace-regexp-in-string
+            "%t" (if (string-empty-p title) "" (concat " \u2014 " title))
+            classicist-phi-index-line t t)
+           t t)
+          t t)))
+     sorted)))
+
+(defun classicist-phi--index-write (file lines)
+  "Replace the index in FILE with LINES, or say why it cannot.
+
+NOTHING IS TOUCHED WITHOUT BOTH MARKERS.  Returns t when the block was
+written, nil when the markers are not both there -- and in that case the
+file is not modified at all, which is the point."
+  (let ((opening (car classicist-phi-index-markers))
+        (closing (cdr classicist-phi-index-markers)))
+    (with-current-buffer (find-file-noselect file)
+      (save-excursion
+        (goto-char (point-min))
+        (let* ((open-at (and (search-forward opening nil t)
+                             (progn (forward-line 1) (point))))
+               (close-at (and open-at
+                              (save-excursion
+                                (when (search-forward closing nil t)
+                                  (goto-char (match-beginning 0))
+                                  (point))))))
+          (when (and open-at close-at (<= open-at close-at))
+            (delete-region open-at close-at)
+            (goto-char open-at)
+            (insert (if lines
+                        (concat (string-join lines "\n") "\n")
+                      "(no notes yet)\n"))
+            (save-buffer)
+            t))))))
+
+;;;###autoload
+(defun classicist-phi-index-work ()
+  "Write the index of this work into its work note.
+
+Run from a Diogenes browser.  The work's note is found -- or made -- and the
+notes on that work are listed in it between
+`classicist-phi-index-markers\=', ordered by citation.
+
+WHERE THE MARKERS ARE ABSENT nothing is written and this offers to add them,
+because the alternative is guessing where in a reader\='s own prose an index
+belongs."
+  (interactive)
+  (classicist-phi--require)
+  (let ((reference (and (fboundp 'classicist-browser-reference)
+                        (classicist-browser-reference))))
+    (unless reference
+      (user-error "Not in a Diogenes browser"))
+    (let* ((corpus (plist-get reference :corpus))
+           (author (plist-get reference :author))
+           (work (plist-get reference :work))
+           (found (or (classicist-phi--work-note corpus author work)
+                      (classicist-phi--make-work-note reference)))
+           (file (cdr found))
+           (lines (classicist-phi--index-lines corpus author work)))
+      (unless file
+        (user-error "Could not find or make a note for this work"))
+      (unless (classicist-phi--index-write file lines)
+        (if (yes-or-no-p
+             (format "No index markers in %s -- add them at the end? "
+                     (file-name-nondirectory file)))
+            (progn
+              (with-current-buffer (find-file-noselect file)
+                (save-excursion
+                  (goto-char (point-max))
+                  (unless (bolp) (insert "\n"))
+                  (insert "\n" (car classicist-phi-index-markers) "\n"
+                          (cdr classicist-phi-index-markers) "\n"))
+                (save-buffer))
+              (classicist-phi--index-write file lines))
+          (user-error "Index not written")))
+      (message "%d note%s indexed in %s"
+               (length lines) (if (= 1 (length lines)) "" "s")
+               (file-name-nondirectory file)))))
+
+;;;###autoload
+(defun classicist-phi-sidebar ()
+  "Show this work\='s note in the phi-notes sidebar.
+
+`phi-toggle-sidebar\=' CANNOT BE USED FROM A BROWSER.  It asks
+`phi-get-linked-project-note-id\=', which reaches `phi-get-fields\=', which
+guesses the note type from `(file-name-extension (buffer-file-name buffer))\='
+-- and a browser buffer has no file, so it ends in
+
+    Wrong type argument: stringp, nil
+
+`phi-sidebar-create-window\=' takes an id and resolves the file itself, so
+naming the work note directly avoids the whole chain."
+  (interactive)
+  (classicist-phi--require)
+  (let ((reference (and (fboundp 'classicist-browser-reference)
+                        (classicist-browser-reference))))
+    (unless reference
+      (user-error "Not in a Diogenes browser"))
+    (let* ((corpus (plist-get reference :corpus))
+           (author (plist-get reference :author))
+           (work (plist-get reference :work))
+           (found (or (classicist-phi--work-note corpus author work)
+                      (classicist-phi--make-work-note reference))))
+      (unless (and found (car found) (not (string-empty-p (car found))))
+        (user-error "No note for this work to show"))
+      (phi-sidebar-create-window (car found)))))
 
 ;;;; The way back
 
