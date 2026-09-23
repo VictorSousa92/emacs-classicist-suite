@@ -304,6 +304,25 @@ turned off after it where this is nil."
   :type 'boolean
   :group 'classicist-phi-notes)
 
+(defcustom classicist-phi-open-in 'default
+  "Where a note opens when reached from the browser or from a list.
+
+`default\=' leaves it to `pop-up-frames\=', so a reader who has set that for
+Diogenes\=' sake gets the same behaviour here.  `window\=' and `frame\=' force
+one or the other.
+
+NEVER IN THE WINDOW IT WAS ASKED FROM, which is the whole point of the
+option.  `find-file\=' and `switch-to-buffer\=' take over the current window,
+and the current window is the browser: a reader who lists the notes on a work
+and opens one should not lose the text they were reading to it.  The same held
+for the note `classicist-phi-note\=' has just written, and for the work note.
+
+`diogenes-roam-index-open-in\='\='s own name and values, which says of itself
+`never in the index\='s own window, whichever this is\='.  The same rule, one
+window along."
+  :type '(choice (const default) (const window) (const frame))
+  :group 'classicist-phi-notes)
+
 (defcustom classicist-phi-keys
   '((classicist-phi-note  . "C-c n n")
     (classicist-phi-notes . "C-c n l")
@@ -609,6 +628,24 @@ only ours."
 
 ;;;; The note for a work
 
+(defun classicist-phi--open (file-or-buffer)
+  "Show FILE-OR-BUFFER, by `classicist-phi-open-in', and select it.
+Never in the window this was called from."
+  (let ((buffer (if (bufferp file-or-buffer)
+                    file-or-buffer
+                  (find-file-noselect file-or-buffer))))
+    (pcase classicist-phi-open-in
+      ('frame (pop-to-buffer buffer '(display-buffer-pop-up-frame)))
+      ('window (pop-to-buffer buffer '(display-buffer-pop-up-window
+                                       (inhibit-same-window . t))))
+      ;; `default': `pop-to-buffer' consults `display-buffer-alist' and
+      ;; `pop-up-frames' as any other buffer would, which is what a reader
+      ;; who has set those for Diogenes' sake will expect.  The one thing
+      ;; insisted on is that it is not this window.
+      (_ (pop-to-buffer buffer '(nil (inhibit-same-window . t)))))
+    buffer))
+
+
 (defun classicist-phi--work-note (corpus author work)
   "The id and file of the structure note for WORK, or nil.
 
@@ -700,7 +737,7 @@ The place to write what you think about a text as against a passage of it."
            (found (or (classicist-phi--work-note corpus author work)
                       (classicist-phi--make-work-note reference))))
       (if (and found (cdr found))
-          (find-file (cdr found))
+          (classicist-phi--open (cdr found))
         (user-error "Could not find or make a note for this work")))))
 
 ;;;; Making a note
@@ -755,7 +792,7 @@ for why they go in `:fields' and not in `:tlg-fields'."
                               (classicist-reference-to-string
                                reference))))))))
         (when (buffer-live-p buffer)
-          (switch-to-buffer buffer))
+          (classicist-phi--open buffer))
         buffer))))
 
 
@@ -846,7 +883,7 @@ ones about this passage are visible among them."
                (pick (completing-read
                       (format "Notes on this work (%d): " (length rows))
                       rows nil t)))
-          (find-file (cdr (assoc pick rows))))))))
+          (classicist-phi--open (cdr (assoc pick rows))))))))
 
 
 
