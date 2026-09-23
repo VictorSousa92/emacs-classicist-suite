@@ -1,15 +1,15 @@
 14 classicist-browser.el
 12 classicist-morphology.el
 9 diogenes-tgl.el
-6 diogenes-org.el
+5 diogenes-org.el
 5 classicist-lookup.el
 2 diogenes-purpose.el
 2 diogenes-passow.el
-2 diogenes-complete.el
 2 diogenes-cheatsheet.el
 1 diogenes-presets.el
 1 diogenes-pdf-search.el
 1 diogenes-old.el
+1 diogenes-complete.el
 0 treebank.el
 0 tei-browser.el
 0 diorisis.el
@@ -34,6 +34,7 @@
 0 classicist-windows.el
 0 classicist-windows-compat.el
 0 classicist-variants.el
+0 classicist-phi-notes.el
 0 classicist-obsolete.el
 0 classicist-lexicon.el
 0 classicist-installation.el

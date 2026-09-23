@@ -75,6 +75,12 @@
 (require 'ucs-normalize)
 
 (declare-function classicist--get-all-lemmata "classicist-lookup" (lang))
+;; THIS SUITE'S OWN, in `classicist.el', which this file does not require:
+;; the completion is wanted by a prompt and the prompt by a command, so
+;; requiring the file that defines the menu would be the wrong direction.
+;; Guarded with `fboundp' where it is called, which is what the declaration
+;; records rather than replaces.
+(declare-function diogenes--perseus-path "classicist" ())
 (declare-function diogenes--beta-to-utf8 "diogenes-utils" (str))
 (declare-function diogenes--utf8-to-beta "diogenes-utils" (str))
 

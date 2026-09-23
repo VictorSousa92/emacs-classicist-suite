@@ -86,6 +86,12 @@
 ;; files beside it: absent the suite the guards fall back to what they did
 ;; before the list existed, which is why the autoloaded one asks fboundp.
 (declare-function classicist-feature-p "classicist-groups" (feature))
+;; SUBR'S OWN, and an accessor rather than a defun: `prop-match-value' is one
+;; of the three `cl-defstruct' accessors `text-property-search-forward'
+;; returns its match in.  There is no `defun' for `check-declare' to find, so
+;; the arglist is left unspecified -- t t -- as it is for any struct
+;; accessor.
+(declare-function prop-match-value "subr" t t)
 
 ;; Diogenes' own, called at run time.  Declared rather than required, so this
 ;; file compiles without a configured Diogenes and fails only where it should:
