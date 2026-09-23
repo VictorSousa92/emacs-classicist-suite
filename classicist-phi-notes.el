@@ -282,6 +282,18 @@ names are used."
   :type 'number
   :group 'classicist-phi-notes)
 
+(defcustom classicist-phi-sidebar-verbose nil
+  "Whether the side window says what it asked for and what came back.
+
+FOR WHEN IT LANDS SOMEWHERE UNEXPECTED.  The action is assembled from three
+sources -- the side and size settled by
+`classicist-phi-sidebar-side\=' and `classicist-phi-sidebar-size\=',
+phi-notes\=' own `phi-sidebar-display-alist\=' minus those, and its window
+parameters -- and reading the code to work out what reached
+`display-buffer\=' is slower than printing it."
+  :type 'boolean
+  :group 'classicist-phi-notes)
+
 (defcustom classicist-phi-sidebar-select t
   "Whether showing the work note puts the cursor in it.
 Non-nil to follow a link straight away; nil to keep reading and glance over.
@@ -1109,28 +1121,51 @@ and looked like a sidebar gone wrong.  The form wanted is the one an entry in
     (display-buffer BUFFER \='(display-buffer-in-side-window
                              (side . right) (window-width . 0.3)))
 
-NIL AND NOT AN ERROR, still.  This is the first of two things tried, so a
-failure here must not stop the split: `display-buffer\=' raises on a nil
-buffer, and a side window can be refused where the frame has no room."
+SAYS WHY IT FAILED, and still falls back.  `ignore-errors\=' was here and
+hid the reason for a whole evening: the side window was refused, the split
+below took the work, and nothing in the echo area said so.  So a failure is
+reported and nil returned -- the split still happens, and the reader learns
+what the side window objected to.
+
+THE ALIST IS REPORTED TOO, at `classicist-phi-sidebar-verbose\='.  An action
+assembled from three sources -- the side and size settled here, phi-notes\='
+own `phi-sidebar-display-alist\=' minus those, and its window parameters --
+is not something to reconstruct by reading the code when it can be printed."
   (let* ((his (and (boundp 'phi-sidebar-display-alist)
                    phi-sidebar-display-alist))
          (key (classicist-phi--sidebar-size-key side))
-         (size (or classicist-phi-sidebar-size (cdr (assq key his)))))
-    (ignore-errors
-      (display-buffer
-       buffer
-       (append (list 'display-buffer-in-side-window
-                     (cons 'side side))
-               (when size (list (cons key size)))
-               ;; HIS, MINUS THE SIDE AND THE SIZE, which this has settled.
-               (seq-remove (lambda (cell)
-                             (memq (car cell)
-                                   '(side window-width window-height)))
-                           his)
-               (when (and (boundp 'phi-sidebar-persistent-window)
-                          phi-sidebar-persistent-window)
-                 (list '(window-parameters
-                         (no-delete-other-windows . t)))))))))
+         (size (or classicist-phi-sidebar-size (cdr (assq key his))))
+         (action
+          (append (list 'display-buffer-in-side-window
+                        (cons 'side side))
+                  (when size (list (cons key size)))
+                  ;; HIS, MINUS WHAT THIS HAS SETTLED.  `slot' goes with
+                  ;; them: a slot chosen for a sidebar at the bottom means
+                  ;; nothing on the right, and asking for one that is not
+                  ;; there is refused rather than adjusted.
+                  (seq-remove (lambda (cell)
+                                (memq (car cell)
+                                      '(side slot window-width
+                                             window-height)))
+                              his)
+                  (when (and (boundp 'phi-sidebar-persistent-window)
+                             phi-sidebar-persistent-window)
+                    (list '(window-parameters
+                            (no-delete-other-windows . t)))))))
+    (when classicist-phi-sidebar-verbose
+      (message "classicist-phi: side window action %S" action))
+    (condition-case err
+        (or (display-buffer buffer action)
+            (progn
+              (when classicist-phi-sidebar-verbose
+                (message (concat "classicist-phi: no side window on the %s"
+                                 " -- an ordinary window instead")
+                         side))
+              nil))
+      (error
+       (message "classicist-phi: side window on the %s refused: %s"
+                side (error-message-string err))
+       nil))))
 
 (defun classicist-phi--split-beside (buffer side)
   "BUFFER in a window on SIDE, by an ordinary split.
