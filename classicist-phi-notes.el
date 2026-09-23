@@ -821,7 +821,14 @@ it as text is enough to say whether a note is about this passage."
                   (not (looking-at-p "^[ \t]*$")))
         (when (looking-at
                "^\\([A-Za-z_][A-Za-z0-9_]*\\):[ \t]*\\(.*?\\)[ \t]*$")
-          (push (cons (match-string 1) (match-string 2)) fields))
+          ;; WITHOUT THE YAML QUOTES.  A title is written `title: "A.R."',
+          ;; and the quotes are the format's rather than the title's -- they
+          ;; reached the index as `1.1 -- "A.R. 1.1"'.  phi-notes has
+          ;; `phi--without-quotes' for this; doing it here keeps the text
+          ;; parser independent of it.
+          (push (cons (match-string 1)
+                      (string-trim (match-string 2) "\"" "\""))
+                fields))
         (forward-line 1))
       (nreverse fields))))
 
@@ -1087,19 +1094,33 @@ ASK non-nil asks again even where an answer is remembered."
 (defun classicist-phi--side-window (buffer side)
   "BUFFER in a side window on SIDE, as phi-notes would, or nil if refused.
 
-NIL AND NOT AN ERROR, whatever goes wrong.  This is the first of two things
-tried, so a failure here is not a failure: `display-buffer-in-side-window\='
-returns nil where a side window is not allowed, but RAISES on a side it does
-not recognise and on a slot already taken, and a raise would stop the split
-from ever being tried."
+THROUGH `display-buffer\=' AND NOT CALLED DIRECTLY.
+`display-buffer-in-side-window\=' is an ACTION FUNCTION, and says of itself
+that it
+
+    should be called only by `display-buffer\=' or a function directly or
+    indirectly called by the latter
+
+-- so called on its own it returns nil, relying on state `display-buffer\='
+sets up.  Which it did here, silently, while the fallback split took the work
+and looked like a sidebar gone wrong.  The form wanted is the one an entry in
+`display-buffer-alist\=' has, the action function INSIDE the action:
+
+    (display-buffer BUFFER \='(display-buffer-in-side-window
+                             (side . right) (window-width . 0.3)))
+
+NIL AND NOT AN ERROR, still.  This is the first of two things tried, so a
+failure here must not stop the split: `display-buffer\=' raises on a nil
+buffer, and a side window can be refused where the frame has no room."
   (let* ((his (and (boundp 'phi-sidebar-display-alist)
                    phi-sidebar-display-alist))
          (key (classicist-phi--sidebar-size-key side))
          (size (or classicist-phi-sidebar-size (cdr (assq key his)))))
     (ignore-errors
-      (display-buffer-in-side-window
+      (display-buffer
        buffer
-       (append (list (cons 'side side))
+       (append (list 'display-buffer-in-side-window
+                     (cons 'side side))
                (when size (list (cons key size)))
                ;; HIS, MINUS THE SIDE AND THE SIZE, which this has settled.
                (seq-remove (lambda (cell)
