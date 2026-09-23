@@ -827,8 +827,15 @@ guesses the note type from `(file-name-extension (buffer-file-name buffer))\='
 
     Wrong type argument: stringp, nil
 
-`phi-sidebar-create-window\=' takes an id and resolves the file itself, so
-naming the work note directly avoids the whole chain."
+`phi-sidebar-create-window\=' takes an id, which avoids that chain -- and
+runs into the next one: it resolves the id through `phi-matching-file-name\=',
+which calls `phi-notes-path\=' with a context, which calls
+`phi--enforce-directory\=', which does
+
+    (setq default-directory (file-name-directory buffer-file-name))
+
+So this is called from inside `classicist-phi--in-repository\=' as well, which
+is the fourth of phi-notes\=' functions to want a file buffer."
   (interactive)
   (classicist-phi--require)
   (let ((reference (and (fboundp 'classicist-browser-reference)
@@ -842,7 +849,8 @@ naming the work note directly avoids the whole chain."
                       (classicist-phi--make-work-note reference))))
       (unless (and found (car found) (not (string-empty-p (car found))))
         (user-error "No note for this work to show"))
-      (phi-sidebar-create-window (car found)))))
+      (classicist-phi--in-repository (classicist-phi--repository-directory)
+        (phi-sidebar-create-window (car found))))))
 
 ;;;; The way back
 
