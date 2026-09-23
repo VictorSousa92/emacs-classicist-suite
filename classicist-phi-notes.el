@@ -282,6 +282,33 @@ names are used."
   :type 'number
   :group 'classicist-phi-notes)
 
+(defcustom classicist-phi-sidebar-manage-sides-vertical t
+  "Whether `window-sides-vertical\=' is set to suit the side asked for.
+
+WHICH AXIS OWNS THE FRAME.  Nil, its default, gives top and bottom side
+windows the full frame width and confines left and right ones between them;
+`t\=' reverses that.  So whichever axis it favours has room and the other may
+not:
+
+  with nil, a bottom sidebar can be made from a right one -- it takes the
+  whole width, including where the right one was -- but a right one cannot be
+  made from a bottom one, there being no full-height column free.
+
+Which is exactly the asymmetry a reader meets: `b\=' and `t\=' reachable from
+`l\=' and `r\=', and not the other way back.  So it is set to match: `t\=' for
+left and right, nil for top and bottom, and both directions work.
+
+SET AND NOT LET-BOUND, because Emacs consults it again when the frame is
+laid out afresh, and a binding undone the moment the window exists would
+leave it to be re-confined later.
+
+IT IS GLOBAL, which is the reason this is an option.  Every side window on
+the frame answers to it -- another package\='s outline or file tree included --
+so a reader who arranges those deliberately should set this to nil and choose
+one axis for everything."
+  :type 'boolean
+  :group 'classicist-phi-notes)
+
 (defcustom classicist-phi-sidebar-verbose nil
   "Whether the side window says what it asked for and what came back.
 
@@ -1137,31 +1164,82 @@ is not something to reconstruct by reading the code when it can be printed."
          (size (or classicist-phi-sidebar-size (cdr (assq key his))))
          (action
           (append (list 'display-buffer-in-side-window
-                        (cons 'side side))
+                        (cons 'side side)
+                        ;; NOT THE WINDOW THIS WAS ASKED FROM.
+                        ;; `display-buffer' prefers a window already showing
+                        ;; the buffer, so asked from inside the sidebar it
+                        ;; hands that one back unchanged and reports
+                        ;; success -- which is why moving the index from the
+                        ;; bottom to the right did nothing when the index
+                        ;; itself was selected, and worked from the browser.
+                        '(inhibit-same-window . t))
                   (when size (list (cons key size)))
-                  ;; HIS, MINUS WHAT THIS HAS SETTLED.  `slot' goes with
-                  ;; them: a slot chosen for a sidebar at the bottom means
-                  ;; nothing on the right, and asking for one that is not
-                  ;; there is refused rather than adjusted.
+                  ;; HIS, MINUS WHAT THIS HAS SETTLED -- AND MINUS
+                  ;; `window-parameters', WHICH BREAKS THE THING IT IS IN.
+                  ;;
+                  ;; `display-buffer-in-side-window' installs `window-side'
+                  ;; and `window-slot' itself, and says that it
+                  ;;
+                  ;;     neither modifies ALIST nor installs any other
+                  ;;     window parameters unless they have been explicitly
+                  ;;     provided via a `window-parameters' entry
+                  ;;
+                  ;; Providing one REPLACES what it would have installed
+                  ;; rather than adding to it, so `window-side' is never set
+                  ;; and what comes back is an ordinary window that merely
+                  ;; sits where it was asked to.  No error, no nil -- it
+                  ;; reports success, which is why this took an evening and
+                  ;; ten wrong guesses about frames, purpose-mode and
+                  ;; buffer-local variables.
+                  ;;
+                  ;; Measured: the same action with the entry gives
+                  ;; `window-side' nil, and without it `right'.
+                  ;;
+                  ;; NOTHING IS LOST BY DROPPING IT.  phi-notes adds it from
+                  ;; `phi-sidebar-persistent-window' to keep
+                  ;; `delete-other-windows' from removing the sidebar -- and
+                  ;; a side window is already exempt from that, so the
+                  ;; parameter was redundant as well as destructive.
+                  ;;
+                  ;; `slot' goes too: one chosen for a sidebar at the bottom
+                  ;; means nothing on the right.
                   (seq-remove (lambda (cell)
                                 (memq (car cell)
-                                      '(side slot window-width
-                                             window-height)))
-                              his)
-                  (when (and (boundp 'phi-sidebar-persistent-window)
-                             phi-sidebar-persistent-window)
-                    (list '(window-parameters
-                            (no-delete-other-windows . t)))))))
+                                      '(side slot window-parameters
+                                             window-width window-height)))
+                              his))))
+    ;; THE AXIS BEFORE THE WINDOW.  `window-sides-vertical' decides which
+    ;; of the two axes owns the frame, and the other may have no room; set
+    ;; it to suit the side asked for and both directions work.  See
+    ;; `classicist-phi-sidebar-manage-sides-vertical'.
+    (when classicist-phi-sidebar-manage-sides-vertical
+      (setq window-sides-vertical (and (memq side '(left right)) t)))
     (when classicist-phi-sidebar-verbose
-      (message "classicist-phi: side window action %S" action))
+      (message "classicist-phi: side window action %S (sides-vertical %s)"
+               action window-sides-vertical))
     (condition-case err
-        (or (display-buffer buffer action)
-            (progn
-              (when classicist-phi-sidebar-verbose
-                (message (concat "classicist-phi: no side window on the %s"
-                                 " -- an ordinary window instead")
-                         side))
-              nil))
+        (let ((window (display-buffer buffer action)))
+          (cond
+           ((null window)
+            (when classicist-phi-sidebar-verbose
+              (message (concat "classicist-phi: no window on the %s"
+                               " -- an ordinary one instead")
+                       side))
+            nil)
+           ;; A WINDOW IS NOT YET A SIDE WINDOW.  `display-buffer' can
+           ;; answer with an ordinary one and call it success, which is
+           ;; exactly what a `window-parameters' entry in the action made it
+           ;; do.  So the parameter is read back rather than trusted, and a
+           ;; plain window is reported as the failure it is.
+           ((null (window-parameter window 'window-side))
+            (when classicist-phi-sidebar-verbose
+              (message (concat "classicist-phi: %s came back an ordinary"
+                               " window, not a side window")
+                       side))
+            window)
+           (t (when classicist-phi-sidebar-verbose
+                (message "classicist-phi: side window on the %s" side))
+              window)))
       (error
        (message "classicist-phi: side window on the %s refused: %s"
                 side (error-message-string err))
@@ -1183,20 +1261,52 @@ SIDE is named as `display-buffer-in-side-window\=' names it;
                    (cons 'direction direction))
              (when size (list (cons key size)))))))
 
-(defun classicist-phi--close-sidebar (buffer)
-  "Delete the window showing BUFFER, where there is one and it may go.
+(defun classicist-phi--windows-showing (buffer)
+  "Every window on this frame showing BUFFER.
 
-MOVING SIDES MEANS CLOSING THE OLD ONE, or a second answer leaves two windows
-on the same note.  The only window in the frame is left alone -- deleting it
-would error, and the new display reuses it anyway.  A `no-delete-other-windows'
-parameter, which phi-notes sets when `phi-sidebar-persistent-window' is on, is
-cleared first: it is there to stop `delete-other-windows', and this is not
-that."
-  (let ((window (and (buffer-live-p buffer) (get-buffer-window buffer))))
-    (when (and window (not (one-window-p t)))
-      (set-window-parameter window 'no-delete-other-windows nil)
-      (delete-window window)
-      t)))
+WALKED AND NOT ASKED FOR.  `get-buffer-window\=' answers nil for a buffer in a
+side window on the selected frame -- measured, from a browser, with the note
+plainly visible in one below it:
+
+    (get-buffer-window (get-buffer \"0001 A.R..markdown\"))  =>  nil
+    (one-window-p t)                                     =>  t
+
+while `window-list\=' found the same window without trouble.  Both of those
+were used to decide whether an old sidebar needed closing, so neither found
+it, nothing was closed, and `display-buffer\=' then did what its docstring
+says it may: reused the existing side window and changed its slot.  Which is
+why a sidebar at the bottom would not move to the right."
+  (seq-filter (lambda (window) (eq (window-buffer window) buffer))
+              (window-list)))
+
+(defun classicist-phi--close-sidebar (buffer)
+  "Delete every window on this frame showing BUFFER, keeping one window.
+
+MOVING SIDES MEANS CLOSING THE OLD ONE, or `display-buffer\=' reuses it and
+only its slot changes.  A `no-delete-other-windows\=' parameter, which
+phi-notes sets when `phi-sidebar-persistent-window\=' is on, is cleared
+first: it is there to stop `delete-other-windows\=', and this is not that.
+
+The last window on the frame is left alone -- deleting it would error, and
+the new display reuses it anyway."
+  (let ((deleted nil))
+    (dolist (window (classicist-phi--windows-showing buffer))
+      (when (> (length (window-list)) 1)
+        (set-window-parameter window 'no-delete-other-windows nil)
+        (set-window-dedicated-p window nil)
+        (ignore-errors (delete-window window) (setq deleted t))))
+    deleted))
+
+(defun classicist-phi--close-own-window ()
+  "Delete the window this buffer is in, on `kill-buffer-hook\='.
+A side window is dedicated, so a killed note would otherwise leave an empty
+window that `delete-other-windows\=' declines to clear."
+  (let ((buffer (current-buffer)))
+    (dolist (window (classicist-phi--windows-showing buffer))
+      (when (> (length (window-list)) 1)
+        (set-window-parameter window 'no-delete-other-windows nil)
+        (set-window-dedicated-p window nil)
+        (ignore-errors (delete-window window))))))
 
 (defun classicist-phi--show-beside (buffer side)
   "Show BUFFER on SIDE, by a side window or failing that a split.
@@ -1210,9 +1320,17 @@ Returns the window, or nil."
 (defun classicist-phi-sidebar (&optional ask)
   "Show this work\='s note beside the text.
 
+A TOGGLE.  Pressed once it shows the note; pressed again, with the note
+already on that side, it hides the window.  The BUFFER is left alone, so
+nothing is asked about saving and nothing is lost -- and an index is not
+somewhere to keep anything that a hidden window would lose.
+
 WHICH SIDE is `classicist-phi-sidebar-side\=': asked on the first use and
-remembered for the session, and a prefix argument ASK asks again.  Choosing a
-different side closes the window the note is in before opening the new one.
+remembered for the session, and a prefix argument ASK asks again.  ASK moves
+it rather than hiding it, a position changed being the same buffer on another
+edge and not a close: the old window is deleted and a new one made, because
+`display-buffer\=' would otherwise reuse the old one and change only its
+slot.
 
 THE WINDOW IS MADE HERE, using neither of phi-notes\=' two routes to a sidebar,
 because both want a file buffer and a Diogenes browser has none:
@@ -1246,7 +1364,10 @@ his sidebar does, and `phi-sidebar-buffer\=' is set, so his
       (unless (and file (file-exists-p file))
         (user-error "No note for this work to show"))
       (let* ((buffer (find-file-noselect file))
-             (shown (get-buffer-window buffer))
+             ;; WALKED, for the reason `classicist-phi--windows-showing'
+             ;; gives: `get-buffer-window' does not find a side window here.
+             (shown (car (classicist-phi--windows-showing
+                          (find-file-noselect file))))
              (side (classicist-phi--sidebar-side ask)))
         (when (fboundp 'phi-sidebar-adjust-buffer)
           (setq buffer (phi-sidebar-adjust-buffer buffer)))
@@ -1258,6 +1379,12 @@ his sidebar does, and `phi-sidebar-buffer\=' is set, so his
         (setq phi-sidebar-buffer buffer)
         ;; ALREADY THERE AND NOT MOVING: select it rather than flickering it
         ;; shut and open again.
+        ;; THE WINDOW GOES WITH THE BUFFER.  A side window is dedicated, so
+        ;; killing the note leaves an empty window that
+        ;; `delete-other-windows' will not clear.
+        (with-current-buffer buffer
+          (add-hook 'kill-buffer-hook
+                    #'classicist-phi--close-own-window nil t))
         (if (and shown
                  ;; THE PARAMETER IS THE SIDE WINDOW'S NAME, which is the
                  ;; vocabulary this file uses -- so they compare directly.
@@ -1266,7 +1393,17 @@ his sidebar does, and `phi-sidebar-buffer\=' is set, so his
                  ;; there is nothing to compare it against.
                  (eq side (window-parameter shown 'window-side))
                  (not ask))
-            (when classicist-phi-sidebar-select (select-window shown))
+            ;; SHOWING ALREADY, AND ON THIS SIDE: hide it.  A second press
+            ;; of the same key should put away what the first put up, as
+            ;; `phi-toggle-sidebar' does; selecting a window that is already
+            ;; in front of the reader wastes the binding.
+            ;;
+            ;; HIDDEN AND NOT KILLED.  The buffer stays, so nothing is asked
+            ;; about saving and nothing is lost -- and a position changed
+            ;; with a prefix argument is not a close at all, being the same
+            ;; buffer moved to another edge.
+            (progn (classicist-phi--close-sidebar buffer)
+                   (message "Work note hidden"))
           (classicist-phi--close-sidebar buffer)
           (let ((window (classicist-phi--show-beside buffer side)))
             (unless window
