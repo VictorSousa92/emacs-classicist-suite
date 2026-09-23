@@ -5,6 +5,9 @@ parse it, read the Perseus editions as TEI, search ten million lemmatised words
 of Greek, annotate a sentence as a dependency tree, and keep notes joined to the
 passages they are about — without leaving Emacs.
 
+**On Windows?** Read [`INSTALLING.md`'s Windows section][windows] before you
+begin. Most of what goes wrong there fails without saying why.
+
 - [What this is, and whose work it stands on](#what-this-is-and-whose-work-it-stands-on)
 - [What it adds](#what-it-adds)
 - [Requirements](#requirements)
@@ -166,11 +169,19 @@ intention is that it becomes unnecessary.
 Emacs, the per-distribution notes, and a section each for Linux, macOS and
 Windows.
 
-Windows is the one that needs reading before you start. It wants MSYS2 with its
-native `mingw64` Emacs, `git` and Python, and four settings that answer for the
-Perl Diogenes bundles and for a GUI Emacs inheriting no shell environment — the
-builder writes those four when you tick the Windows box, and `INSTALLING.md`
-explains the two traps that fail in ways which do not look like their cause.
+> **On Windows, read [the Windows section][windows] first.** Not as a
+> formality: three of the things it records cost an evening each to find, and
+> none of them fails in a way that points at its cause. A backslash in a path
+> is dropped silently and the error names a directory that looks almost right.
+> MSYS2's `$HOME` is not the Windows home, so Doom and Spacemacs look where
+> nothing is, fail during startup, and leave what appears to be a plain Emacs
+> with no error in sight. And a search that takes thirty seconds is usually
+> Windows Defender scanning the index rather than anything to do with Emacs.
+>
+> It also wants MSYS2 with its native `mingw64` Emacs, `git` and Python, and
+> four settings that answer for the Perl Diogenes bundles and for a GUI Emacs
+> inheriting no shell environment. The builder writes those four when you tick
+> the Windows box; the rest is reading.
 
 ## Modularity: choosing what is awake
 
@@ -868,4 +879,5 @@ GPL-3.0-or-later, as `diogenes.el` is.
 [tgl4]: https://www.digitale-sammlungen.de/en/view/bsb11912166
 [tgl5]: https://www.digitale-sammlungen.de/en/view/bsb11202469
 [installing]: INSTALLING.md
+[windows]: INSTALLING.md#windows
 [builder]: https://victorsousa92.github.io/emacs-classicist-suite/tools/classicist-builder.html

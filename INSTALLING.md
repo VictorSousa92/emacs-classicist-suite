@@ -41,6 +41,7 @@ configure it once installed.
   - [4. The four settings](#4-the-four-settings)
   - [5. The trap: two homes](#5-the-trap-two-homes)
   - [6. Shortcuts](#6-shortcuts)
+  - [7. Speed, and Windows Defender](#7-speed-and-windows-defender)
   - [What the five unknowns turned out to be](#what-the-five-unknowns-turned-out-to-be)
   - [Known limitations](#known-limitations)
 - [What a Podman container is good for, and is not](#what-a-podman-container-is-good-for-and-is-not)
@@ -306,6 +307,50 @@ This section used to be a list of things to find out. The answers:
 | Whether Perl is found | not without the four settings above; with them, `diogenes-browse-tlg` answers |
 | What renders a PDF | Ghostscript is not installed by default and `doc-view` needs it; poppler and pdf-tools are buildable under MSYS2, unlike the FSF build |
 | The two symlinks in `tools/viewer` | there are none. `serve.py` answers `/trees/NAME.xml` from wherever `--trees` points; the viewer's own README says no symlink is wanted |
+
+### 7. Speed, and Windows Defender
+
+A corpus search is thousands of small reads of a large index, which is the
+worst shape of work for a real-time virus scanner. Defender inspects each one,
+and on a first search — before anything is in the file cache — the difference
+is measured in tens of seconds rather than percentages. It is the single
+largest thing a reader can fix.
+
+**Exclude the Diogenes directory and your corpora.** Settings → Privacy &
+security → Windows Security → Virus & threat protection → *Manage settings* →
+Exclusions → *Add or remove exclusions* → Add an exclusion → Folder. Add:
+
+- the Diogenes installation, `C:\Program Files (x86)\Diogenes`
+- wherever the corpora are, if they are not inside it
+- the directory holding your scanned dictionaries, which are large PDFs
+
+Or in an elevated PowerShell:
+
+```powershell
+Add-MpPreference -ExclusionPath "C:\Program Files (x86)\Diogenes"
+Add-MpPreference -ExclusionPath "D:\DiogenesData"
+Get-MpPreference | Select-Object -ExpandProperty ExclusionPath
+```
+
+The last line reads back what is excluded, which is worth doing: the cmdlet
+fails silently without elevation.
+
+**A word on what an exclusion means.** It tells Defender not to scan files in
+that folder. That is a sound trade for a directory holding a licensed corpus
+and a Perl distribution you installed deliberately, and a bad habit for a
+downloads folder. Exclude the data, not the places things arrive from.
+
+**Two other things worth trying before blaming Perl.** Where the corpora sit
+matters far more than which Perl reads them — a network share is slow and an
+RDP redirected drive is unusable, for the same reason Defender is: thousands
+of small reads. And a newer Perl is not the answer: the interpreter has gained
+little that a corpus search would feel, the cost on Windows being process
+creation and file access rather than execution, and Diogenes' bundled CPAN
+modules were tested against the Strawberry it ships with.
+
+**Measure rather than assume.** Time the same search twice — once with the
+corpora on a local disk and the folder excluded, once without — before
+changing anything else.
 
 ### Known limitations
 
