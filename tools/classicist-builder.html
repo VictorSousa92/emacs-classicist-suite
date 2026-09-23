@@ -530,6 +530,38 @@
   }
   .actions button.ghost { background: #fff; color: var(--accent); }
   .note { font-size: .85rem; color: var(--quiet); margin: .5rem 0 0; max-width: 70ch; }
+  /* A DIALOGUE, for the two questions that must not be read past: which note
+     system, and that phi-notes is installed by its own README and not here.
+     The native element, so Escape closes it and the backdrop is the
+     browser's. */
+  dialog.ask {
+    border: 1px solid var(--rule); border-radius: 5px; padding: 0;
+    background: var(--paper); color: var(--ink); max-width: 56ch;
+    box-shadow: 0 6px 28px rgba(0,0,0,.18);
+  }
+  dialog.ask::backdrop { background: rgba(28,26,23,.34); }
+  dialog.ask .body { padding: 1.1rem 1.3rem .2rem; }
+  dialog.ask h3 { margin: 0 0 .5rem; font-size: 1.02rem; }
+  dialog.ask p { margin: .5rem 0; font-size: .9rem; line-height: 1.45; }
+  dialog.ask .acts {
+    display: flex; gap: .6rem; flex-wrap: wrap; justify-content: flex-end;
+    padding: .9rem 1.3rem 1.1rem;
+  }
+  dialog.ask button {
+    font: inherit; padding: .42rem .9rem; cursor: pointer; border-radius: 3px;
+    border: 1px solid var(--accent); background: var(--accent); color: #fff;
+  }
+  dialog.ask button.ghost { background: var(--paper); color: var(--accent); }
+  dialog.ask a { color: var(--accent); }
+  dialog.ask ul { margin: .5rem 0; padding-left: 1.2rem; font-size: .88rem; }
+  dialog.ask li { margin: .2rem 0; }
+  dialog.ask li code { font-size: .85em; }
+  #c-ask-dicts-list { max-height: 34vh; overflow: auto; margin: .6rem 0 0;
+                      border-top: 1px solid var(--rule); padding-top: .5rem; }
+  #c-ask-dicts-list label { display: flex; gap: .45rem; align-items: baseline;
+                            font-size: .88rem; margin: .18rem 0; }
+  #c-ask-dicts-list em { color: var(--quiet); font-style: normal;
+                         font-size: .85em; }
   .legend { display: flex; gap: .5rem; align-items: center; margin: .7rem 0 0;
             font-size: .8rem; color: var(--quiet); flex-wrap: wrap; }
   .legend .key {
@@ -698,6 +730,82 @@
       <div><b>Frame, window and buffer managing</b><span>which frame a buffer lands in, whether a window is split or reused, and whether a perspective claims it</span></div>
     </label>
   </div>
+
+  <div id="c-noteswap" class="note" hidden></div>
+
+  <dialog class="ask" id="c-ask-notes">
+    <div class="body">
+      <h3>Two note systems, and they are alternatives</h3>
+      <p>The same three commands &mdash; a note on the passage in hand, what
+         has been said about these lines, and the way back &mdash; kept either
+         in <b>org</b> or in <b>phi-notes</b>. Having both awake binds two
+         sets of keys over one reader&rsquo;s notes and asks them to keep two
+         Zettelkasten.</p>
+      <p><b>Org</b> is the standard: it is what the suite shipped with and
+         what the other note commands were written against. <b>phi-notes</b>
+         is markdown, a YAML-ish frontmatter and <code>[[0002]]</code>
+         wikilinks, and is a package of its own that you install
+         yourself.</p>
+    </div>
+    <div class="acts">
+      <button type="button" class="ghost" value="phi"
+              id="c-ask-notes-phi">Use phi-notes</button>
+      <button type="button" value="org" id="c-ask-notes-org">Keep org</button>
+    </div>
+  </dialog>
+
+  <dialog class="ask" id="c-ask-dicts">
+    <div class="body">
+      <h3>Which printed dictionaries do you have?</h3>
+      <p>Each one you tick is <b>offered</b> &mdash; its key appears at the
+         head of every entry &mdash; whether or not its files are where it
+         expects. That is on purpose: a key that says what to configure is
+         better than one that does nothing.</p>
+      <p>You can leave this until later: the section below lists them all with
+         their paths, and nothing is lost by coming back to it.</p>
+      <div id="c-ask-dicts-list"></div>
+    </div>
+    <div class="acts">
+      <button type="button" class="ghost"
+              id="c-ask-dicts-later">Choose later</button>
+      <button type="button" id="c-ask-dicts-ok">Use these</button>
+    </div>
+  </dialog>
+
+  <dialog class="ask" id="c-ask-paths">
+    <div class="body">
+      <h3>Some paths are not set</h3>
+      <p>These features and dictionaries are turned on and have nowhere to
+         read from. The configuration will still load &mdash; a key tells you
+         what to set rather than failing &mdash; but nothing will be found
+         until they are filled in.</p>
+      <ul id="c-ask-paths-list"></ul>
+    </div>
+    <div class="acts">
+      <button type="button" class="ghost"
+              id="c-ask-paths-ignore">Use it anyway</button>
+      <button type="button" id="c-ask-paths-go">Take me to the first</button>
+    </div>
+  </dialog>
+
+  <dialog class="ask" id="c-ask-phi">
+    <div class="body">
+      <h3>phi-notes is installed separately</h3>
+      <p>This configuration does not install it, deliberately. Its own README
+         recommends a Spacemacs layer with a local checkout, and a recipe
+         written here would be a second declaration of a package you are
+         likely to have already &mdash; which is how two of them end up
+         pulling against each other.</p>
+      <p><b><a href="https://github.com/brunocbr/phi-notes" target="_blank"
+              rel="noopener">github.com/brunocbr/phi-notes</a></b></p>
+      <p>What this configuration writes is the suite&rsquo;s own side: which
+         repository a note goes in, which edge the work note sits on, the
+         index, and the keys.</p>
+    </div>
+    <div class="acts">
+      <button type="button" id="c-ask-phi-ok">Understood</button>
+    </div>
+  </dialog>
 
   <h2>Your own keys</h2>
   <p class="note">Optional, and it makes the warnings below far better: add the
@@ -4846,20 +4954,201 @@ document.addEventListener('change', e => {
     const rb = el('c-useroam');
     if (rb) rb.checked = e.target.checked;
   }
+  // ONE ZETTELKASTEN.  The two note features are the same three commands in
+  // two systems, so having both awake binds two sets of keys over one
+  // reader's notes and asks them to keep two.  Ticking one unticks the other
+  // rather than warning about it: a warning would leave the block written
+  // with both in `classicist-features', which is the state being prevented.
+  const OTHER_NOTES = { notes: 'phi-notes', 'phi-notes': 'notes' };
+  if (e.target.checked && OTHER_NOTES[f]) {
+    const other = document.getElementById('f-' + OTHER_NOTES[f]);
+    if (other && other.checked) {
+      other.checked = false;
+      if (OTHER_NOTES[f] === 'notes') {
+        // AND THE PACKAGE THAT FILES THEM GOES WITH IT, as it does when
+        // `notes' is unticked by hand: a recipe and its settings for a
+        // feature the same block declares asleep is the fault this follows.
+        const rb = el('c-useroam');
+        if (rb) rb.checked = false;
+      }
+      noteLine(f);
+    }
+  }
+  // TICKED BY HAND, AND THE SAME WARNING IS DUE.  A reader who turns
+  // phi-notes on without going through the dialogue above still has a
+  // package to install, and nothing else here would tell them.
+  if (f === 'phi-notes' && e.target.checked) warnInstallPhi();
   if (e.target.checked && WANTS[f] && !WANTS[f].some(featureOn)) {
     const first = document.getElementById('f-' + WANTS[f][0]);
     if (first) { first.checked = true; }
+  }
+  // GONE ON THE NEXT CHANGE, whatever it was: the line answers one action and
+  // reading it against a later one would be worse than not having it.
+  if (!OTHER_NOTES[f]) {
+    const box = el('c-noteswap');
+    if (box) box.hidden = true;
   }
   syncFeatureRows();
   showSections();
   renderConfig();
 });
 
+// TWO DIALOGUES, for the two things that must not be read past.  A line
+// under the features was the first attempt and was too quiet: a reader who
+// pressed "everything" got a sentence below the fold and a configuration
+// that had already chosen for them.
+//
+// `showModal' AND NOT `alert': the native element, so Escape closes it, the
+// backdrop is the browser's, and the buttons are buttons -- which matters
+// here because one of them is a choice and not an acknowledgement.
+function askWhichNotes() {
+  const d = el('c-ask-notes');
+  if (!d || !d.showModal) {          // a browser without <dialog>: choose and say
+    noteLine('org');
+    return;
+  }
+  d.showModal();
+}
+
+// AND THE INSTALL WARNING, shown whenever phi-notes is turned on -- by the
+// dialogue above or by ticking the box.  It is the one thing a reader must
+// know that this configuration cannot do for them.
+function warnInstallPhi() {
+  const d = el('c-ask-phi');
+  if (d && d.showModal) d.showModal();
+}
+
+// THE LINE UNDER THE FEATURES REMAINS, for the swap a reader makes by hand:
+// ticking one and watching the other go off wants a word, and a dialogue for
+// that would be in the way of someone who meant it.
+function noteLine(kept) {
+  const box = el('c-noteswap');
+  if (!box) return;
+  box.hidden = false;
+  box.innerHTML = kept === 'notes'
+    ? 'Notes in <b>org</b> it is &mdash; the phi-notes ones went off. ' +
+      'They are the same three commands in two systems, and a reader keeps ' +
+      'one Zettelkasten.'
+    : 'Notes in <b>phi-notes</b> it is &mdash; the org ones went off, and ' +
+      'the package that files them by author and work with them.';
+}
+
+// THE DICTIONARY CHOOSER, which follows the note question when a reader has
+// asked for everything.  It is the one other thing "everything" cannot decide
+// for them: which printed dictionaries they actually own.
+//
+// TICKED BY DEFAULT IS WRONG HERE.  Declaring a dictionary puts its key at
+// the head of every entry, and a reader with none of these would get eleven
+// keys that all report a missing file.  So the list starts empty and they
+// pick.
+function askWhichDicts() {
+  const d = el('c-ask-dicts'), list = el('c-ask-dicts-list');
+  if (!d || !d.showModal || !list) return;
+  list.innerHTML = DICTS.filter(x => !x.shipped).map(x => `
+    <label><input type="checkbox" data-askdict="${x.id}">
+      <span>${x.name} <em>&mdash; ${x.lang}</em></span></label>`).join('');
+  // WHAT IS ALREADY TICKED BELOW, so that pressing "everything" twice does
+  // not forget what was chosen the first time.
+  list.querySelectorAll('[data-askdict]').forEach(box => {
+    const there = document.getElementById('decl-' + box.dataset.askdict);
+    box.checked = !!(there && there.checked);
+  });
+  d.showModal();
+}
+
+{
+  const ok = el('c-ask-dicts-ok'), later = el('c-ask-dicts-later');
+  const close = () => { const d = el('c-ask-dicts'); if (d && d.close) d.close(); };
+  if (ok) ok.addEventListener('click', () => {
+    document.querySelectorAll('[data-askdict]').forEach(box => {
+      const there = document.getElementById('decl-' + box.dataset.askdict);
+      if (there) there.checked = box.checked;
+    });
+    close();
+    showSections();
+    renderConfig();
+  });
+  // LATER LEAVES THEM AS THEY WERE, and does not untick what was already on:
+  // "choose later" is not "choose none".
+  if (later) later.addEventListener('click', close);
+}
+
+function chooseNotes(which) {
+  const orgBox = document.getElementById('f-notes');
+  const phiBox = document.getElementById('f-phi-notes');
+  if (orgBox) orgBox.checked = (which === 'org');
+  if (phiBox) phiBox.checked = (which === 'phi');
+  // THE PACKAGE THAT FILES THE ORG NOTES GOES WITH THEM, as it does when
+  // `notes' is unticked by hand.
+  const rb = el('c-useroam');
+  if (rb) rb.checked = (which === 'org');
+  noteLine(which === 'org' ? 'notes' : 'phi-notes');
+  syncFeatureRows();
+  showSections();
+  renderConfig();
+  if (which === 'phi') warnInstallPhi();
+  // AND THEN THE DICTIONARIES, when this choice came from "everything".  The
+  // flag rather than a look at the preset radio: a reader who swaps the note
+  // system by hand later has not asked to be taken through setting up again.
+  if (askedByPreset) {
+    askedByPreset = false;
+    if (featureOn('dictionaries')) askWhichDicts();
+  }
+}
+
+// SET WHEN A PRESET PUT THE QUESTION, cleared when it is answered.  Two
+// dialogues in a row need to know they are a sequence, and the alternative --
+// reading the preset radio at the time of answering -- says nothing about
+// whether this particular question came from it.
+let askedByPreset = false;
+
+for (const [id, which] of [['c-ask-notes-org', 'org'],
+                           ['c-ask-notes-phi', 'phi']]) {
+  const b = el(id);
+  if (b) b.addEventListener('click', () => {
+    const d = el('c-ask-notes');
+    if (d && d.close) d.close();
+    chooseNotes(which);
+  });
+}
+{
+  const b = el('c-ask-phi-ok');
+  if (b) b.addEventListener('click', () => {
+    const d = el('c-ask-phi');
+    if (d && d.close) d.close();
+  });
+}
+// ESCAPE IS AN ANSWER TOO, and the answer is the standard: a reader who
+// dismisses the question has not asked for the alternative.
+{
+  const d = el('c-ask-notes');
+  if (d) d.addEventListener('close', () => {
+    const orgBox = document.getElementById('f-notes');
+    const phiBox = document.getElementById('f-phi-notes');
+    if (orgBox && phiBox && !orgBox.checked && !phiBox.checked)
+      chooseNotes('org');
+  });
+}
+
 function setFeatures(list) {
   ALL_FEATURES.forEach(f => {
     const box = document.getElementById('f-' + f);
     if (box) box.checked = list.includes(f);
   });
+  // A PRESET CAN ASK FOR BOTH, and `all' is the one that does: it means
+  // everything, and everything cannot mean two note systems.  So BOTH are
+  // turned off and the question is put -- rather than choosing and
+  // mentioning it, which left a reader with a configuration already decided
+  // and a sentence below the fold.  The dialogue's own `close' handler takes
+  // org if it is dismissed.
+  const orgBox = document.getElementById('f-notes');
+  const phiBox = document.getElementById('f-phi-notes');
+  if (orgBox && phiBox && orgBox.checked && phiBox.checked) {
+    orgBox.checked = false;
+    phiBox.checked = false;
+    askedByPreset = true;
+    askWhichNotes();
+  }
   syncFeatureRows();
   showSections();
 }
@@ -4969,7 +5258,85 @@ document.addEventListener('input', e => {
   if (slot) lastTouched = slot;
   renderConfig();
 });
+// WHAT IS TURNED ON AND HAS NOWHERE TO READ FROM.  Returns a list of
+// {label, el} -- the thing missing and the box to fill it in.
+//
+// OPTIONAL FIELDS ARE NOT MISSING.  Several dictionaries name a scan as well
+// as a source, and the scan is a second way of looking a word up rather than
+// a requirement; the table says so in its labels, and this reads that rather
+// than keeping a second list to fall out of step with it.
+function missingPaths() {
+  const out = [];
+  const want = (id, label) => {
+    const box = el(id);
+    if (box && !box.value.trim()) out.push({ label, el: box });
+  };
+  // THE INSTALLATION FIRST.  Without it the base raises at load, so this is
+  // not one missing path among others.
+  want('c-path', 'Diogenes itself (diogenes-path)');
+  if (featureOn('diorisis') && !(el('c-diousemerged') && el('c-diousemerged').checked))
+    want('c-diodb', 'the Diorisis database');
+  if (featureOn('diorisis') && el('c-diousemerged') && el('c-diousemerged').checked)
+    want('c-diomerged', 'the merged Diorisis database');
+  if (featureOn('treebank')) want('c-tbdir', 'where annotated trees are kept');
+  if (featureOn('tei-corpora')) want('c-teidir', 'the tree of TEI editions');
+  if (featureOn('dictionaries')) {
+    DICTS.forEach(d => {
+      const box = document.getElementById('decl-' + d.id);
+      if (!box || !box.checked) return;
+      (d.fields || []).forEach(([v, label]) => {
+        if (/optional/i.test(label)) return;
+        // THE BUILT FILE IS NOT MISSING EITHER: the package writes it from
+        // the source, so a reader who has named the source has said enough.
+        if (/^built /i.test(label)) return;
+        const f = document.querySelector(`[data-path="${v}"]`);
+        if (f && !f.value.trim())
+          out.push({ label: `${d.name}: ${label} (<code>${v}</code>)`, el: f });
+      });
+    });
+  }
+  return out;
+}
+
+// ASKED BEFORE THE CONFIGURATION IS TAKEN AWAY, and not while it is being
+// built: a dialogue on every keystroke would be unusable, and a reader
+// reading the block on screen has not yet committed to anything.  Copying,
+// downloading or clicking into the text is the moment they do.
+//
+// Returns true when it is safe to go on.
+function pathsChecked(then) {
+  const missing = missingPaths();
+  const d = el('c-ask-paths'), list = el('c-ask-paths-list');
+  if (!missing.length || !d || !d.showModal || !list) return true;
+  list.innerHTML = missing.map(m => `<li>${m.label}</li>`).join('');
+  const go = el('c-ask-paths-go'), ignore = el('c-ask-paths-ignore');
+  // REPLACED RATHER THAN ADDED TO, the dialogue being reused: a listener per
+  // opening would fire once per time it had ever been shown.
+  if (go) go.onclick = () => {
+    if (d.close) d.close();
+    const first = missing[0].el;
+    // THE PANEL IT IS IN, then the box.  A field inside a hidden panel
+    // cannot be scrolled to, and the dictionaries are on a tab of their own.
+    const panel = first.closest('[id^="panel-"]');
+    if (panel && panel.id) {
+      const tab = document.querySelector(`[data-tab="${panel.id.replace('panel-', '')}"]`);
+      if (tab) tab.click();
+    }
+    first.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    first.focus();
+    // AND SAID, because a focused empty box in a long form is easy to lose.
+    first.style.outline = '2px solid var(--accent)';
+    setTimeout(() => first.style.outline = '', 2400);
+  };
+  if (ignore) ignore.onclick = () => { if (d.close) d.close(); if (then) then(); };
+  d.showModal();
+  return false;
+}
+
+el('c-out') && el('c-out').addEventListener('click', () => pathsChecked());
+
 el('c-copy').addEventListener('click', async () => {
+  if (!pathsChecked(() => el('c-copy').click())) return;
   try {
     await navigator.clipboard.writeText(configText());
     el('c-copied').textContent = 'copied';
@@ -4977,6 +5344,7 @@ el('c-copy').addEventListener('click', async () => {
   } catch { el('c-copied').textContent = 'select the text and copy it'; }
 });
 el('c-download').addEventListener('click', () => {
+  if (!pathsChecked(() => el('c-download').click())) return;
   const blob = new Blob([configText()], { type: 'text/plain' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob); a.download = 'diogenes-config.el'; a.click();
@@ -5017,12 +5385,18 @@ const START = {
     preset: '', gesture: ''
   },
   all: {
+    // BOTH NOTE FEATURES, and deliberately: "everything" means everything,
+    // and the two of them cannot both be awake.  So this is the one preset
+    // that asks -- `setFeatures' untangles the pair, keeps org as the
+    // standard and offers the swap as a button, which is the choice a reader
+    // who clicked "everything" should be given at once rather than finding
+    // in the output.
+    //
+    // Listing only `notes' was the first attempt and was silently wrong:
+    // nothing was ever in conflict, so nothing ever asked.
     features: ['texts', 'lexica', 'dictionaries', 'diorisis', 'treebank',
-               'tei-corpora', 'notes', 'windows', 'books',
+               'tei-corpora', 'notes', 'phi-notes', 'windows', 'books',
                'lemmata'],
-    // NOT `phi-notes': it is an alternative to `notes' and not an addition,
-    // and "everything" cannot mean both note systems at once.  A reader who
-    // wants markdown notes ticks it and unticks the org ones.
     'c-useroam': true,
     // The above, plus what the package is for.
     'c-headerline': true, 'c-citations': true, 'c-analysis': true,
