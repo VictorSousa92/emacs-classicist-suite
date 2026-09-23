@@ -813,6 +813,34 @@ are being asked for one at a time."
   :type 'boolean
   :group 'diogenes)
 
+(defun classicist-browser--pad-levels (levels labels)
+  "LEVELS with the last one filled in, where LABELS says one is missing.
+
+THE CORPUS WILL NOT FIND A CITATION ONE LEVEL SHORT.  Aristotle is cited by
+`Bekker page\=' and `line\=', and `1048b\=' alone dies INSIDE `seek_passage\='
+-- not returning nil, dying -- so the browser process goes with it and the
+reader sees `exited abnormally with code 255\='.  `1048b.1\=' opens the page.
+An empty
+answer at the `line\=' prompt means the beginning of that page, so that is what
+is sent.
+
+ONE LEVEL, AND THE LAST, AND ONLY `1\='.  The last level of every work looked at
+is a line, and a line starts at 1 -- Bekker page and line; Stephanus page,
+section and line; Book and line; actio, book, section and line.  The levels
+ABOVE it are books, actiones and lettered sections, where 1 is a guess and not
+a fact -- Cicero\='s first
+`actio\=' is not 1 for a speech that has none, and Plato\='s `section\=' is a
+letter.  So two or more levels missing is left alone, and falls back to the
+head of the work as it did before.
+
+FOR EVERY WAY IN, which is why this is here and not in the reader: the
+level-by-level prompt, the whole-citation prompt, and a PASSAGE handed over by
+another package all pass through `classicist-browser-goto-passage\='."
+  (if (and labels levels
+           (= (length levels) (1- (length labels))))
+      (append levels (list "1"))
+    levels))
+
 (defun classicist-browser--read-levels (labels)
   "A citation read one level at a time, as LABELS name them.
 
@@ -848,7 +876,11 @@ separator in the first answer can mean nothing else."
                                 (capitalize (substring name 0 1))
                                 (substring name 1))))))
           (when (string-empty-p answer)
-            ;; Nothing given: the citation ends here.
+            ;; NOTHING GIVEN: the citation ends here, and
+            ;; `classicist-browser--pad-levels' fills the last level when
+            ;; exactly one is missing -- so `1048b' and return is
+            ;; `1048b.1', the beginning of that page, rather than a
+            ;; citation the corpus dies on.
             (throw 'done nil))
           (if (and (null levels) (string-match "[.: ]" answer))
               ;; THE WHOLE CITATION AT THE FIRST PROMPT, which is what a
@@ -893,6 +925,7 @@ the passage at the top rather than paged to."
                "[.: ]+" t)))))
     (unless levels
       (user-error "No passage given"))
+    (setq levels (classicist-browser--pad-levels levels labels))
     ;; Outermost level first, as Diogenes takes them.
     (classicist-open-passage classicist--browser-corpus
                            classicist--browser-author
