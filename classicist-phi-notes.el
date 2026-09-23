@@ -79,7 +79,10 @@
 (declare-function phi-new-note "phi-notes" (&rest args))
 (declare-function phi-create-note "phi-notes" (type repo-dir &rest args))
 (declare-function phi-get-note-id-from-file-name "phi-notes" (filename))
-(declare-function phi-sidebar-create-window "phi-notes" (id))
+(declare-function phi-sidebar-adjust-buffer "phi-notes" (buffer))
+(defvar phi-sidebar-buffer)
+(defvar phi-sidebar-display-alist)
+(defvar phi-sidebar-persistent-window)
 (declare-function phi-get-note-field-contents "phi-notes"
                   (field &optional buffer))
 (declare-function phi-get-fields "phi-notes" (&optional buffer))
@@ -820,22 +823,29 @@ belongs."
 (defun classicist-phi-sidebar ()
   "Show this work\='s note in the phi-notes sidebar.
 
-`phi-toggle-sidebar\=' CANNOT BE USED FROM A BROWSER.  It asks
-`phi-get-linked-project-note-id\=', which reaches `phi-get-fields\=', which
-guesses the note type from `(file-name-extension (buffer-file-name buffer))\='
--- and a browser buffer has no file, so it ends in
+THE WINDOW IS MADE HERE, and not by `phi-sidebar-create-window\='.  Two of
+phi-notes\=' routes to a sidebar want a file buffer, and a Diogenes browser
+has none:
 
-    Wrong type argument: stringp, nil
+  `phi-toggle-sidebar\=' asks `phi-get-linked-project-note-id\=', which reaches
+  `phi-get-fields\=', which guesses the note type from
+  `(file-name-extension (buffer-file-name buffer))\='.
 
-`phi-sidebar-create-window\=' takes an id, which avoids that chain -- and
-runs into the next one: it resolves the id through `phi-matching-file-name\=',
-which calls `phi-notes-path\=' with a context, which calls
-`phi--enforce-directory\=', which does
+  `phi-sidebar-create-window\=' takes an id, which avoids that -- and resolves
+  it through `phi-matching-file-name\=' and `phi-notes-path\=', which calls
+  `phi--enforce-directory\=', which does
+  `(setq default-directory (file-name-directory buffer-file-name))\='.
 
-    (setq default-directory (file-name-directory buffer-file-name))
+Calling the second from a temporary buffer carrying a file name got past the
+error and displayed nothing: a side window made while a `with-temp-buffer\=' is
+current goes when the temporary buffer does.
 
-So this is called from inside `classicist-phi--in-repository\=' as well, which
-is the fourth of phi-notes\=' functions to want a file buffer."
+SO NEITHER IS USED.  `classicist-phi--work-note\=' already knows the file --
+it found it by reading frontmatter -- so `find-file-noselect\=' and
+`display-buffer-in-side-window\=' do the whole job with none of phi-notes\='
+path resolution involved.  His own `phi-sidebar-adjust-buffer\=' is still
+called, so the sidebar looks as his does, and `phi-sidebar-buffer\=' is set, so
+his `phi-toggle-sidebar\=' can close what this opened."
   (interactive)
   (classicist-phi--require)
   (let ((reference (and (fboundp 'classicist-browser-reference)
@@ -846,11 +856,22 @@ is the fourth of phi-notes\=' functions to want a file buffer."
            (author (plist-get reference :author))
            (work (plist-get reference :work))
            (found (or (classicist-phi--work-note corpus author work)
-                      (classicist-phi--make-work-note reference))))
-      (unless (and found (car found) (not (string-empty-p (car found))))
+                      (classicist-phi--make-work-note reference)))
+           (file (cdr found)))
+      (unless (and file (file-exists-p file))
         (user-error "No note for this work to show"))
-      (classicist-phi--in-repository (classicist-phi--repository-directory)
-        (phi-sidebar-create-window (car found))))))
+      (let ((buffer (find-file-noselect file)))
+        (when (fboundp 'phi-sidebar-adjust-buffer)
+          (setq buffer (phi-sidebar-adjust-buffer buffer)))
+        (setq phi-sidebar-buffer buffer)
+        (display-buffer-in-side-window
+         buffer
+         (append (and (boundp 'phi-sidebar-display-alist)
+                      phi-sidebar-display-alist)
+                 (when (and (boundp 'phi-sidebar-persistent-window)
+                            phi-sidebar-persistent-window)
+                   (list '(window-parameters
+                           (no-delete-other-windows . t))))))))))
 
 ;;;; The way back
 
