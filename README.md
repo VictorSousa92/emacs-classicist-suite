@@ -31,6 +31,7 @@ passages they are about — without leaving Emacs.
   - [Under evil](#under-evil)
 - [Where the windows go](#where-the-windows-go)
 - [One package kept beside it](#one-package-kept-beside-it)
+- [Where the data comes from](#where-the-data-comes-from)
 - [Which files are Michael Neidhart's, modified](#which-files-are-michael-neidharts-modified)
 - [Developing](#developing)
 - [Licence and credits](#licence-and-credits)
@@ -67,7 +68,7 @@ to build on.
 
 ## What it adds
 
-Ten features, and you name the ones you want — see
+Eleven features, and you name the ones you want — see
 [Modularity](#modularity-choosing-what-is-awake). The default is the two that
 match what `diogenes.el` itself does.
 
@@ -164,8 +165,8 @@ explains the two traps that fail in ways which do not look like their cause.
 
 ## Modularity: choosing what is awake
 
-**Nothing you did not ask for.** The suite is one package of ten features, and
-you name the ones you want:
+**Nothing you did not ask for.** The suite is one package of eleven features,
+and you name the ones you want:
 
 ```elisp
 (setq classicist-features '(texts lexica))
@@ -190,11 +191,12 @@ configuration, and turning something on is one symbol rather than an install.
 | `tei-corpora` | the CSEL, the Patrologia Latina, Corpus Corporum, anything published as TEI XML |
 | `books` | a work opened at one of its books — *Theta*, not `1045b27`. The corpora do not know books; the text carries their titles, and this reads them |
 | `notes` | the org commands: a note on a passage, and what has been said about the lines in front of you |
+| `phi-notes` | the same three things in [phi-notes][phi] instead — markdown, a frontmatter and wikilinks. An **alternative** to `notes`, not an addition |
 | `windows` | the suite placing buffers, rather than leaving that to whatever you have arranged |
 
-### Three want another
+### Four want another
 
-Seven of the ten stand alone. Three do not:
+Seven of the eleven stand alone. Four do not:
 
 - **`treebank`** wants **`diorisis`** — it annotates that corpus's sentences,
   reads its file, and puts its keys in its results buffer.
@@ -202,6 +204,8 @@ Seven of the ten stand alone. Three do not:
   banner at the head of an LSJ or Lewis & Short entry.
 - **`notes`** wants **`texts`** or **`tei-corpora`** — a note is about a
   passage, and either browser will do.
+- **`phi-notes`** wants the same, for the same reason — and the phi-notes
+  package itself, which is its own and installed separately.
 
 <!-- -->
 
@@ -509,9 +513,66 @@ are tried.
 
 ### Notes joined to passages
 
-With `notes` awake, `diogenes-org-note` writes a note about the passage in hand
-and `diogenes-org-notes` shows what has been said about these lines. A note
-carries an org link back, so the passage and the note each reach the other.
+Two note systems, and they are alternatives rather than additions: a reader
+keeps one Zettelkasten, not two. `notes` wakes the org commands, `phi-notes`
+the markdown ones.
+
+**In org.** `diogenes-org-note` writes a note about the passage in hand and
+`diogenes-org-notes` shows what has been said about these lines. A note carries
+an org link back, so the passage and the note each reach the other.
+
+**In [phi-notes][phi].** For a reader whose Zettelkasten is already markdown,
+a YAML-ish frontmatter and `[[0002]]` wikilinks. Five commands, all from a
+browser buffer:
+
+| | |
+|---|---|
+| `C-c n n` | a note on the passage in hand |
+| `C-c n l` | list the notes on this work, and open one |
+| `C-c n w` | the work's own note |
+| `C-c n i` | write the index of this work into that note |
+| `C-c n s` | show it beside the text, and hide it again |
+
+A note comes out as one of his, in his own `tlg-text` type, with the citation
+already in the fields:
+
+    ---
+    title: "A.R. 1.23-1.24"
+    id:    0002
+    ref_tlg: 0001:001
+    section: 1
+    line:    23-24
+    tags: #π #A.R. #Arg. #tlg0001.001
+    ...
+
+    △[[0001]]
+
+so everything of his reads it without knowing this exists — `phi-backlinks`,
+`helm-phi-find`, the tag search, the wikilinks. His `ref_tlg` spelling is kept
+exactly; the other corpora follow the pattern through
+`classicist-phi-ref-fields`.
+
+**The work's note is the index.** `0001` above is a note for the
+*Argonautica* as a whole, and every passage note links to it as parent, so
+`phi-backlinks` on it lists everything said about that text. `C-c n i` also
+writes the list into it, ordered by citation:
+
+    <!-- classicist:index -->
+    - [[0003]] 1.1
+    - [[0004]] 1.5-1.6
+    - [[0002]] 1.23-1.24
+    <!-- /classicist:index -->
+
+Only what lies between those markers is replaced, and only when both are
+found — a note without them gets no index and no complaint, and `C-c n i`
+offers to add them rather than guessing where in a reader's prose an index
+belongs. It is written by hand and not by a save hook, deliberately: a hook
+that rewrites a buffer while it is being typed in should be opted into after
+the writing is trusted.
+
+`C-c n s` puts that note in a side window on an edge you pick, and a second
+press hides it. The buffer is left alone either way, so nothing is asked about
+saving.
 
 ### Forgetting the keys
 
@@ -555,45 +616,66 @@ noticed where present.
 
 ## Which files are Michael Neidhart's, modified
 
-Six files here are derived from his, and the table says from which.
+Six files here are derived from his. Nothing of his is vendored: `diogenes.el`
+is a dependency, installed separately, and this suite requires six of its files
+at load. What follows is only what was done to the six copies.
 
-`diogenes.el` and `diogenes-browser.el` were modified in place:
+### Two were modified in place
 
-| This file | Modified from | Shared definitions |
-|---|---|---|
-| `classicist.el` | `diogenes.el` | 43 of 53 |
-| `classicist-browser.el` | `diogenes-browser.el` | 22 of 62 |
+| This file | From | His definitions kept | New here |
+|---|---|---|---|
+| `classicist.el` | `diogenes.el` | 43 | 10 |
+| `classicist-browser.el` | `diogenes-browser.el` | 22 | 41 |
 
-The figures are shared definition names, counted after allowing for this
-suite's `classicist-` prefix, so they measure how much of each file is his
-design rather than how many lines are untouched.
+**`classicist.el`** is his transient menu, extended so that other files can
+add to it. His `diogenes` prefix became `classicist-define-menu`, which builds
+the menu from whatever features are awake and runs `classicist-menu-defined-hook`
+after — that hook is how `diorisis.el` and `tei-browser.el` add their own
+entries without knowing about each other. The rest of what is new here is the
+override machinery: `classicist-install-overrides` and its fellows, which point
+his commands at this suite's versions where a feature is awake and leave them
+alone where it is not.
 
-**`diogenes-perseus.el` became four files.** 4,173 lines, cut into a stack that
-runs in one direction, with three `declare-function`s back for what the
-dispatcher calls at a keypress:
+**`classicist-browser.el`** keeps his Perl conversation and his page-turning
+and adds most of what a reader touches: a word looked up from a click, a
+citation followed, hyphenation joined across a line break and put back on
+leaving, a header line, `goto-passage`, and the per-buffer state his version
+kept in globals. Forty-one new definitions against twenty-two of his is the
+measure of that — the file is his design carrying a great deal more.
+
+### One became four
+
+`diogenes-perseus.el` was 4,173 lines doing four jobs. It is now four files
+that run in one direction, with three `declare-function`s back for what the
+dispatcher needs at a keypress:
 
     variants -> lexicon -> lookup -> morphology
 
-| This file | Forms | Lines | What it does |
-|---|---|---|---|
-| `classicist-variants.el` | 28 | 578 | spellings a dictionary file does not use |
-| `classicist-lexicon.el` | 28 | 406 | reading a dictionary file |
-| `classicist-lookup.el` | 71 | 1,363 | the buffer an entry is shown in |
-| `classicist-morphology.el` | 66 | 1,650 | the morphological analysis |
+| This file | Lines | What it does |
+|---|---|---|
+| `classicist-variants.el` | 578 | spellings a dictionary file does not use |
+| `classicist-lexicon.el` | 406 | reading a dictionary file |
+| `classicist-lookup.el` | 1,363 | the buffer an entry is shown in |
+| `classicist-morphology.el` | 1,650 | the morphological analysis |
 
-`classicist-architecture.md` records what each cut cost, which is worth reading
-before moving anything: the design was right in shape and wrong in detail every
-time.
+The cut was made where the dependencies already ran one way. Reading a file
+knows nothing of the buffer it will be shown in; the buffer knows nothing of
+how a form was analysed. The one place that needed a link back is the
+dispatcher — `RET` on a word has to decide between a citation, a dictionary
+link and a form, and that decision needs all four — so it declares what it
+calls rather than the files requiring each other in a circle.
 
-Three further files exist only to keep his names working —
-`diogenes-browser-compat.el`, `diogenes-lisp-utils-compat.el` and
-`classicist-windows-compat.el` — so that configuration written against
-`diogenes.el` continues to load.
+### Nothing of his was removed
 
-Every one of these carries his copyright in its header alongside any later one.
-The remaining files are this suite's own, and the base's own files are not
-vendored here at all: `diogenes.el` is a dependency, installed separately, and
-this suite requires six of its files at load.
+Where a name changed, the old one still works:
+`diogenes-browser-compat.el`, `diogenes-lisp-utils-compat.el`,
+`classicist-windows-compat.el` and `classicist-obsolete.el` hold obsolete
+aliases, so configuration written against `diogenes.el` continues to load and
+a reader's old key bindings keep working. Some of his definitions moved to a
+different file in the split rather than changing name at all.
+
+Every one of the six carries his copyright in its header alongside any later
+one.
 
 ## Developing
 
@@ -605,8 +687,97 @@ the configuration builder emits, and the SQL — which is extracted from
 `diorisis.el` itself and run against a forty-sentence fixture, so what is tested
 is the elisp's own queries rather than a copy that could drift from them.
 
-`classicist-architecture.md` is the reasoning, including the things that turned
-out to be wrong.
+Each gate exists because something got past the others. The compile ratchet is
+per-file and records the count each file is allowed, so a new warning fails the
+build while the existing ones are not a wall to climb before making a change.
+The SQL is extracted from `diorisis.el` itself rather than copied, because a
+copy drifts. And the builder check reads every symbol the configuration
+generator emits and looks for its definition, because a generator that writes a
+name which no longer exists produces a configuration that fails at load with no
+clue where it came from.
+
+## Where the data comes from
+
+Everything named here is free to download, and none of it ships with the
+suite. The corpora Diogenes reads are licensed separately and are its own
+business; what follows is what the other features want.
+
+### Corpora
+
+| | |
+|---|---|
+| **Diorisis Ancient Greek Corpus** | <https://doi.org/10.6084/m9.figshare.6187256> — ten million lemmatised words, Vatri and McGillivray's own release |
+| **Diorisis as DuckDB** | <https://zenodo.org/records/11261146> — the same corpus already in a database, which is what to point the merge at rather than parsing the XML afresh |
+| **First Thousand Years of Greek** | <https://github.com/opengreekandlatin/First1KGreek> |
+| **Perseus Greek** | <https://github.com/PerseusDL/canonical-greekLit> |
+| **Perseus Latin** | <https://github.com/PerseusDL/canonical-latinLit> |
+
+The last three are TEI and are what `tei-directory` expects.
+
+### Dictionaries
+
+The LSJ and Lewis & Short come with Diogenes. The rest are other people's
+digitisations, and the source decides how much work is involved.
+
+**Already TEI, and built directly:**
+
+- **The DGE** — <https://github.com/dge-csic/xdge_xml>, the CSIC's own XML,
+  one file per volume, 112 MB in all. `classicist-dge-source-file` takes a
+  file, a directory or a list.
+- **Gaffiot** — <https://digital-gaffiot.sourceforge.net/>, needing no
+  conversion but proofread as far as **F** only, some 28,000 entries.
+
+**Databases, which have to be turned into TEI first:**
+
+- **Pape, Gaffiot and Georges** — the FDB databases published by the Institut
+  für Klassische Philologie at Zürich,
+  <https://www.iaka.uzh.ch/de/klph/it/mls.html>. More work than the TEI above,
+  and the Gaffiot among them is **complete, A–Z**, which is the trade.
+- **Bailly** — built from the GoldenDict version at
+  <https://chaerephon.e-monsite.com/pages/litterature/grec-ancien/bailly2020.html>.
+
+**Scans, for the page lookups.** Supply your own; nothing is shipped. And
+*which* copy matters, because the page is found from the PDF's own bookmarks
+and every edition bookmarks itself differently. The copies these were written
+against:
+
+| | Copy | How its pages are found |
+|---|---|---|
+| **OLD** | a first edition | the PDF outline, whose bookmarks are the printed running heads. This is what the upstream Diogenes build tools rely on |
+| **TLL** | | the same |
+| **Montanari** | | an interval per page, `288: άραιρη- – Άραυάκαι`, some pages a single word. OCR'd, so accents cannot be trusted and comparison ignores them |
+| **BDAG** | 4th ed., [Isidore's Calibre library][bdag] | an interval, `2: ἀβροχία - ἀγαθός`; letter-openings and long entries carry one word. Clean accented Greek, so compared strictly |
+| **CGL** | | **one** guide word per page, `3: άγακτίμενος`, numbered sequentially — and which word it is depends on the **parity** of that number: even gives the page's first headword, odd its last, except the first odd bookmark of a letter, which opens the letter |
+| **Georges** | 1913, [zeno.org][georges] | one bookmark per page naming **every** entry on it — `Bd1_Sp0005-0006_a-3_abacinus_abactio_…` — some 43,000 headword-to-page pairs |
+| **Bailly** | typeset *Bailly 2020 – Hugo Chávez*, [Gérard Gréco][bailly] | its bookmarks name a word *somewhere* on the page rather than its bounds, so the index comes from the **running heads** instead, read from the text layer |
+| **TGL**, **Passow** | OCR'd MDZ volumes, [Bavarian State Library][mdz] | the TGL's bookmarks are the least reliable of any here, so the page is reconstructed from the column numbers instead — a folio prints two columns, so `left-column = 2 × page + b` |
+
+Each regexp is an ordinary option, so a copy bookmarked differently can be
+read by adjusting one: group 1 the first headword, group 2 the last, and for
+the CGL group 1 the number and group 2 the word.
+`M-x diogenes-montanari-show-bookmarks` and its equivalents print what the
+package can read from your PDF, which is the quickest way to find out whether
+a copy will work at all.
+
+These are scans of old print books. Expect dropped letters, misread
+diacritics, columns out of order and wrong bookmarks — a lookup lands on the
+right page more often than on the right column.
+
+### Annotation
+
+- **Arethusa** — <https://github.com/alpheios-project/arethusa/>, the tree
+  editor `tools/viewer` serves a sentence to.
+- **The Ancient Greek and Latin Dependency Treebank** is the format the
+  treebank feature reads and writes.
+
+### And the programs underneath
+
+- **Diogenes** — <https://d.iogen.es/>, and its source at
+  <https://github.com/pjheslin/diogenes>.
+- **`diogenes.el`** — <https://github.com/nitardus/diogenes.el>.
+- **Morpheus** — <https://github.com/VictorSousa92/morpheus>, source only, and
+  [built yourself](#morpheus-for-the-forms-neither-table-names).
+- **phi-notes** — <https://github.com/brunocbr/phi-notes>.
 
 ## Licence and credits
 
@@ -629,5 +800,10 @@ GPL-3.0-or-later, as `diogenes.el` is.
 [roam]: https://github.com/VictorSousa92/diogenes-roam/tree/classicist-roam
 [orgreadme]: https://github.com/VictorSousa92/diogenes.el/tree/org-integration
 [morpheus]: https://github.com/VictorSousa92/morpheus
+[phi]: https://github.com/brunocbr/phi-notes
+[bdag]: https://isidore.co/CalibreLibrary/Bauer,%20Walter/A%20Greek-English%20Lexicon%20of%20the%20New%20Testament%20and%20Other%20Early%20Christian%20Literature%20(BDAG%204th%20ed%20(10226)/
+[georges]: http://www.zeno.org/Georges-1913
+[bailly]: http://gerardgreco.free.fr/spip.php?article24&lang=fr
+[mdz]: https://www.digitale-sammlungen.de/en/
 [installing]: INSTALLING.md
 [builder]: https://victorsousa92.github.io/emacs-classicist-suite/tools/classicist-builder.html

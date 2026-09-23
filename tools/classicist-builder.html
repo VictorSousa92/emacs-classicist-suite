@@ -581,7 +581,8 @@
   <h1>The classicist suite for Emacs</h1>
   <p>Tools for reading Greek and Latin: Diogenes&rsquo; corpora and lexica, the
      printed dictionaries, the Diorisis corpus of lemmatised Greek, treebank
-     annotation, editions published as TEI, and notes in org.</p>
+     annotation, editions published as TEI, and notes in org or in
+     phi-notes.</p>
   <p>Two things, on two tabs. <b>Configuration</b> is what is true of this
      machine &mdash; which features you want awake, where the corpora and
      dictionaries are, which viewer opens a scan, which keys you want &mdash;
@@ -687,6 +688,10 @@
     <label class="featurerow" data-feature="notes" data-wants="texts tei-corpora">
       <input type="checkbox" id="f-notes" data-feature="notes">
       <div><b>Notes in org</b><span>a note on the passage in hand, and what has been said about these lines &mdash; and, with the diogenes-roam package, filed under its author and its work. Wants a browser &mdash; Diogenes&rsquo; corpora or the TEI editions, either will do</span></div>
+    </label>
+    <label class="featurerow" data-feature="phi-notes" data-wants="texts tei-corpora">
+      <input type="checkbox" id="f-phi-notes" data-feature="phi-notes">
+      <div><b>Notes in phi-notes</b><span>the same three things in markdown instead of org &mdash; Bruno Conte&rsquo;s phi-notes, a YAML-ish frontmatter and <code>[[0002]]</code> wikilinks. An ALTERNATIVE to the org notes and not an addition: a reader keeps one Zettelkasten, not two. Wants the phi-notes package, which is its own, and a browser</span></div>
     </label>
     <label class="featurerow" data-feature="windows">
       <input type="checkbox" id="f-windows" data-feature="windows">
@@ -1313,6 +1318,116 @@
        single letters reach the dictionaries. This is the way back to normal
        state.</p>
     <div id="c-keys-evil"></div>
+  </div>
+
+  <h2 data-feature="phi-notes">Notes in phi-notes</h2>
+  <p class="note" data-feature="phi-notes"><b>Install phi-notes yourself:
+     <a href="https://github.com/brunocbr/phi-notes"
+        target="_blank" rel="noopener">github.com/brunocbr/phi-notes</a></b>
+     &mdash; and follow its own README, which recommends a Spacemacs layer
+     with a local checkout. This configuration deliberately does not install
+     it: a second declaration of a package you already have is how two of
+     them end up pulling against each other, and its README's arrangement is
+     better than a recipe written here.</p>
+  <p class="note" data-feature="phi-notes">A note this makes is one of his, in
+     his own <code>tlg-text</code> type with his <code>ref_tlg</code>
+     spelling, so everything of his reads it without knowing this exists:
+     <code>phi-backlinks</code>, the tag search, the wikilinks. Nothing in
+     phi-notes is modified.</p>
+
+  <div class="field" data-feature="phi-notes">
+    <span>The repository a passage note goes in
+      <em><code>classicist-phi-repository</code> &mdash; a name from your <code>phi-repository-alist</code>. Empty asks, unless you have only one, in which case it uses it</em></span>
+    <input type="text" id="c-phirepo" placeholder="(ask)">
+  </div>
+
+  <div class="field" data-feature="phi-notes">
+    <span>Which edge the work note sits on
+      <em><code>classicist-phi-sidebar-side</code> &mdash; ask, and it asks once and remembers for the session</em></span>
+    <select id="c-phiside">
+      <option value="ask">ask, and remember</option>
+      <option value="right">right</option>
+      <option value="left">left</option>
+      <option value="top">top</option>
+      <option value="bottom">bottom</option>
+    </select>
+  </div>
+
+  <div class="field" data-feature="phi-notes">
+    <span>How much of the frame it takes
+      <em><code>classicist-phi-sidebar-size</code> &mdash; 0.35 by default, a fraction of the width or height. A whole number is taken as columns or lines</em></span>
+    <input type="text" id="c-phisize" placeholder="0.35">
+  </div>
+
+  <div class="row" data-feature="phi-notes">
+    <input type="checkbox" id="c-phistructure" checked>
+    <label for="c-phistructure">File each note under a note for its work
+      <em><code>classicist-phi-structure-notes</code> &mdash; the work gets a note of its own and every passage note links to it as parent, so <code>phi-backlinks</code> on it lists everything said about that text. <code>C-c n i</code> writes the list into it as well.</em></label>
+  </div>
+
+  <div class="row" data-feature="phi-notes">
+    <input type="checkbox" id="c-phiolivetti">
+    <label for="c-phiolivetti">Leave olivetti on in the work note
+      <em><code>classicist-phi-sidebar-olivetti</code> &mdash; off by default. phi-notes turns olivetti on where it is available, which is right for reading a note and wrong for a column of one-line index entries.</em></label>
+  </div>
+
+  <div class="row" data-feature="phi-notes">
+    <input type="checkbox" id="c-phiaxis" checked>
+    <label for="c-phiaxis">Let it set <code>window-sides-vertical</code> to suit the side
+      <em><code>classicist-phi-sidebar-manage-sides-vertical</code> &mdash; that variable decides which axis owns the frame, so whichever it favours has room and the other may not. Setting it to match makes every edge reachable. It is global, so untick this if you arrange other side windows deliberately.</em></label>
+  </div>
+
+  <h3 data-feature="phi-notes">phi-notes keys</h3>
+  <p class="note" data-feature="phi-notes">One option holds all five &mdash;
+     <code>classicist-phi-keys</code>, an alist of command and key &mdash; so
+     changing one writes the whole list. All five are pressed in a browser
+     buffer. <code>C-c n</code> is a contested prefix in some
+     configurations &mdash; if one of these does nothing, that is usually
+     why.</p>
+  <div class="keyrow" data-feature="phi-notes">
+    <div class="what"><code>classicist-phi-note</code><em>a note on the passage in hand</em></div>
+    <div class="keybox">
+      <input type="text" data-phikey="0" placeholder="C-c n n"
+             data-context="browser">
+      <button data-record="1" title="Press the keys instead of typing them">&#9000;</button>
+    </div>
+    <div data-warnfor="pk0" class="warnline"></div>
+  </div>
+  <div class="keyrow" data-feature="phi-notes">
+    <div class="what"><code>classicist-phi-notes</code><em>list the notes on this work, and open one</em></div>
+    <div class="keybox">
+      <input type="text" data-phikey="1" placeholder="C-c n l"
+             data-context="browser">
+      <button data-record="1" title="Press the keys instead of typing them">&#9000;</button>
+    </div>
+    <div data-warnfor="pk1" class="warnline"></div>
+  </div>
+  <div class="keyrow" data-feature="phi-notes">
+    <div class="what"><code>classicist-phi-work-note</code><em>the work&rsquo;s own note</em></div>
+    <div class="keybox">
+      <input type="text" data-phikey="2" placeholder="C-c n w"
+             data-context="browser">
+      <button data-record="1" title="Press the keys instead of typing them">&#9000;</button>
+    </div>
+    <div data-warnfor="pk2" class="warnline"></div>
+  </div>
+  <div class="keyrow" data-feature="phi-notes">
+    <div class="what"><code>classicist-phi-index-work</code><em>write the index of this work into that note</em></div>
+    <div class="keybox">
+      <input type="text" data-phikey="3" placeholder="C-c n i"
+             data-context="browser">
+      <button data-record="1" title="Press the keys instead of typing them">&#9000;</button>
+    </div>
+    <div data-warnfor="pk3" class="warnline"></div>
+  </div>
+  <div class="keyrow" data-feature="phi-notes">
+    <div class="what"><code>classicist-phi-sidebar</code><em>show it beside the text, and hide it again</em></div>
+    <div class="keybox">
+      <input type="text" data-phikey="4" placeholder="C-c n s"
+             data-context="browser">
+      <button data-record="1" title="Press the keys instead of typing them">&#9000;</button>
+    </div>
+    <div data-warnfor="pk4" class="warnline"></div>
   </div>
 
   <h3 data-feature="notes">Org keys</h3>
@@ -2735,6 +2850,26 @@ el('c-keys-lookup').innerHTML =
 // THE THREE ORG KEYS, as a table like the others: the row builder gives each
 // the keyboard button, the clash check and a warnline, which three
 // hand-written boxes had none of.
+// THE FIVE PHI-NOTES KEYS, as a table like the others.  All five are pressed
+// in a browser buffer: the commands read the passage from it, which is the
+// point of making a note from where you are reading rather than from the note
+// side.
+// NAMED BY THE COMMAND AND NOT BY A VARIABLE, because there is no variable
+// apiece: `classicist-phi-keys' is one alist of (COMMAND . KEY), so a reader
+// who moves one key writes the whole list.  Which the emission below does.
+const PHI_KEYS = [
+  ['classicist-phi-note', 'C-c n n',
+   'a note on the passage in hand'],
+  ['classicist-phi-notes', 'C-c n l',
+   'list the notes on this work, and open one'],
+  ['classicist-phi-work-note', 'C-c n w',
+   "the work's own note"],
+  ['classicist-phi-index-work', 'C-c n i',
+   'write the index of this work into that note'],
+  ['classicist-phi-sidebar', 'C-c n s',
+   'show it beside the text, and hide it again'],
+];
+
 const ORG_KEYS = [
   ['diogenes-org-goto-key', 'C-c C-x C-d',
    'in org, the way back to the passage a note is about'],
@@ -3108,6 +3243,11 @@ function configText() {
   const ROAM_REPO = 'VictorSousa92/diogenes-roam';
   const ROAM_BRANCH = 'classicist-roam';
   const wantRoam = () => !!(el('c-useroam') && el('c-useroam').checked);
+  // PHI-NOTES IS NOT INSTALLED HERE, deliberately, and the section for it
+  // says so with a link.  Its own README recommends a Spacemacs layer with a
+  // local checkout, and a recipe written here would be a second declaration
+  // of a package a reader is likely to have already -- which is how two of
+  // them end up pulling against each other.
 
   if (distro === 'doom') {
     out.push(';; ---- in ~/.config/doom/packages.el ----');
@@ -3445,6 +3585,38 @@ function configText() {
       block.push(v === '-' ? `  (setq ${k[0]} nil)`
                            : `  (setq ${k[0]} ${JSON.stringify(v)})`);
     });
+  }
+  // PHI-NOTES, when it is awake.  The defaults are left out as everywhere
+  // else here: a setting written at its default is a line a reader has to
+  // read and decide about for no gain.
+  if (awake('phi-notes')) {
+    const repo = el('c-phirepo') && el('c-phirepo').value.trim();
+    if (repo) block.push(`  (setq classicist-phi-repository ${JSON.stringify(repo)})`);
+    const side = el('c-phiside') && el('c-phiside').value;
+    if (side && side !== 'ask')
+      block.push(`  (setq classicist-phi-sidebar-side '${side})`);
+    const size = el('c-phisize') && el('c-phisize').value.trim();
+    if (size && size !== '0.35')
+      block.push(`  (setq classicist-phi-sidebar-size ${size})`);
+    if (el('c-phistructure') && !el('c-phistructure').checked)
+      block.push('  (setq classicist-phi-structure-notes nil)');
+    if (el('c-phiolivetti') && el('c-phiolivetti').checked)
+      block.push('  (setq classicist-phi-sidebar-olivetti t)');
+    if (el('c-phiaxis') && !el('c-phiaxis').checked)
+      block.push('  (setq classicist-phi-sidebar-manage-sides-vertical nil)');
+    // THE KEYS AS ONE ALIST, `classicist-phi-keys' taking pairs rather than a
+    // variable apiece -- so a reader who moves one writes the whole list, and
+    // this writes it only when at least one has been changed.
+    const pairs = [];
+    PHI_KEYS.forEach((k, i) => {
+      const box = document.querySelector(`[data-phikey="${i}"]`);
+      const v = box && box.value.trim();
+      if (!v || v === k[1]) return;
+      pairs.push(v === '-' ? `(${k[0]})`
+                           : `(${k[0]} . ${JSON.stringify(v)})`);
+    });
+    if (pairs.length)
+      block.push(`  (setq classicist-phi-keys '(${pairs.join(' ')}))`);
   }
   // TODAY'S TWO, both found by installing rather than by reading.
   if (normalisePath(el('c-teiscript') && el('c-teiscript').value))
@@ -4483,6 +4655,7 @@ const WANTS = {
   treebank:     ['diorisis'],
   dictionaries: ['lexica'],
   notes:        ['texts', 'tei-corpora'],
+  'phi-notes':  ['texts', 'tei-corpora'],
   books:        ['texts']
 };
 const FEATURE_LABEL = {
@@ -4491,7 +4664,8 @@ const FEATURE_LABEL = {
   treebank: 'treebank annotation', 'tei-corpora': 'the TEI editions',
   books: 'a work at one of its books',
   lemmata: 'completing a lemma prompt',
-  notes: 'notes in org', windows: 'where the buffers go'
+  notes: 'notes in org', 'phi-notes': 'notes in phi-notes',
+  windows: 'where the buffers go'
 };
 const ALL_FEATURES = Object.keys(FEATURE_LABEL);
 
@@ -4846,6 +5020,9 @@ const START = {
     features: ['texts', 'lexica', 'dictionaries', 'diorisis', 'treebank',
                'tei-corpora', 'notes', 'windows', 'books',
                'lemmata'],
+    // NOT `phi-notes': it is an alternative to `notes' and not an addition,
+    // and "everything" cannot mean both note systems at once.  A reader who
+    // wants markdown notes ticks it and unticks the org ones.
     'c-useroam': true,
     // The above, plus what the package is for.
     'c-headerline': true, 'c-citations': true, 'c-analysis': true,
