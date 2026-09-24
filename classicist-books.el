@@ -64,6 +64,8 @@
 ;; citation of one part wants splitting.
 (declare-function diogenes--get-work-labels "diogenes-perl-interface"
                   (options author-and-work))
+(declare-function classicist-browser--pad-levels "classicist-browser"
+                  (levels labels))
 (declare-function diogenes--get-author-list "diogenes-perl-interface" (options &optional author-regex))
 (declare-function diogenes--get-works-list "diogenes-perl-interface"
                   (options author))
@@ -561,13 +563,13 @@ and where the answer cannot be had the citation is taken as written."
                    (and (fboundp 'diogenes--get-work-labels)
                         (diogenes--get-work-labels (list :type corpus)
                                                    (list author work))))))
-    (if (and labels
-             (= 1 (length parts))
-             (>= (length labels) 3)
-             (string-match "\\`\\([0-9]+\\)\\([a-zA-Z]\\)\\'" (car parts)))
-        (append (list (match-string 1 (car parts))
-                      (match-string 2 (car parts)))
-                (make-list (- (length labels) 2) "1"))
+    ;; THE BROWSER'S OWN, because it is the same fault twice: a reader typing
+    ;; `330a' at the page prompt and a book declared as `484a' are the same
+    ;; citation written the same way, and one place should take it apart.
+    ;; The padding is the browser's too, so a book that reaches only its page
+    ;; and section gets its line of 1 from there.
+    (if (fboundp 'classicist-browser--pad-levels)
+        (classicist-browser--pad-levels parts labels)
       parts)))
 
 (provide 'classicist-books)

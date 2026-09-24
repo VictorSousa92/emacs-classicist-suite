@@ -836,9 +836,76 @@ head of the work as it did before.
 FOR EVERY WAY IN, which is why this is here and not in the reader: the
 level-by-level prompt, the whole-citation prompt, and a PASSAGE handed over by
 another package all pass through `classicist-browser-goto-passage\='."
-  (if (and labels levels
-           (= (length levels) (1- (length labels))))
-      (append levels (list "1"))
+  (let* ((levels (classicist-browser--unglue-levels levels labels))
+         (short (and labels levels (- (length labels) (length levels)))))
+    (if (and short (> short 0))
+        (append levels
+                ;; EVERY MISSING LEVEL AND NOT ONE.  This filled exactly one,
+                ;; which left `330' for Plato two short -- the section AND
+                ;; the line -- so the padding never fired and the reader got
+                ;; the head of the work.  A reader who names a page and
+                ;; stops means the beginning of that page, however many
+                ;; levels the work counts it in.
+                (classicist-browser--level-starts (length levels)
+                                                  (length labels)))
+      levels)))
+
+(defun classicist-browser--level-starts (have want)
+  "Starting values for the levels from HAVE to WANT, as strings.
+
+A LINE STARTS AT 1 AND A STEPHANUS SECTION AT `a\=', and the difference
+cannot be had from the level\='s NAME: Plato and Cicero both report a level
+called `section\=', and Plato\='s is lettered where Cicero\='s is numbered.  A
+citation padded with 1 throughout therefore asked Plato for section 1, which
+is nowhere in the corpus.
+
+SO THE WORK IS ASKED, and it is already answering: the buffer is showing a
+citation from the very work being jumped in, and
+`classicist-browser-citation-at\=' gives its levels -- `(327 c 8)\=' in the
+Republic, the section a letter and the line a number.  Whatever the shape of
+that level there, the padding takes the same shape.
+
+FAILING THAT, 1.  A buffer with no citation to read -- a work just opened, a
+passage handed over by another package -- gets the answer that is right for
+every numbered level and for every last level there is, a line."
+  (let ((here (ignore-errors (classicist-browser-citation-at (point))))
+        (out nil))
+    (dotimes (i (- want have))
+      (let ((value (nth (+ have i) here)))
+        (push (if (and value
+                       (string-match-p "\\`[a-zA-Z]\\'" (format "%s" value)))
+                  "a"
+                "1")
+              out)))
+    (nreverse out)))
+
+(defun classicist-browser--unglue-levels (levels labels)
+  "LEVELS with a glued page and section taken apart, where that is what it is.
+
+A STEPHANUS PAGE IS TWO LEVELS AND IS WRITTEN AS ONE.  Plato is cited `330a\=',
+and that is a page and a section: the Republic reports `Stephanus page\=',
+`section\=' and `line\='.  So a reader typing `330a\=' at the page prompt --
+which is how anyone writes it -- gave ONE level for a work that wants three,
+two short rather than one, and the padding below could not help.  The seek
+found nothing and the browser opened the head of the work.
+
+BY THE COUNT AND NOT BY THE AUTHOR.  The work has said how it is cited, so
+the test is arithmetic: a single level, holding digits and then one letter,
+for a work of three levels or more.  Aristotle is untouched -- `1048b\=' is
+ONE level there, the page and its column together, which `Bekker page\=' and
+`line\=' says by being two -- and a citation already in parts is untouched
+whatever it holds.
+
+Which is the same fault `classicist-books--levels\=' answers for a declared
+book, and for the same reason: the corpus divides a citation where the
+printed convention does not."
+  (if (and labels
+           (>= (length labels) 3)
+           (= 1 (length levels))
+           (string-match "\\`\\([0-9]+\\)\\([a-zA-Z]\\)\\'"
+                         (format "%s" (car levels))))
+      (list (match-string 1 (format "%s" (car levels)))
+            (match-string 2 (format "%s" (car levels))))
     levels))
 
 (defun classicist-browser--read-levels (labels)
