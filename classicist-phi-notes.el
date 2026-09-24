@@ -80,6 +80,14 @@
 (declare-function phi-create-note "phi-notes" (type repo-dir &rest args))
 (declare-function phi-get-note-id-from-file-name "phi-notes" (filename))
 (declare-function phi-sidebar-adjust-buffer "phi-notes" (buffer))
+(declare-function phi-matching-file-name "phi-notes"
+                  (id &optional usecontext path))
+(declare-function phi-buttonize-buffer "phi-notes" ())
+;; WINDOW-PURPOSE'S OWN, a third package again.  Asked `boundp' and `fboundp'
+;; before either is touched.
+(declare-function purpose-compile-user-configuration
+                  "window-purpose-configuration" ())
+(defvar purpose-user-regexp-purposes)
 ;; OLIVETTI'S, DECLARED WITH AN UNSPECIFIED ARGLIST.  It is another package
 ;; again, wanted only to turn it off in the work note, and asked `boundp'
 ;; before it is called.
@@ -109,6 +117,16 @@
 (declare-function classicist-open-passage "classicist-browser"
                   (corpus author work &optional passage))
 (declare-function classicist-feature-p "classicist-groups" (feature))
+;; THE ONE PLACE THAT DECIDES WHERE A DIOGENES BUFFER GOES, so a note goes
+;; through it too rather than answering the question again by hand.
+;; AN UNSPECIFIED ARGLIST -- t t -- BECAUSE IT TAKES KEYWORDS.
+;; `classicist-display-buffer' is a `cl-defun', and `declare-function' reads
+;; an arglist literally: `&key' means nothing to it, so writing the keywords
+;; out declared seven REQUIRED arguments and the compiler then objected to a
+;; call with three.  Which is the same treatment any `cl-defstruct' accessor
+;; wants, and `check-declare' is content with it: it verifies the definition
+;; is where the declaration says, and asks nothing of the arglist.
+(declare-function classicist-display-buffer "classicist-windows" t t)
 
 
 ;;;; Options
@@ -343,12 +361,92 @@ turned off after it where this is nil."
   :type 'boolean
   :group 'classicist-phi-notes)
 
+(defcustom classicist-phi-purpose 'classicist-notes
+  "The window-purpose a note buffer is filed under, or nil for none.
+
+BECAUSE PURPOSE DECIDES WHERE A BUFFER GOES, where it is loaded, and it
+decides by what the buffer IS.  A note it has never heard of is filed under
+`general\=' and shown in the window the reader was reading in -- which is
+`diogenes-purpose.el\=''s own account of why an entry once took the browser's
+window, and is what a note did until it was given a purpose of its own.
+
+Neither `classicist-phi-display-action\=' nor
+`classicist-window-behaviour\=' reaches this: purpose advises
+`display-buffer\=' and answers before any action of ours is consulted.  So on
+a configuration with purpose, THIS is the setting that matters, and the
+others are what happens everywhere else.
+
+MATCHED ON THE BUFFER NAME, which for a note is its id and then its title --
+`0002 A.R. 1.23-1.24.markdown\='.  The mode table cannot serve: a note is in
+`markdown-mode\=' like every other markdown buffer, and `phi-mode\=' is a
+minor mode, which purpose does not read.
+
+Nil registers nothing, for a reader who would rather purpose treated a note
+as any other file."
+  :type '(choice (const :tag "None" nil) symbol)
+  :group 'classicist-phi-notes)
+
+(defcustom classicist-phi-own-buttons t
+  "Whether a wikilink in one of our notes is followed by us or by phi-notes.
+
+HIS ACTION CLEARS THE FRAME.  `phi-find-file-button\=', which every
+`[[0002]]\=' is made a button of, ends
+
+    (pop-to-buffer buffer)
+    (phi-mode)
+    (if phi-sidebar-persistent-window (delete-other-windows))
+
+which is sound in his arrangement -- a sidebar that stays and one note filling
+the space beside it -- and wrong where one of the windows being cleared is the
+text the note is about.
+
+So by default the wikilinks in a note of ours are followed by
+`classicist-phi--open\=', which places the note like everything else here.
+Nil leaves them his, for a reader who wants the arrangement he wrote and does
+not mind the browser going with it.
+
+EITHER WAY IT IS ONLY OUR NOTES.  A note without one of
+`classicist-phi-ref-fields\=' in its frontmatter is not ours, and its buttons
+are never touched."
+  :type 'boolean
+  :group 'classicist-phi-notes)
+
+(defcustom classicist-phi-display-action
+  '((display-buffer-below-selected) (window-height . 0.4))
+  "Where a note appears, as a `display-buffer\=' action.
+
+BELOW THE TEXT IT IS ABOUT, which is the arrangement a note wants: the
+passage above, what you have written about it underneath, both on the screen
+at once.  A note is not a thing to read INSTEAD of the text, and every
+behaviour that reuses a window put it there instead -- the browser replaced
+by the note about it, which is the one result nobody wants.
+
+A ROLE'S OWN ACTION, as `classicist-lookup-display-action\=' and its three
+fellows are, and it wins over `classicist-window-behaviour\=' in the same
+way theirs do.
+
+NIL DEFERS.  Set it to nil and a note is placed by the behaviour, the
+actions and the preset like any other buffer -- which is the more consistent
+answer and the worse one in practice, `reuse\=' meaning that a note takes the
+window it was asked from.
+
+`classicist-display-actions\=' with a `notes\=' entry overrides this, being
+consulted first."
+  :type 'sexp
+  :group 'classicist-phi-notes)
+
 (defcustom classicist-phi-open-in 'default
   "Where a note opens when reached from the browser or from a list.
 
-`default\=' leaves it to `pop-up-frames\=', so a reader who has set that for
-Diogenes\=' sake gets the same behaviour here.  `window\=' and `frame\=' force
-one or the other.
+`default\=' hands it to `classicist-display-buffer\=' with
+`classicist-phi-display-action\=' -- below the text by default, and nil there
+to be placed by `classicist-window-behaviour\=', by
+`classicist-display-actions\=' and by whatever preset is loaded, as an entry
+or a browser is.  Where that function
+is absent -- the `windows\=' feature asleep, or the suite not loaded -- it
+falls back to `pop-up-frames\=' and `display-buffer-alist\=' as any other
+buffer would.  `window\=' and `frame\=' force one or the other and consult
+nothing.
 
 NEVER IN THE WINDOW IT WAS ASKED FROM, which is the whole point of the
 option.  `find-file\=' and `switch-to-buffer\=' take over the current window,
@@ -669,7 +767,26 @@ only ours."
 
 (defun classicist-phi--open (file-or-buffer)
   "Show FILE-OR-BUFFER, by `classicist-phi-open-in', and select it.
-Never in the window this was called from."
+Never in the window this was called from.
+
+THROUGH `classicist-display-buffer\=' WHERE THERE IS ONE, which is the whole
+of what `default\=' means.  That function is, in its own words, the one place
+that decides where a Diogenes buffer goes -- so a note answers to
+`classicist-window-behaviour\=', to `classicist-display-actions\=' and to a
+preset, as an entry or a browser does.  Answering the question again here
+with a bare `pop-to-buffer\=' is what its docstring warns against, and is
+what this used to do.
+
+`notes\=' AS THE KIND, and not a role in `classicist-role-modes\='.  A role is
+keyed on the major mode, and the modes here are `org-mode\=' and
+`markdown-mode\=' -- general modes that would carry every other org and
+markdown buffer with them.  The kind is passed instead, and a kind the
+actions do not name falls through to the behaviour, which is the wanted
+default.
+
+AND NOT THE SIDEBAR, which is furniture: a reader put it on an edge and it
+stays there.  Only a note opened from the index, from the list or just
+written comes through here."
   (let ((buffer (if (bufferp file-or-buffer)
                     file-or-buffer
                   (find-file-noselect file-or-buffer))))
@@ -677,11 +794,14 @@ Never in the window this was called from."
       ('frame (pop-to-buffer buffer '(display-buffer-pop-up-frame)))
       ('window (pop-to-buffer buffer '(display-buffer-pop-up-window
                                        (inhibit-same-window . t))))
-      ;; `default': `pop-to-buffer' consults `display-buffer-alist' and
-      ;; `pop-up-frames' as any other buffer would, which is what a reader
-      ;; who has set those for Diogenes' sake will expect.  The one thing
-      ;; insisted on is that it is not this window.
-      (_ (pop-to-buffer buffer '(nil (inhibit-same-window . t)))))
+      (_ (if (fboundp 'classicist-display-buffer)
+             (classicist-display-buffer buffer :kind 'notes
+                                        :action classicist-phi-display-action)
+           ;; WITHOUT THE WINDOWS FEATURE, or with it asleep: as any other
+           ;; buffer, consulting `display-buffer-alist' and `pop-up-frames'
+           ;; as a reader who set those would expect.  The one thing
+           ;; insisted on either way is that it is not this window.
+           (pop-to-buffer buffer '(nil (inhibit-same-window . t))))))
     buffer))
 
 
@@ -932,6 +1052,130 @@ ones about this passage are visible among them."
           (classicist-phi--open (cdr (assoc pick rows))))))))
 
 
+
+
+
+;;;; Telling window-purpose what a note is
+
+(defun classicist-phi--purpose-regexp ()
+  "A buffer-name regexp matching a phi-notes note.
+Its id, then a space: `0002 A.R. 1.23-1.24.markdown\='.  Anchored at the
+start, so a file merely containing a number is not one."
+  (concat "\\`" (or (and (boundp 'phi-id-regex) phi-id-regex) "[0-9]+")
+          " "))
+
+;;;###autoload
+(defun classicist-phi-install-purpose ()
+  "Register `classicist-phi-purpose\=' for note buffers with window-purpose.
+Does nothing where purpose is absent or the option is nil.  Recompiles
+purpose\='s configuration, which is what makes a new entry take effect."
+  (interactive)
+  (when (and classicist-phi-purpose
+             (boundp 'purpose-user-regexp-purposes))
+    (let ((entry (cons (classicist-phi--purpose-regexp)
+                       classicist-phi-purpose)))
+      (unless (member entry purpose-user-regexp-purposes)
+        (setq purpose-user-regexp-purposes
+              (cons entry purpose-user-regexp-purposes))))
+    (when (fboundp 'purpose-compile-user-configuration)
+      (purpose-compile-user-configuration))))
+
+;; AFTER THE PURPOSE MODULE, which is where the other Diogenes purposes are
+;; registered from.  Nothing is asked of this file by the form: the function
+;; it names is autoloaded, which is what `make check' requires of a cookie on
+;; a form rather than a definition.
+;;;###autoload
+(with-eval-after-load 'diogenes-purpose
+  (classicist-phi-install-purpose))
+
+;; AND AFTER PURPOSE ITSELF, for a configuration that has purpose without the
+;; Diogenes module.
+;;;###autoload
+(with-eval-after-load 'window-purpose
+  (classicist-phi-install-purpose))
+
+;;;; Following a link out of a note
+
+;; PHI-NOTES' OWN BUTTON CLEARS THE FRAME.  `phi-find-file-button', which
+;; every `[[0002]]' is made a button of, ends:
+;;
+;;     (pop-to-buffer buffer)
+;;     (phi-mode)
+;;     (if phi-sidebar-persistent-window (delete-other-windows))
+;;
+;; which is sound in his arrangement -- a sidebar that stays and one note
+;; filling the space beside it -- and wrong where one of the windows being
+;; cleared is the text the note is about.  With `split' behaviour and
+;; `phi-sidebar-persistent-window' on, following a link from the index took
+;; the whole frame and the browser with it.
+;;
+;; SO THE BUTTONS IN A NOTE OF OURS GET OUR ACTION, and `classicist-phi--open'
+;; places the note by `classicist-display-buffer' as everything else here
+;; does.  His buttons elsewhere are untouched: a reader with notes that are
+;; not about passages keeps the behaviour he wrote.
+
+(define-button-type 'classicist-phi-linked-note
+  'follow-link t
+  'action #'classicist-phi--follow-button)
+
+(defun classicist-phi--follow-button (button)
+  "Open the note BUTTON names, placed as any other note of ours."
+  (let* ((id (buffer-substring-no-properties (button-start button)
+                                             (button-end button)))
+         (file (and (fboundp 'phi-matching-file-name)
+                    (phi-matching-file-name id))))
+    (unless file
+      (user-error "No note with the id %s" id))
+    (classicist-phi--open file)))
+
+;;;###autoload
+(defun classicist-phi--rebuttonize ()
+  "Give this buffer\='s wikilinks our action instead of phi-notes\='.
+
+RE-MADE AND NOT ADVISED.  `phi-buttonize-buffer' is called from several
+places of his, and advising it would change every note a reader has, not
+only the ones about passages.  Re-making the buttons in a buffer we know to
+be ours leaves his alone.
+
+Recognised the same way `classicist-phi--work-note' recognises one: by the
+reference field in the frontmatter.  A note without it is not ours.
+
+Does nothing where `classicist-phi-own-buttons' is nil."
+  (when (and classicist-phi-own-buttons
+             (fboundp 'phi-matching-file-name)
+             (buffer-file-name)
+             (classicist-phi--reference-field-here))
+    (save-excursion
+      (goto-char (point-min))
+      (let* ((id-re (or (and (boundp 'phi-id-regex) phi-id-regex) "[0-9]+"))
+             (re (concat "\\[\\[\\(" id-re "\\)\\]\\]")))
+        (while (re-search-forward re nil t)
+          (make-button (match-beginning 1) (match-end 1)
+                       :type 'classicist-phi-linked-note))))))
+
+(defun classicist-phi--reference-field-here ()
+  "Whether this buffer\='s frontmatter carries one of our reference fields."
+  (save-excursion
+    (goto-char (point-min))
+    (let ((end (save-excursion
+                 (if (re-search-forward "^[ \t]*$" nil t)
+                     (point)
+                   (point-max)))))
+      (seq-some (lambda (cell)
+                  (save-excursion
+                    (re-search-forward
+                     (concat "^" (regexp-quote (cdr cell)) ":") end t)))
+                classicist-phi-ref-fields))))
+
+;; PUT ON THE HOOK BY `classicist-phi-install-keys', and not by an autoloaded
+;; `add-hook' of its own.  An autoloaded form must be a definition or ask
+;; nothing, `make check' says so, and it cannot see that the function named
+;; here is autoloaded too -- so rather than write an exception into the
+;; checker, which is the kind that outlives the fact justifying it, this
+;; hangs off the form that already runs: the `with-eval-after-load' at the
+;; foot of this file, which fires when the browser loads and the feature is
+;; awake.  A browser exists before any note is made, so the hook is there in
+;; time.
 
 ;;;; An index in the work note
 
@@ -1444,7 +1688,13 @@ his sidebar does, and `phi-sidebar-buffer\=' is set, so his
                           (find-file-noselect file))))
              (side (classicist-phi--sidebar-side ask)))
         (when (fboundp 'phi-sidebar-adjust-buffer)
-          (setq buffer (phi-sidebar-adjust-buffer buffer)))
+          (setq buffer (phi-sidebar-adjust-buffer buffer))
+          ;; AND THE BUTTONS AGAIN AFTER HIM.  `phi-sidebar-adjust-buffer'
+          ;; ends with `phi-buttonize-buffer', so it re-makes every wikilink
+          ;; with HIS type -- after `phi-mode-hook' has already given them
+          ;; ours.  The index is the one buffer that goes through it, which
+          ;; made it the one buffer whose links still cleared the frame.
+          (with-current-buffer buffer (classicist-phi--rebuttonize)))
         ;; AFTER HIS ADJUSTER, which is what turned olivetti on.
         (unless classicist-phi-sidebar-olivetti
           (with-current-buffer buffer
@@ -1510,7 +1760,7 @@ need say which corpus it is."
 
 ;;;###autoload
 (defun classicist-phi-install-keys ()
-  "Bind `classicist-phi-keys' in the browser.
+  "Bind `classicist-phi-keys' in the browser, and take over the wikilinks.
 Interactive, and asks `boundp' first, so that a reader who turns the feature
 on mid-session need not restart -- as `classicist-browser-install-mouse-keys'
 is and does, for the same reasons."
@@ -1519,7 +1769,10 @@ is and does, for the same reasons."
     (dolist (cell classicist-phi-keys)
       (when (cdr cell)
         (keymap-set (symbol-value 'classicist-browser-mode-map)
-                    (cdr cell) (car cell))))))
+                    (cdr cell) (car cell)))))
+  ;; AND THE BUTTONS IN OUR OWN NOTES: see
+  ;; `classicist-phi--rebuttonize' for why phi-notes' own action will not do.
+  (add-hook 'phi-mode-hook #'classicist-phi--rebuttonize))
 
 ;; INSTALLED WHEN THE BROWSER LOADS, and only when the feature is awake.  The
 ;; cookie copies this into the generated autoloads, where it runs before this

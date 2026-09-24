@@ -1497,6 +1497,30 @@
   </div>
 
   <div class="row" data-feature="phi-notes">
+    <input type="checkbox" id="c-phibuttons" checked>
+    <label for="c-phibuttons">Follow a note&rsquo;s wikilinks ourselves
+      <em><code>classicist-phi-own-buttons</code> &mdash; phi-notes&rsquo; own
+      action for a <code>[[0002]]</code> ends
+      <code>(if phi-sidebar-persistent-window (delete-other-windows))</code>,
+      which suits a sidebar that stays and one note beside it, and clears the
+      browser along with everything else. Ticked, a link in one of our notes
+      is placed like any other note; unticked, his arrangement is kept.
+      Either way only notes with one of our reference fields are
+      touched.</em></label>
+  </div>
+
+  <div class="row" data-feature="phi-notes">
+    <input type="checkbox" id="c-phibelow" checked>
+    <label for="c-phibelow">Show a note below the text it is about
+      <em><code>classicist-phi-display-action</code> &mdash; the passage
+      above, the note underneath, both on the screen at once. Unticked, a note
+      is placed by <code>classicist-window-behaviour</code> and the preset
+      like any other buffer &mdash; more consistent, and worse in practice:
+      <code>reuse</code> then means the note takes the window it was asked
+      from, which is the browser showing the passage.</em></label>
+  </div>
+
+  <div class="row" data-feature="phi-notes">
     <input type="checkbox" id="c-phistructure" checked>
     <label for="c-phistructure">File each note under a note for its work
       <em><code>classicist-phi-structure-notes</code> &mdash; the work gets a note of its own and every passage note links to it as parent, so <code>phi-backlinks</code> on it lists everything said about that text. <code>C-c n i</code> writes the list into it as well.</em></label>
@@ -2006,10 +2030,15 @@ const KINDS = [
   ['morphology', 'Analyses', 'what ml and mg produce &mdash; an analysis, or a list of forms'],
   ['search', 'Searches', 'Diogenes&rsquo; search results, and Diorisis hit lists'],
   ['treebank', 'Trees', 'a sentence annotated as a dependency tree'],
+  // NOTES LAST, and only where one of the note features is awake: a reader
+  // with neither has nothing to place, and a row for it would be a question
+  // about a buffer they will never see.
+  ['notes', 'Notes', 'a note on a passage &mdash; in org, or in phi-notes'],
 ];
 
 let kind = { lookup: 'defer', browser: 'defer', dictionary: 'defer',
-             morphology: 'defer', search: 'defer', treebank: 'defer' };
+             morphology: 'defer', search: 'defer', treebank: 'defer',
+             notes: 'defer' };
 let scene = [], fresh = null;
 
 const el = id => document.getElementById(id);
@@ -2503,8 +2532,10 @@ function separated() {
     return box && box.checked;
   });
 }
-// SIX PLUS WHATEVER IS SEPARATED.  KINDS was four, then six; a list that
-// changes wants a function rather than a constant everything reads directly.
+// THE KINDS, PLUS WHATEVER IS SEPARATED.  KINDS was four, then six, then
+// seven with `notes'; a list that keeps changing wants a function rather
+// than a constant everything reads directly -- and no count in a comment,
+// which is what the last two of those changes had to correct.
 function kindsNow() {
   return KINDS.concat(separated().map(([k, name, from]) =>
     [k, name, 'kept apart from ' + (from === 'browser' ? 'the texts'
@@ -2531,7 +2562,7 @@ document.addEventListener('change', e => {
 });
 
 // ---------- where a preset starts from ----------
-// THE FOUR BUILTINS EACH SET ALL FOUR KINDS TO ONE WORD, which is what
+// THE FOUR BUILTINS EACH SET EVERY KIND TO ONE WORD, which is what
 // `classicist-window-behaviour' means when given a symbol rather than an
 // alist.  So starting from one is four assignments, and `blank' is the same
 // thing with `defer'.
@@ -3779,6 +3810,10 @@ function configText() {
     const size = el('c-phisize') && el('c-phisize').value.trim();
     if (size && size !== '0.35')
       block.push(`  (setq classicist-phi-sidebar-size ${size})`);
+    if (el('c-phibuttons') && !el('c-phibuttons').checked)
+      block.push('  (setq classicist-phi-own-buttons nil)');
+    if (el('c-phibelow') && !el('c-phibelow').checked)
+      block.push('  (setq classicist-phi-display-action nil)');
     if (el('c-phistructure') && !el('c-phistructure').checked)
       block.push('  (setq classicist-phi-structure-notes nil)');
     if (el('c-phiolivetti') && el('c-phiolivetti').checked)
