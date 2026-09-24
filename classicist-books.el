@@ -59,6 +59,11 @@
 (declare-function classicist-open-passage "classicist-browser"
                   (corpus author work &optional passage))
 (declare-function classicist-browser-reference "classicist-citation" ())
+;; THE BASE'S, for how a work is cited: three levels for a Stephanus work
+;; against two for a Bekker one, which is what decides whether a declared
+;; citation of one part wants splitting.
+(declare-function diogenes--get-work-labels "diogenes-perl-interface"
+                  (options author-and-work))
 (declare-function diogenes--get-author-list "diogenes-perl-interface" (options &optional author-regex))
 (declare-function diogenes--get-works-list "diogenes-perl-interface"
                   (options author))
@@ -527,7 +532,43 @@ are remembered afterwards in `classicist-books-cache-file\\='."
            (user-error "No book of this work answers to `%s'" choice))
          (message "%s, at %s" (car book) (cadr book))
          (classicist-open-passage corpus author work
-                                (split-string (cadr book) "[.]" t)))))))
+                                (classicist-books--levels
+                                 corpus author work (cadr book))))))))
+
+(defun classicist-books--levels (corpus author work citation)
+  "CITATION as the levels the corpus wants.
+
+A STEPHANUS PAGE IS TWO LEVELS AND IS WRITTEN AS ONE.  Plato\='s books are
+declared as a reader writes them -- `327a\=', `484a\=' -- and the corpus cites
+the Republic by Stephanus page, section and line, which is three.  So `327a\='
+split on stops alone gave ONE level for a three-level work, the seek found
+nothing, and the browser opened the head of the work instead: book I looked
+right, being at 327a, and every other book showed the first page.
+
+The letter is therefore separated from the digits -- `327a\=' becomes the page
+`327\=' and the section `a\=' -- and a line of 1 added, the head of the page
+being where a book begins.  A Bekker page is left alone: `1048b\=' is ONE
+level there, the page and its column together, which is what a Bekker work
+reports for its levels.
+
+WHICH IS TOLD APART BY THE COUNT AND NOT BY THE AUTHOR.  A citation of one
+part for a work of three levels wants splitting; one of two parts for two
+levels does not.  So the work is asked how it is cited -- the corpus knows,
+and a table of who is cited how would be a second place for the same fact --
+and where the answer cannot be had the citation is taken as written."
+  (let* ((parts (split-string (or citation "") "[.]" t))
+         (labels (ignore-errors
+                   (and (fboundp 'diogenes--get-work-labels)
+                        (diogenes--get-work-labels (list :type corpus)
+                                                   (list author work))))))
+    (if (and labels
+             (= 1 (length parts))
+             (>= (length labels) 3)
+             (string-match "\\`\\([0-9]+\\)\\([a-zA-Z]\\)\\'" (car parts)))
+        (append (list (match-string 1 (car parts))
+                      (match-string 2 (car parts)))
+                (make-list (- (length labels) 2) "1"))
+      parts)))
 
 (provide 'classicist-books)
 ;;; classicist-books.el ends here
