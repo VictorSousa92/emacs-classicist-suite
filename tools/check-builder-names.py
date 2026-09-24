@@ -74,6 +74,18 @@ NOT_SYMBOLS = {
     "classicist",               # the feature
     "classicist-base",          # a git BRANCH on the fork, not a symbol
     "diogenes-roam",            # a package of its own, not in this suite
+    # A NOTE-TYPE NAME, which is a KEY IN SOMEBODY ELSE'S ALIST and not a
+    # symbol anything defines.  `classicist-phi-install-org-type' pushes
+    # (classicist-org-text . PROPS) onto phi-notes' `phi-note-types' at load,
+    # so the name exists as a value and never as a definition -- which is
+    # what this checker looks for, correctly.
+    #
+    # WILL ROT IF THE TYPE GOES, like every hand-written exception here: see
+    # `classicist-browser' above, which outlived its fact and hid two dead
+    # forms.  The guard is that the builder only emits this inside
+    # `(setq classicist-phi-note-type ...)', so a grep for that option finds
+    # both at once.
+    "classicist-org-text",
     # SPACEMACS READS IT AND NOTHING HERE DEFINES IT.  A layer declares its
     # own `LAYER-packages' in the file Spacemacs loads, so the builder writes
     # that name as part of a layer rather than naming a symbol this suite

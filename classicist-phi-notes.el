@@ -83,6 +83,14 @@
 (declare-function phi-matching-file-name "phi-notes"
                   (id &optional usecontext path))
 (declare-function phi-buttonize-buffer "phi-notes" ())
+(declare-function phi-buffer-repository "phi-notes" (&optional buf))
+(declare-function phi-filename "phi-notes" (id &optional repo))
+(declare-function org-link-set-parameters "ol" (type &rest parameters))
+(declare-function org-id-new "org-id" (&optional prefix))
+(declare-function phi-org-header "phi-notes"
+                  (id title &optional tags parent-props extra-fields))
+(defvar phi-note-types)
+(defvar phi-repository-alist)
 ;; WINDOW-PURPOSE'S OWN, a third package again.  Asked `boundp' and `fboundp'
 ;; before either is touched.
 (declare-function purpose-compile-user-configuration
@@ -234,6 +242,19 @@ reader with one Zettelkasten wants.  A list of directories overrides it."
                  (repeat directory))
   :group 'classicist-phi-notes)
 
+(defcustom classicist-phi-org-index-markers
+  '("# classicist:index" . "# /classicist:index")
+  "The lines an index is written between in an ORG note.
+
+AN HTML COMMENT WILL NOT DO THERE.  `classicist-phi-index-markers\=' is
+invisible in markdown and is plain text in org, so org gets markers of its
+own -- a line beginning `# \=' is a comment to org and shows as nothing.
+
+Read with the same both-or-nothing rule: see
+`classicist-phi-index-markers\='."
+  :type '(cons string string)
+  :group 'classicist-phi-notes)
+
 (defcustom classicist-phi-index-markers
   '("<!-- classicist:index -->" . "<!-- /classicist:index -->")
   "The lines an index is written between, as (OPENING . CLOSING).
@@ -248,6 +269,23 @@ into a file a reader also edits by hand, so the failure it must not have is
 eating prose.  Requiring both markers means the worst case is that nothing
 happens."
   :type '(cons string string)
+  :group 'classicist-phi-notes)
+
+(defcustom classicist-phi-org-index-line
+  "- [[%r:%i][%c]]%t"
+  "How a note is written in the index of an ORG note.
+
+  %r  the repository, which an org phi-link needs and a wikilink does not
+  %i  the note\='s id
+  %c  its citation, which is the link\='s description here
+  %t  its title, preceded by an em dash when there is one
+
+AN ORG LINK AND NOT A WIKILINK.  `phi-org-insert-link\=' writes
+`[[REPOSITORY:ID][description]]\=' -- an org link whose type `ol-phi.el\='
+registers for each repository -- where markdown has a bare `[[0002]]\='.  So
+the line differs, and so does the way it is followed: see
+`classicist-phi-own-buttons\='."
+  :type 'string
   :group 'classicist-phi-notes)
 
 (defcustom classicist-phi-index-line
@@ -384,6 +422,41 @@ minor mode, which purpose does not read.
 Nil registers nothing, for a reader who would rather purpose treated a note
 as any other file."
   :type '(choice (const :tag "None" nil) symbol)
+  :group 'classicist-phi-notes)
+
+(defcustom classicist-phi-roam-ids nil
+  "Whether an org note also carries an `org-id\=', so org-roam can see it.
+
+PHI-NOTES HAS NO ORG-ROAM INTEGRATION -- checked, and there is none: not in
+`phi-notes.el\=', not in `ol-phi.el\=', and `org-phi.el\=' is bibliography
+through `org-bibtex\=' rather than anything to do with roam.  Its org support
+is org-MODE.
+
+SO THE TWO IDS DIFFER IN KIND.  `phi-org-header\=' writes `#+ID: 0002\=' --
+phi\='s counter, which drives its wikilinks -- and org-roam finds nodes by
+`org-id\=', a UUID in a `:PROPERTIES:\=' drawer.  `#+ID:\=' is not that, so a
+phi note is an org file and not a roam node.  Non-nil writes the drawer as
+well, and the two ids live side by side without contending: phi\='s counter
+drives its links, roam\='s UUID drives its database.
+
+    :PROPERTIES:
+    :ID:       a1b2c3d4-...
+    :END:
+    #+TITLE: A.R. 1.23-1.24
+    #+ID: 0002
+
+NIL BY DEFAULT, and the reason is that the suite already answers this.  The
+`notes\=' feature IS org-roam -- `diogenes-org-note\=' captures through
+`org-roam-capture-\=' -- so a reader who wants their passage notes in the
+roam graph has a feature for it, and phi-notes exists for the reader who
+wants markdown, wikilinks and no database.  Defaulting this on would collapse
+the distinction the two features are for, and would add a dependency that can
+fail in its own ways.
+
+WANTS THE REPOSITORY UNDER `org-roam-directory\=', and one
+`org-roam-db-sync\=' before the notes appear.  Only org notes are affected: a
+markdown note has nowhere to put a drawer."
+  :type 'boolean
   :group 'classicist-phi-notes)
 
 (defcustom classicist-phi-own-buttons t
@@ -976,16 +1049,26 @@ it as text is enough to say whether a note is about this passage."
     (insert-file-contents file nil 0 4096)
     (goto-char (point-min))
     (let ((fields nil))
+      ;; TO THE FIRST BLANK LINE, in both formats.  Markdown opens with `---'
+      ;; and closes with `...'; org has its keywords at the top and then a
+      ;; blank line, which `phi-org-header' writes.  Neither puts a field
+      ;; after the gap, so the gap is the end of the frontmatter for both.
       (while (and (not (eobp))
                   (not (looking-at-p "^[ \t]*$")))
         (when (looking-at
-               "^\\([A-Za-z_][A-Za-z0-9_]*\\):[ \t]*\\(.*?\\)[ \t]*$")
+               ;; EITHER SYNTAX.  `field: value' for markdown, `#+FIELD:
+               ;; value' for org -- and org UPCASES the name, `phi-org-header'
+               ;; writing it with `(upcase (symbol-name ...))', so the key is
+               ;; downcased below and every caller can go on asking for
+               ;; `section' whatever the note is written in.
+               (concat "^\\(?:#\\+\\)?\\([A-Za-z_][A-Za-z0-9_]*\\):"
+                       "[ \t]*\\(.*?\\)[ \t]*$"))
           ;; WITHOUT THE YAML QUOTES.  A title is written `title: "A.R."',
           ;; and the quotes are the format's rather than the title's -- they
           ;; reached the index as `1.1 -- "A.R. 1.1"'.  phi-notes has
           ;; `phi--without-quotes' for this; doing it here keeps the text
           ;; parser independent of it.
-          (push (cons (match-string 1)
+          (push (cons (downcase (match-string 1))
                       (string-trim (match-string 2) "\"" "\""))
                 fields))
         (forward-line 1))
@@ -1054,6 +1137,91 @@ ones about this passage are visible among them."
 
 
 
+
+
+;;;; Markdown or org, asked of phi-notes rather than assumed
+
+;; PHI-NOTES DOES BOTH, and markdown is only its default.  `phi-note-types'
+;; carries a `file-extensions' for each type, `phi-file-extensions' lists
+;; every one it will read, and `org-default' writes org keywords through
+;; `phi-org-header'.  So the format is a fact to be asked for, in two places:
+;; the TYPE when a note is written, the EXTENSION when one is read.
+;;
+;; AND THE TWO FORMATS DIFFER IN MORE THAN SYNTAX.  Three things change:
+;;
+;;   the frontmatter   `ref_tlg: x' against `#+REF_TLG: x', and org upcases
+;;                     the field name -- `phi-org-header' does it with
+;;                     `(upcase (symbol-name ...))'
+;;   the markers       an HTML comment is invisible in markdown and is text
+;;                     in org
+;;   the links         markdown has a `[[0002]]' wikilink made a BUTTON by
+;;                     `phi-buttonize-buffer'; org has `[[Notes:0002][...]]',
+;;                     an ORG LINK whose type `ol-phi.el' registers per
+;;                     repository.  Different mechanisms, so following one
+;;                     ourselves is a different job in each.
+
+(defun classicist-phi--org-type-p (&optional type)
+  "Whether TYPE, or `classicist-phi-note-type\=', writes org."
+  (let* ((type (or type classicist-phi-note-type))
+         (props (and (boundp 'phi-note-types)
+                     (alist-get type phi-note-types))))
+    (and (member "org" (alist-get 'file-extensions props)) t)))
+
+(defun classicist-phi--org-file-p (file)
+  "Whether FILE is an org note rather than a markdown one."
+  (equal "org" (file-name-extension (or file ""))))
+
+(defconst classicist-phi--org-type 'classicist-org-text
+  "The name of the org note type this file adds to `phi-note-types\='.")
+
+(defun classicist-phi--org-header-with-id (id title &optional tags
+                                              parent-props extra-fields)
+  "As `phi-org-header\=', with an `org-id\=' drawer before it.
+
+HIS HEADER AND THEN SOME, and in that order: the drawer must come first in
+the file for org to read it as the file\='s own properties, so this puts it
+there and leaves everything after it to him.  A change to
+`phi-org-header\=' therefore carries over.
+
+The id is `org-id-new\=''s, not phi\='s counter: roam assumes an id is unique
+across every note it knows, and a second repository starting its counter
+again would collide."
+  (let ((his (funcall 'phi-org-header id title tags parent-props
+                      extra-fields)))
+    (concat ":PROPERTIES:\n"
+            ":ID:       " (if (fboundp 'org-id-new) (org-id-new) id) "\n"
+            ":END:\n"
+            his)))
+
+;;;###autoload
+(defun classicist-phi-install-org-type ()
+  "Add an org note type carrying our reference fields to `phi-note-types\='.
+
+`org-default\=' DECLARES NO extra-fields, so a note made as it would carry no
+reference at all and nothing here could find it again.  This copies it and
+adds the three, which is all the difference: the header function, the tag
+reader and the rest stay his.
+
+`phi-note-types\=' being a plain defvar is what makes this possible without
+touching phi-notes."
+  (interactive)
+  (when (and (boundp 'phi-note-types)
+             (alist-get 'org-default phi-note-types)
+             (not (alist-get classicist-phi--org-type phi-note-types)))
+    (let ((props (copy-alist (alist-get 'org-default phi-note-types))))
+      (setf (alist-get 'description props) "A passage, in org")
+      (setf (alist-get 'extra-fields props) '(ref_tlg section line))
+      (when classicist-phi-roam-ids
+        (setf (alist-get 'header-function props)
+              #'classicist-phi--org-header-with-id))
+      (setf (alist-get 'required-tags props)
+            (alist-get 'required-tags
+                       (alist-get 'tlg-text phi-note-types)))
+      (push (cons classicist-phi--org-type props) phi-note-types))))
+
+;;;###autoload
+(with-eval-after-load 'phi-notes
+  (classicist-phi-install-org-type))
 
 ;;;; Telling window-purpose what a note is
 
@@ -1129,6 +1297,53 @@ purpose\='s configuration, which is what makes a new entry take effect."
     (classicist-phi--open file)))
 
 ;;;###autoload
+(defun classicist-phi--follow-org-link (path _arg)
+  "Open the note PATH names, placed as any other note of ours.
+
+THE ORG HALF OF `classicist-phi-own-buttons\='.  An org phi-link is
+`[[REPOSITORY:ID][description]]\=', and `ol-phi.el\=' registers a link type
+per repository whose `:follow\=' ends in `org-open-file\=' -- which takes the
+window it is called from.  No `delete-other-windows\=' as the markdown button
+has, so org never cleared the frame; it replaced the browser instead, which
+is the same loss by a quieter route.
+
+PATH IS THE ID, possibly with org\='s `::search\=' after it.  The search is
+dropped: what it would find is a place within the note, and a note opened to
+be read wants its head."
+  (let* ((id (if (string-match "\\`\\(.+?\\)::" path)
+                 (match-string 1 path)
+               path))
+         (file (and (fboundp 'phi-matching-file-name)
+                    (phi-matching-file-name id))))
+    (unless file
+      (user-error "No note with the id %s" id))
+    (classicist-phi--open file)))
+
+;;;###autoload
+(defun classicist-phi-install-org-links ()
+  "Follow org phi-links ourselves, for every repository phi-notes knows.
+
+REGISTERED OVER `ol-phi.el\='\='S OWN, the link type being named for the
+repository and `org-link-set-parameters\=' taking the last word.  Only the
+`:follow\=' is replaced: `:export\=' and `:store\=' are his and are left
+alone, so storing a link and exporting one behave as they did.
+
+Does nothing where `classicist-phi-own-buttons\=' is nil, which is the
+setting for a reader who wants his arrangement in both formats."
+  (interactive)
+  (when (and classicist-phi-own-buttons
+             (fboundp 'org-link-set-parameters)
+             (boundp 'phi-repository-alist))
+    (dolist (repository (mapcar #'car phi-repository-alist))
+      (org-link-set-parameters
+       repository :follow #'classicist-phi--follow-org-link))))
+
+;; AFTER `ol-phi', so ours is the later word; and after `phi-notes' for a
+;; configuration that has the repositories without the org integration.
+;;;###autoload
+(with-eval-after-load 'ol-phi
+  (classicist-phi-install-org-links))
+
 (defun classicist-phi--rebuttonize ()
   "Give this buffer\='s wikilinks our action instead of phi-notes\='.
 
@@ -1196,6 +1411,12 @@ Does nothing where `classicist-phi-own-buttons' is nil."
 ;; while it is being typed in should be opted into after the writing is
 ;; trusted, not before.  `classicist-phi-index-work' is the whole of it.
 
+(defun classicist-phi--markers-for (file)
+  "The index markers FILE\='s format wants."
+  (if (classicist-phi--org-file-p file)
+      classicist-phi-org-index-markers
+    classicist-phi-index-markers))
+
 (defun classicist-phi--index-citation (section line)
   "SECTION and LINE as one citation for an index line."
   (let ((s (string-trim (or section "")))
@@ -1233,8 +1454,9 @@ Does nothing where `classicist-phi-own-buttons' is nil."
         (setq x (cdr x) y (cdr y)))
       nil)))
 
-(defun classicist-phi--index-lines (corpus author work)
-  "The index of WORK, as a list of strings, the work's own note excluded."
+(defun classicist-phi--index-lines (corpus author work &optional org repo)
+  "The index of WORK, as a list of strings, the work's own note excluded.
+ORG non-nil writes org links, which want REPO -- a wikilink does not."
   (let* ((notes (classicist-phi--notes-on corpus author work))
          (passages
           (seq-remove (lambda (n)
@@ -1253,15 +1475,21 @@ Does nothing where `classicist-phi-own-buttons' is nil."
                       ""))
               (citation (classicist-phi--index-citation (nth 1 n) (nth 2 n)))
               (title (string-trim (or (nth 3 n) ""))))
-         (replace-regexp-in-string
-          "%i" id
-          (replace-regexp-in-string
-           "%c" citation
-           (replace-regexp-in-string
-            "%t" (if (string-empty-p title) "" (concat " \u2014 " title))
-            classicist-phi-index-line t t)
-           t t)
-          t t)))
+         (let ((out (if org
+                        classicist-phi-org-index-line
+                      classicist-phi-index-line)))
+           ;; LITERALLY, all four: a citation may hold a stop and a title
+           ;; anything at all, and `replace-regexp-in-string' would read a
+           ;; backslash in either as its own.
+           (dolist (pair (list (cons "%r" (or repo ""))
+                               (cons "%i" id)
+                               (cons "%c" citation)
+                               (cons "%t" (if (string-empty-p title)
+                                              ""
+                                            (concat " \u2014 " title)))))
+             (setq out (replace-regexp-in-string
+                        (car pair) (cdr pair) out t t)))
+           out)))
      sorted)))
 
 (defun classicist-phi--index-write (file lines)
@@ -1270,8 +1498,9 @@ Does nothing where `classicist-phi-own-buttons' is nil."
 NOTHING IS TOUCHED WITHOUT BOTH MARKERS.  Returns t when the block was
 written, nil when the markers are not both there -- and in that case the
 file is not modified at all, which is the point."
-  (let ((opening (car classicist-phi-index-markers))
-        (closing (cdr classicist-phi-index-markers)))
+  (let* ((markers (classicist-phi--markers-for file))
+         (opening (car markers))
+         (closing (cdr markers)))
     (with-current-buffer (find-file-noselect file)
       (save-excursion
         (goto-char (point-min))
@@ -1314,7 +1543,11 @@ belongs."
            (found (or (classicist-phi--work-note corpus author work)
                       (classicist-phi--make-work-note reference)))
            (file (cdr found))
-           (lines (classicist-phi--index-lines corpus author work)))
+           (org (classicist-phi--org-file-p file))
+           (repo (and org (fboundp 'phi-buffer-repository)
+                      (with-current-buffer (find-file-noselect file)
+                        (phi-buffer-repository))))
+           (lines (classicist-phi--index-lines corpus author work org repo)))
       (unless file
         (user-error "Could not find or make a note for this work"))
       (unless (classicist-phi--index-write file lines)
@@ -1326,8 +1559,8 @@ belongs."
                 (save-excursion
                   (goto-char (point-max))
                   (unless (bolp) (insert "\n"))
-                  (insert "\n" (car classicist-phi-index-markers) "\n"
-                          (cdr classicist-phi-index-markers) "\n"))
+                  (let ((m (classicist-phi--markers-for file)))
+                    (insert "\n" (car m) "\n" (cdr m) "\n")))
                 (save-buffer))
               (classicist-phi--index-write file lines))
           (user-error "Index not written")))
@@ -1770,9 +2003,12 @@ is and does, for the same reasons."
       (when (cdr cell)
         (keymap-set (symbol-value 'classicist-browser-mode-map)
                     (cdr cell) (car cell)))))
-  ;; AND THE BUTTONS IN OUR OWN NOTES: see
-  ;; `classicist-phi--rebuttonize' for why phi-notes' own action will not do.
-  (add-hook 'phi-mode-hook #'classicist-phi--rebuttonize))
+  ;; AND THE LINKS IN OUR OWN NOTES, both kinds: see
+  ;; `classicist-phi--rebuttonize' for the markdown button and
+  ;; `classicist-phi-install-org-links' for the org link, which are different
+  ;; mechanisms and so want doing separately.
+  (add-hook 'phi-mode-hook #'classicist-phi--rebuttonize)
+  (classicist-phi-install-org-links))
 
 ;; INSTALLED WHEN THE BROWSER LOADS, and only when the feature is awake.  The
 ;; cookie copies this into the generated autoloads, where it runs before this

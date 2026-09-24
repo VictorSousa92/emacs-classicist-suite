@@ -594,6 +594,16 @@ the writing is trusted.
 press hides it. The buffer is left alone either way, so nothing is asked about
 saving.
 
+Everything here is configurable. `M-x customize-group classicist-phi-notes`
+lists every option, each with the reasoning in its docstring.
+
+**With `window-purpose` loaded, `classicist-phi-purpose` is what decides
+where a note goes** — and nothing else does. Purpose advises `display-buffer`
+and answers before any action of the suite's is consulted, so neither the
+behaviour, nor a preset, nor `classicist-phi-display-action` is reached. A
+note it has never heard of is filed under `general` and shown in the window
+you were reading in, which is why notes are given a purpose of their own.
+
 **A wikilink in one of our notes is followed by us**, not by phi-notes, and
 that is `classicist-phi-own-buttons`. His own action for a `[[0002]]` ends
 `(if phi-sidebar-persistent-window (delete-other-windows))` — which suits a

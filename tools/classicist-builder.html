@@ -817,6 +817,34 @@
     </div>
   </dialog>
 
+  <dialog class="ask" id="c-ask-org">
+    <div class="body">
+      <h3>The org notes want org-roam</h3>
+      <p>Not merely to file them &mdash; they are org-roam nodes.
+         <code>diogenes-org-note</code> captures through
+         <code>org-roam-capture-</code> and
+         <code>diogenes-org-notes</code> opens what it finds with
+         <code>org-roam-node-open</code>, so without org-roam both report
+         <i>This wants org-roam</i> and do nothing.</p>
+      <p>This configuration does not install it. org-roam is on MELPA and its
+         own setup wants a decision or two of yours &mdash;
+         <code>org-roam-directory</code>, and the database it keeps &mdash;
+         which a recipe written here would make for you badly:
+         <b><a href="https://www.orgroam.com/" target="_blank"
+               rel="noopener">orgroam.com</a></b></p>
+      <p>The citation goes into a note&rsquo;s <code>ROAM_REFS</code>, which
+         is how it is found again and how it leads back. That is the whole of
+         the coupling: everything else about a note is org-roam&rsquo;s
+         business and yours.</p>
+      <p>If you would rather not run org-roam, <b>notes in phi-notes</b> is
+         the other feature &mdash; markdown, a frontmatter and wikilinks,
+         with no database.</p>
+    </div>
+    <div class="acts">
+      <button type="button" id="c-ask-org-ok">Understood</button>
+    </div>
+  </dialog>
+
   <dialog class="ask" id="c-ask-phi">
     <div class="body">
       <h3>phi-notes is installed separately</h3>
@@ -1494,6 +1522,29 @@
     <span>How much of the frame it takes
       <em><code>classicist-phi-sidebar-size</code> &mdash; 0.35 by default, a fraction of the width or height. A whole number is taken as columns or lines</em></span>
     <input type="text" id="c-phisize" placeholder="0.35">
+  </div>
+
+  <div class="field" data-feature="phi-notes">
+    <span>The note type a passage is written as
+      <em><code>classicist-phi-note-type</code> &mdash; phi-notes does both formats and markdown is only its default</em></span>
+    <select id="c-phitype">
+      <option value="tlg-text">markdown, with a YAML-ish frontmatter</option>
+      <option value="classicist-org-text">org, with keywords</option>
+    </select>
+  </div>
+
+  <div class="row" data-feature="phi-notes">
+    <input type="checkbox" id="c-phiroam">
+    <label for="c-phiroam">Give an org note an <code>org-id</code> as well
+      <em><code>classicist-phi-roam-ids</code> &mdash; phi-notes has no
+      org-roam integration of its own, and its <code>#+ID: 0002</code> is its
+      counter rather than an <code>org-id</code>, so a phi note is an org file
+      and not a roam node. Ticked, a <code>:PROPERTIES:</code> drawer with a
+      UUID is written as well and the two ids live side by side. Wants the
+      repository under <code>org-roam-directory</code> and one
+      <code>org-roam-db-sync</code>. Org notes only &mdash; a markdown note
+      has nowhere to put a drawer. If what you want is passage notes in the
+      roam graph, the <b>notes in org</b> feature is that already.</em></label>
   </div>
 
   <div class="row" data-feature="phi-notes">
@@ -3810,6 +3861,11 @@ function configText() {
     const size = el('c-phisize') && el('c-phisize').value.trim();
     if (size && size !== '0.35')
       block.push(`  (setq classicist-phi-sidebar-size ${size})`);
+    const ptype = el('c-phitype') && el('c-phitype').value;
+    if (ptype && ptype !== 'tlg-text')
+      block.push(`  (setq classicist-phi-note-type '${ptype})`);
+    if (el('c-phiroam') && el('c-phiroam').checked)
+      block.push('  (setq classicist-phi-roam-ids t)');
     if (el('c-phibuttons') && !el('c-phibuttons').checked)
       block.push('  (setq classicist-phi-own-buttons nil)');
     if (el('c-phibelow') && !el('c-phibelow').checked)
@@ -5086,6 +5142,10 @@ document.addEventListener('change', e => {
   // phi-notes on without going through the dialogue above still has a
   // package to install, and nothing else here would tell them.
   if (f === 'phi-notes' && e.target.checked) warnInstallPhi();
+  // AND THE ORG NOTES WANT org-roam, which is a stronger claim than wanting
+  // a package beside them: without it both commands report `This wants
+  // org-roam' and do nothing at all.
+  if (f === 'notes' && e.target.checked) warnInstallOrgRoam();
   if (e.target.checked && WANTS[f] && !WANTS[f].some(featureOn)) {
     const first = document.getElementById('f-' + WANTS[f][0]);
     if (first) { first.checked = true; }
@@ -5121,6 +5181,19 @@ function askWhichNotes() {
 // AND THE INSTALL WARNING, shown whenever phi-notes is turned on -- by the
 // dialogue above or by ticking the box.  It is the one thing a reader must
 // know that this configuration cannot do for them.
+function warnInstallOrgRoam() {
+  const d = el('c-ask-org');
+  if (d && d.showModal) d.showModal();
+}
+
+{
+  const b = el('c-ask-org-ok');
+  if (b) b.addEventListener('click', () => {
+    const d = el('c-ask-org');
+    if (d && d.close) d.close();
+  });
+}
+
 function warnInstallPhi() {
   const d = el('c-ask-phi');
   if (d && d.showModal) d.showModal();
@@ -5195,6 +5268,7 @@ function chooseNotes(which) {
   showSections();
   renderConfig();
   if (which === 'phi') warnInstallPhi();
+  if (which === 'org') warnInstallOrgRoam();
   // AND THEN THE DICTIONARIES, when this choice came from "everything".  The
   // flag rather than a look at the preset radio: a reader who swaps the note
   // system by hand later has not asked to be taken through setting up again.
