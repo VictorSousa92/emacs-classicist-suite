@@ -88,6 +88,11 @@
 ;; across a line -- a variable, so a bare `defvar' says it exists
 ;; elsewhere without pretending to own it
 (defvar classicist-browser-join-broken-words)
+;; THE SEARCH BUFFER'S, which `classicist--language-at-point' consults: a
+;; bare defvar because it is another file's and is asked `boundp' first.
+(defvar diogenes--search-language)
+(defvar diogenes-search-mode-map)
+(declare-function classicist-browser--at-click "classicist-browser" (command))
 
 (defgroup classicist-lookup nil
   "The buffer a dictionary entry is read in, and the registry the\ndictionaries announce themselves to."
@@ -1216,7 +1221,17 @@ about this, so it is taken first."
 	 (buf-lang (or (and (boundp 'classicist--lookup-lang)
 			    classicist--lookup-lang)
 		       (and (boundp 'classicist--browser-language)
-			    classicist--browser-language)))
+			    classicist--browser-language)
+		       ;; AND A SEARCH BUFFER, which knows too and was not
+		       ;; asked.  `diogenes-search-mode' sets
+		       ;; `diogenes--search-language' from the corpus when the
+		       ;; search starts, and this read only the lookup and the
+		       ;; browser -- so a Latin word in a PHI result had no
+		       ;; property, no Greek script and no buffer language, and
+		       ;; `C-c C-c' answered that it could do nothing useful
+		       ;; with a word it could have parsed.
+		       (and (boundp 'diogenes--search-language)
+			    diogenes--search-language)))
 	 (word (classicist--word-at-point-for-lookup)))
     (cond
      ;; Greek letters mean Greek, tagged or not.
@@ -1637,6 +1652,74 @@ the file only at the first call."
 	      (classicist--lemmata-file-to-hashtable
 	       (file-name-concat (diogenes--perseus-path)
 				 (concat lang "-lemmata.txt")))))))
+
+(defcustom classicist-search-lookup-keys
+  '(("l" . classicist-perseus-action))
+  "Keys that look a word up in a search-results buffer, as (KEY . COMMAND).
+
+BECAUSE NOTHING THERE LOOKED A WORD UP.  `diogenes-search-mode-map\=' binds
+`RET\=', `C-c C-c\=' and a double click all to
+`diogenes-search-browse-passage\=', and `mouse-1\=' is left as
+`mouse-set-point\=' -- so a reader who has found a word by searching for it
+could open the passage and not the dictionary, which is the wrong way round
+for a search whose point was the word.
+
+`l\=' BY DEFAULT, the mode\='s own keys being single letters -- `n\=', `p\=',
+`d\=', `u\=', `q\=' -- and `l\=' free among them.  `C-c C-c\=' is not taken from
+browsing: a reader who has pressed it for a year should not find it doing
+something else.
+
+Mouse gestures belong in `classicist-search-mouse-keys\=', point having to be
+moved to the click before the command runs."
+  :type '(alist :key-type key-sequence :value-type function)
+  :group 'classicist-lookup)
+
+(defcustom classicist-search-mouse-keys nil
+  "Mouse gestures that look a word up in a search buffer.
+
+As (GESTURE . COMMAND), and nil by default and off, as
+`classicist-browser-mouse-keys\=' is: clicking a word and getting a
+dictionary entry is not what a reader expects of an Emacs buffer.
+
+    (setq classicist-search-mouse-keys
+          \='((\"<mouse-1>\" . classicist-perseus-action)))
+
+The mouse-1 gesture is safe to take: Emacs fires it only on a click in place,
+a drag being drag-mouse-1, so marking still works.  Point is moved to the
+click before the command runs, whatever the command.
+
+Call `classicist-search-install-lookup-keys\=' after changing this."
+  :type '(alist :key-type key-sequence :value-type function)
+  :group 'classicist-lookup)
+
+;;;###autoload
+(defun classicist-search-install-lookup-keys ()
+  "Bind the word-lookup keys in a Diogenes search-results buffer.
+
+Both `classicist-search-lookup-keys\=' and
+`classicist-search-mouse-keys\=', the latter wrapped so that point moves to
+the click first -- see `classicist-browser--at-click\=', whose reasoning is
+the same and whose wrapper this borrows."
+  (interactive)
+  (when (boundp 'diogenes-search-mode-map)
+    (dolist (cell classicist-search-lookup-keys)
+      (when (and (car cell) (cdr cell))
+        (keymap-set (symbol-value 'diogenes-search-mode-map)
+                    (car cell) (cdr cell))))
+    (when (fboundp 'classicist-browser--at-click)
+      (dolist (cell classicist-search-mouse-keys)
+        (when (and (car cell) (cdr cell))
+          (keymap-set (symbol-value 'diogenes-search-mode-map)
+                      (car cell)
+                      (classicist-browser--at-click (cdr cell))))))))
+
+;; AFTER THE SEARCH FILE LOADS, the keymap being its own.  The cookie copies
+;; this into the generated autoloads, where it runs before this file is
+;; loaded -- so it names only what is autoloaded, which
+;; `classicist-search-install-lookup-keys' is.
+;;;###autoload
+(with-eval-after-load 'diogenes-search
+  (classicist-search-install-lookup-keys))
 
 (defun classicist-perseus-action (char)
   "Callback for the links in Diogenes Lookup and Analysis Mode."
