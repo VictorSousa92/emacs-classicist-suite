@@ -836,7 +836,8 @@ head of the work as it did before.
 FOR EVERY WAY IN, which is why this is here and not in the reader: the
 level-by-level prompt, the whole-citation prompt, and a PASSAGE handed over by
 another package all pass through `classicist-browser-goto-passage\='."
-  (let* ((levels (classicist-browser--unglue-levels levels labels))
+  (let* ((levels (classicist-browser--drop-blank-levels levels))
+         (levels (classicist-browser--unglue-levels levels labels))
          (short (and labels levels (- (length labels) (length levels)))))
     (if (and short (> short 0))
         (append levels
@@ -878,6 +879,27 @@ every numbered level and for every last level there is, a line."
                 "1")
               out)))
     (nreverse out)))
+
+(defun classicist-browser--drop-blank-levels (levels)
+  "LEVELS without the empty ones at the end.
+
+A BLANK ANSWER IS NOT A LEVEL.  Naming a Bekker page and pressing return
+past the line gave `(\"1048b\" \"\")\=' -- two levels for a work that counts
+two, so nothing was short, nothing was padded, and the corpus was asked for
+page 1048b at line nothing.  It answered by opening the head of the work,
+which looked like the page not being found.
+
+DROPPED HERE AND NOT IN THE READER, because there are three ways in -- the
+level-by-level prompt, the whole-citation prompt, and a PASSAGE handed over
+by another package -- and a blank is a blank in all of them.
+
+FROM THE END ONLY.  A blank in the middle is a reader saying something about
+the levels after it, and throwing it away would silently move them up one."
+  (let ((levels (reverse (or levels '()))))
+    (while (and levels
+                (string-empty-p (string-trim (format "%s" (car levels)))))
+      (setq levels (cdr levels)))
+    (reverse levels)))
 
 (defun classicist-browser--unglue-levels (levels labels)
   "LEVELS with a glued page and section taken apart, where that is what it is.
