@@ -1353,10 +1353,29 @@ Uses the Diogenes Perl module."
 	 (work (or work
 		   (diogenes--select-work-num (list :type type)
 					      author)))
-	 (passage (when (y-or-n-p "Specify passage? ")
-		    (diogenes--select-passage (list :type type)
-					      author
-					      work))))
+	 (asked (when (y-or-n-p "Specify passage? ")
+		  (diogenes--select-passage (list :type type)
+					    author
+					    work)))
+	 ;; PADDED HERE TOO, this being the one way in that did not.
+	 ;;
+	 ;; `diogenes--select-passage' stops at the first blank answer and
+	 ;; returns what it has -- `("1048a")' for a reader who names a Bekker
+	 ;; page and no line -- on the belief, which its docstring states, that
+	 ;; a passage of one level is perfectly good and Diogenes opens it at
+	 ;; its beginning.  It is not: the Metaphysics counts two levels, and
+	 ;; one short is a citation `seek_passage' does not find, so the
+	 ;; browser opens the head of the work instead.
+	 ;;
+	 ;; Which is the same fault `classicist-browser-goto-passage' had and
+	 ;; the same cure, so the same function does it: three ways in went
+	 ;; through `classicist-browser--pad-levels' and this was the fourth.
+	 (labels (ignore-errors
+		   (diogenes--get-work-labels (list :type type)
+					      (list author work))))
+	 (passage (if (and asked labels)
+		      (classicist-browser--pad-levels asked labels)
+		    asked)))
     (classicist--browse-work (list :type type) (nconc (list author work)
 						    passage))))
 
