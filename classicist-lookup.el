@@ -99,6 +99,7 @@
 (declare-function spacemacs/set-leader-keys "spacemacs"
                   (key def &rest bindings))
 (defvar doom-leader-map)
+(declare-function classicist-browser--at-click "classicist-browser" (command))
 
 (defgroup classicist-lookup nil
   "The buffer a dictionary entry is read in, and the registry the\ndictionaries announce themselves to."
@@ -1691,6 +1692,30 @@ should take quietly: set this to nil and nothing is bound globally.  Call
                  (alist :key-type key-sequence :value-type function))
   :group 'classicist-lookup)
 
+(defcustom classicist-global-mouse-keys
+  '(("C-M-<mouse-1>" . classicist-lookup-at-point))
+  "Mouse gestures bound EVERYWHERE, for looking a word up.
+
+A CLICK IS THE OBVIOUS GESTURE and cannot have the obvious button.  A bare
+`mouse-1\=' bound globally would fire on every click in every buffer, which
+is not a thing to do to an Emacs; so the default is modified --
+`C-M-mouse-1\=' -- and free of anything Emacs or a distribution uses.
+
+POINT MOVES TO THE CLICK FIRST, whatever the command, through
+`classicist-browser--at-click\='.  Without that a click would look up
+whatever was under point before, which is the trap that function exists for.
+
+`classicist-browser-mouse-keys\=' is the other place a click is bound, and
+takes the bare `mouse-1\=' safely because it acts in one mode: Emacs fires
+`mouse-1\=' only on a click in place -- a drag is `drag-mouse-1\=' -- so
+marking a passage still works.  Set that for a plain click while you read,
+and this for one anywhere.
+
+Nil binds no gesture."
+  :type '(choice (const :tag "None" nil)
+                 (alist :key-type key-sequence :value-type function))
+  :group 'classicist-lookup)
+
 (defcustom classicist-leader-keys
   '(("l" . classicist-lookup-at-point)
     ("g" . classicist-parse-and-lookup-greek)
@@ -1758,6 +1783,13 @@ Called at load, and again after changing either option."
   (dolist (cell classicist-global-keys)
     (when (and (car cell) (cdr cell))
       (keymap-global-set (car cell) (cdr cell))))
+  ;; AND THE GESTURES, wrapped so that point reaches the click before the
+  ;; command does.
+  (when (fboundp 'classicist-browser--at-click)
+    (dolist (cell classicist-global-mouse-keys)
+      (when (and (car cell) (cdr cell))
+        (keymap-global-set (car cell)
+                           (classicist-browser--at-click (cdr cell))))))
   (classicist--install-leader-keys))
 
 (defun classicist--install-leader-keys ()
