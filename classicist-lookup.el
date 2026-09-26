@@ -100,6 +100,8 @@
                   (key def &rest bindings))
 (defvar doom-leader-map)
 (declare-function classicist-browser--at-click "classicist-browser" (command))
+(declare-function diogenes-search-browse-passage "diogenes-search" (pos))
+(defvar diogenes-search-mode-map)
 
 (defgroup classicist-lookup nil
   "The buffer a dictionary entry is read in, and the registry the\ndictionaries announce themselves to."
@@ -1822,6 +1824,123 @@ is the right answer for vanilla Emacs."
                                          classicist-leader-prefix " ")
                               " " (car cell))
                       (cdr cell))))))))
+
+;;;; --------------------------------------------------------------------
+;;;; THE SEARCH-RESULTS BUFFER
+;;;; --------------------------------------------------------------------
+
+;; A RESULTS BUFFER HAS TWO KINDS OF LINE and had one behaviour.  The header
+;; names the author, the work, the edition and the citation; the body holds
+;; the passage with the match in it.  A reader wants different things of them
+;; -- the citation is a place to go, the match is a word to look up -- and
+;; `diogenes-search-mode-map' bound `RET', `C-c C-c' and a double click all
+;; to browsing, and left `mouse-1' as `mouse-set-point'.
+;;
+;; THESE ARE THE SUITE'S AND THE MODE IS THE BASE'S, so everything here is
+;; installed into its keymap after it loads and nothing of the base is
+;; rewritten.  A reader who wants the base's own behaviour sets the options
+;; to nil and gets it back.
+
+(defcustom classicist-search-header-links t
+  "Whether a click on a result\='s header opens the passage.
+
+THE HEADER IS A CITATION AND A CITATION IS A PLACE.  `Bekker page 24a, line
+18\=' is the one thing in a result that names where to go, and clicking it
+was the same as clicking anywhere else: nothing.
+
+Recognised by the `header\=' text property, which the base\='s filter already
+puts on the block -- so this asks the buffer rather than guessing at a line\='s
+shape."
+  :type 'boolean
+  :group 'classicist-lookup)
+
+(defcustom classicist-search-mouse-keys
+  '(("<mouse-1>" . classicist-search-click))
+  "Mouse gestures in a search-results buffer, as (GESTURE . COMMAND).
+
+    mouse-1   opens the passage where the click is on a header, and does
+              nothing more than move point elsewhere -- see
+              `classicist-search-click\='
+
+THE LOOKUP IS NOT HERE, having one already: `classicist-global-mouse-keys\='
+binds `C-M-mouse-1\=' in every buffer, this one among them, and a second
+gesture for the same thing in the same buffer is one to remember for no gain.
+
+THE BARE CLICK IS SAFE HERE, as it is in the browser: Emacs fires `mouse-1\='
+only on a click in place, a drag being `drag-mouse-1\=', so marking a passage
+still works.
+
+Point moves to the click before the command runs, whatever the command."
+  :type '(choice (const :tag "None" nil)
+                 (alist :key-type key-sequence :value-type function))
+  :group 'classicist-lookup)
+
+(defcustom classicist-search-keys
+  '(("C-c C-c" . diogenes-search-browse-passage))
+  "Keys in a search-results buffer, as (KEY . COMMAND).
+
+`C-c C-c\=' IS LISTED THOUGH IT IS ALREADY BOUND, so that a reader who wants
+it to do something else -- the lookup, most likely -- has one place to say
+so:
+
+    (setq classicist-search-keys
+          \='((\"C-c C-c\" . classicist-lookup-at-point)))
+
+Nil binds nothing and leaves the base\='s keys as they are."
+  :type '(choice (const :tag "None" nil)
+                 (alist :key-type key-sequence :value-type function))
+  :group 'classicist-lookup)
+
+(defcustom classicist-search-double-click t
+  "Whether a double click opens the passage.
+
+THE BASE BINDS IT and this can take it away, for a reader who has the single
+click doing something and does not want the double doing another: one click
+looking a word up and two opening a passage is an ambiguity that depends on
+how fast you click."
+  :type 'boolean
+  :group 'classicist-lookup)
+
+(defun classicist-search-click ()
+  "Open the passage if the click was on a header; otherwise do nothing.
+
+WHICH IS WHAT ONE CLICK SHOULD MEAN in a buffer of two kinds of line.  Point
+has already moved to the click -- see `classicist-browser--at-click\=' -- so
+the `header\=' property under point says which kind it is.
+
+Does nothing rather than guessing when the click is in the body: the body is
+text to read, and a reader who wants the word looked up has
+`C-mouse-1\='."
+  (interactive)
+  (when (and classicist-search-header-links
+             (get-text-property (point) 'header)
+             (fboundp 'diogenes-search-browse-passage))
+    (call-interactively 'diogenes-search-browse-passage)))
+
+;;;###autoload
+(defun classicist-search-install-keys ()
+  "Bind the suite\='s keys and gestures in `diogenes-search-mode-map\='.
+Called after the base\='s search file loads, and again after changing any of
+`classicist-search-keys\=', `classicist-search-mouse-keys\=' or
+`classicist-search-double-click\='."
+  (interactive)
+  (when (and (boundp 'diogenes-search-mode-map)
+             (keymapp (symbol-value 'diogenes-search-mode-map)))
+    (let ((map (symbol-value 'diogenes-search-mode-map)))
+      (dolist (cell classicist-search-keys)
+        (when (and (car cell) (cdr cell))
+          (keymap-set map (car cell) (cdr cell))))
+      (when (fboundp 'classicist-browser--at-click)
+        (dolist (cell classicist-search-mouse-keys)
+          (when (and (car cell) (cdr cell))
+            (keymap-set map (car cell)
+                        (classicist-browser--at-click (cdr cell))))))
+      ;; AND THE DOUBLE CLICK, TAKEN AWAY WHERE IT IS NOT WANTED.  Set to
+      ;; `ignore' rather than nil: nil in a keymap is `undefined' and Emacs
+      ;; would then look the gesture up in the parent map, which is
+      ;; `text-mode-map' and has its own idea about a double click.
+      (unless classicist-search-double-click
+        (keymap-set map "<double-mouse-1>" #'ignore)))))
 
 (defun classicist-perseus-action (char)
   "Callback for the links in Diogenes Lookup and Analysis Mode."

@@ -705,6 +705,12 @@ Idempotent: defining a transient prefix again simply replaces it."
   (when (fboundp 'classicist-install-global-keys)
     (classicist-install-global-keys)))
 
+;; AND THE SEARCH BUFFER'S, after the base's search file: its keymap is the
+;; one being added to, so there is nothing to bind until it exists.
+(with-eval-after-load 'diogenes-search
+  (when (fboundp 'classicist-search-install-keys)
+    (classicist-search-install-keys)))
+
 ;;;; --------------------------------------------------------------------
 ;;;; THE BASE'S OWN NAMES, POINTED HERE
 ;;;; --------------------------------------------------------------------
