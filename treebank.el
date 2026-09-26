@@ -219,8 +219,18 @@ where each token really stood, without which nothing could be sent back."
      ("expletive" . "g") ("conjunction" . "c") ("conj" . "c")
      ("preposition" . "r") ("prep" . "r") ("pronoun" . "p")
      ("interrog" . "p") ("numeral" . "m") ("interjection" . "i")
-     ("exclam" . "e") ("exclamation" . "e") ("proper" . "n")
-     ("geog_name" . "n") ("punctuation" . "u"))
+     ;; AN EXCLAMATION IS AN INTERJECTION HERE, and `e' is not a letter the
+     ;; Greek scheme has: its part of speech admits only
+     ;; n v a d l g c r p m i u x.  This wrote `e' and produced a tag no
+     ;; reader of the format would accept -- the LATIN table's `e' is right,
+     ;; the Latin Dependency Treebank having that letter and a `t' for a
+     ;; participle besides, which is one more reason the two tables are two.
+     ("exclam" . "i") ("exclamation" . "i") ("proper" . "n")
+     ("geog_name" . "n") ("punctuation" . "u")
+     ;; AND THE ELLIPTICAL NODE, which the guidelines give `x' for -- "not
+     ;; available (only for elliptical nodes)".  An artificial node has no
+     ;; part of speech to state, and without this there was no way to say so.
+     ("none" . "x") ("elliptical" . "x") ("artificial" . "x"))
     (("1st" . "1") ("2nd" . "2") ("3rd" . "3"))
     (("sg" . "s") ("pl" . "p") ("dual" . "d"))
     (("pres" . "p") ("imperf" . "i") ("perf" . "r") ("plup" . "l")
@@ -229,8 +239,12 @@ where each token really stood, without which nothing could be sent back."
      ("imperat" . "m") ("part" . "p"))
     (("act" . "a") ("mid" . "m") ("pass" . "p") ("mp" . "e"))
     (("masc" . "m") ("fem" . "f") ("neut" . "n"))
+    ;; SIX CASES AND NOT FIVE.  The guidelines' eighth place admits a
+    ;; locative, `l', which Homer and some dialect texts have and Classical
+    ;; prose almost never does -- rare is not absent, and a tagset missing a
+    ;; value cannot write the texts that use it.
     (("nom" . "n") ("gen" . "g") ("dat" . "d") ("acc" . "a")
-     ("voc" . "v"))
+     ("voc" . "v") ("loc" . "l"))
     (("comp" . "c") ("superl" . "s") ("irreg_comp" . "c")
      ("irreg_superl" . "s")))
   "The nine places of a GREEK postag, each as (DIORISIS-VALUE . LETTER).
@@ -592,16 +606,51 @@ another; either may ask for the redraw, and both mean the same window.")
   "The sentence's own attributes: id, document_id, subdoc, span.")
 
 (defcustom treebank-guidelines-url
-  "https://github.com/PerseusDL/treebank_data/blob/master/AGDT2/guidelines/Greek_guidelines.md"
-  "Where the annotation guidelines are.
+  (concat "https://github.com/PerseusDL/treebank_data/blob/master"
+          "/AGDT2/guidelines/Greek_guidelines.md")
+  "Where the GREEK annotation guidelines are.
 
-`G\\=' in the help buffer opens them.  Celano\\='s guidelines for the Ancient Greek
-Dependency Treebank 2.0: the authority for everything the help says, and
-fuller than it by two hundred pages."
+`G\\=' in the help buffer opens them, for a Greek sentence.  Celano\\='s
+guidelines for the Ancient Greek Dependency Treebank: the authority for
+everything the help says about Greek, and fuller than it by two hundred
+pages."
   :type 'string
   :group 'treebank)
 
+(defcustom treebank-guidelines-url-latin
+  (concat "https://github.com/PerseusDL/treebank_data/blob/master"
+          "/v2.1/Latin/TAGSET.txt")
+  "Where the LATIN annotation guidelines are.
+
+A DIFFERENT AUTHORITY AND SO A DIFFERENT SETTING.  `G\\=' used to open
+Celano\\='s Greek guidelines whatever the language of the sentence -- and they
+are no authority for Latin: the tagset differs in five of the nine places,
+and the section numbers the relation notes cite are numbers in HIS document.
+
+The Latin Dependency Treebank\\='s own `TAGSET.txt\\=' is the corresponding
+authority.  It is a tagset rather than a two-hundred-page grammar, the Latin
+treebank having no equivalent of Celano\\='s work."
+  :type 'string
+  :group 'treebank)
+
+(defun treebank-guidelines-url-for-language ()
+  "The guidelines for the language of the sentence in hand.
+Greek by default, as the corpus is Greek: see `treebank-postag-places\\='."
+  (if (and (boundp 'diorisis-language) (eq diorisis-language 'latin))
+      treebank-guidelines-url-latin
+    treebank-guidelines-url))
+
 (defconst treebank-relation-notes
+  ;; THE SECTION NUMBERS ARE CELANO'S, and the relations are not.  The two
+  ;; treebanks share the Prague scheme, so the SET of labels serves both --
+  ;; PRED, SBJ, OBJ and the rest mean the same thing in a Latin tree.  What
+  ;; is Greek is the numbering: `(3.1)' is a section of the AGDT guidelines,
+  ;; and a reader annotating Latin who follows it is reading about Greek.
+  ;;
+  ;; NOT SPLIT INTO TWO TABLES, because that would be two copies of one set
+  ;; of definitions to keep in step, and the definitions genuinely are one.
+  ;; Said instead where it matters: `treebank-explain-relation' names whose
+  ;; document the reference belongs to, and `G' opens the right one.
   '(("PRED"
      . "The verb of the MAIN clause, and there is one to a sentence (3.1).
 Every other verb, finite or not, takes the label of the function it has
@@ -638,7 +687,11 @@ THE DATA SAYS OTHERWISE: ATV appears 3,428 times in the released AGDT 2.1 and
 AtvV 1,809, so the older style is very much alive.  Either way it is for a
 word agreeing with the subject -- never for the finite verb of a clause,
 which takes the function the clause has.")
-    ("ATVV" . "See ATV.")
+    ;; `AtvV\=' AND NOT `ATVV\='.  The guidelines write the pair `ATV/AtvV'
+    ;; throughout, and the docstring above spells it so while this key did
+    ;; not -- a relation is compared as a string in an ALDT file, so the key
+    ;; is what a reader of the file sees.
+    ("AtvV" . "See ATV.")
     ("PNOM"
      . "A predicate noun or adjective depending on a COPULA (3.7) -- what
 `to be' joins to its subject.  The supplementary participle not in indirect
@@ -694,6 +747,29 @@ It hangs from the word it bears on.")
      . "A constituent that does not belong to the sentence syntactically
  at (3.19): a vocative, the head of a parenthesis, an interjection (2.10).  It
 hangs from the PRED.")
+    ;; TWO THAT ARE LATIN'S AND NOT GREEK'S.  `diorisis-relations' lists them
+    ;; with a gloss apiece and this table had nothing, so `e' on one answered
+    ;; "Nothing written down about this one."  They are in the Latin
+    ;; Dependency Treebank's tagset and in the GSALT; Celano's scheme has
+    ;; neither, Greek needing no auxiliary `to be' with a participle and
+    ;; having no reflexive passive of the Latin kind.  So the sections cited
+    ;; are the GSALT's.
+    ("AuxV"
+     . "AN AUXILIARY VERB, and LATIN'S ALONE (GSALT 3.11).  A form of `esse'
+in a periphrastic verb -- `enuntiata est', `amatum esse', `amanda sit'.  It
+hangs from the VERBAL ADJECTIVE and not the other way about: the participle
+or gerundive carries the meaning and the auxiliary is the tense.
+
+Greek has no equivalent in this scheme: its periphrastic participle is a
+PNOM on the copula -- see `treebank-guidelines-url' and the AGDT's 4.1.9.4.")
+    ("AuxR"
+     . "A REFLEXIVE THAT MARKS A PASSIVE, and LATIN'S ALONE (GSALT 3.10).
+`se habet forma' is `the form is held to be', not `the form holds itself':
+the verb is active in form and passive in sense, and the `se' is no object.
+
+RARE IN CLASSICAL LATIN and commoner later.  Most reflexive `se' is an OBJ
+instead, which is what the guidelines warn: this label is for the passivizing
+use only.")
     ("MWE"
      . "A multi-word expression (3.11) whose words cannot be given functions
 of their own: the head takes the function of the whole and the rest hang from
@@ -927,9 +1003,11 @@ is always one label and what the suffixes are for.")
     (display-buffer buffer)))
 
 (defun treebank-open-guidelines ()
-  "Open the AGDT guidelines in a browser."
+  "Open the guidelines for this sentence\='s language in a browser.
+Celano\='s for Greek, the Latin Dependency Treebank\='s tagset for Latin: see
+`treebank-guidelines-url-for-language\='."
   (interactive)
-  (browse-url treebank-guidelines-url))
+  (browse-url (treebank-guidelines-url-for-language)))
 
 (defun treebank-explain-relation (relation)
   "Say at length what RELATION is for.
@@ -944,7 +1022,19 @@ label was the right one."
                mine
              (completing-read "Explain which relation? "
                               (mapcar #'car diorisis-relations) nil nil)))))
-  (let* ((bare (replace-regexp-in-string "_\\(CO\\|AP\\)\\'" "" relation))
+  (let* ((bare
+          ;; THE FIRST COMPONENT, which is the word's OWN relation.  This
+          ;; stripped one suffix from the end, which answered for `SBJ_CO'
+          ;; and for nothing longer: `SBJ_AP_CO' is a real label -- the AGDT
+          ;; names it for coordinate appositives, the LDT's tagset has
+          ;; `AP_CO' outright -- and left `SBJ_AP', which is in no table.
+          ;;
+          ;; AND THE LATIN ELLIPSIS TAGS ARE A PATH, not a suffixed label:
+          ;; `OBJ_ExD0_PRED_CO' says the word is the OBJ of an elided verb
+          ;; which would itself have been a PRED_CO (GSALT 4.1).  Stripping
+          ;; from the end gets nowhere; the word's own function is the first
+          ;; component, and that is what an explanation is being asked for.
+          (car (split-string relation "_" t)))
          (note (cdr (assoc bare treebank-relation-notes)))
          (gloss (cdr (assoc bare diorisis-relations)))
          (buffer (get-buffer-create "*The relation*")))
@@ -956,10 +1046,31 @@ label was the right one."
         (insert (or note "Nothing written down about this one.\n"))
         (when (string-suffix-p "_CO" relation)
           (insert "\n\n_CO: a member of a coordination -- see COORD."))
+        ;; AND THE PATH, where there is one: a reader who presses `e' on
+        ;; `OBJ_ExD0_PRED_CO' has been told what an OBJ is and should be told
+        ;; why the label is four things long.
+        (when (string-match-p "_ExD[0-9]*_" relation)
+          (insert "\n\n_ExD_: the word's head is ELIDED, and what follows
+names the function that head would have had.  The numeral indexes the
+ellipsis, a sentence being able to elide more than one word.  See GSALT 4.1."))
         (when (string-suffix-p "_AP" relation)
           (insert "\n\n_AP: the older apposition style, which must be \
 declared -- see APOS."))
-        (insert "\n")
+        ;; WHOSE SECTIONS THESE ARE, said where a reader reads them.
+        ;; The numbers are Celano's, and a Latin sentence is annotated
+        ;; by the same labels out of a different document -- so saying
+        ;; nothing would send a Latin annotator to a Greek grammar.
+        (insert
+         (if (and (boundp 'diorisis-language)
+                  (eq diorisis-language 'latin))
+             (concat
+              "\n\nThe labels are the Prague scheme and are the same"
+              " for Latin.\nThe sections above are Celano's, for Greek:"
+              " the Latin\ntreebank's own authority is its TAGSET.txt"
+              " -- `G' opens it.\n")
+           (concat
+            "\n\nSections are Celano's AGDT guidelines"
+            " -- `G' opens them.\n")))
         (goto-char (point-min)))
       (special-mode)
       (setq-local truncate-lines nil))

@@ -451,7 +451,15 @@
     font: 600 .66rem/1.8 ui-monospace, Menlo, monospace; text-align: center;
     background: var(--ink); color: var(--paper); letter-spacing: .04em;
   }
-  .windows { display: flex; aspect-ratio: var(--screen, 1.778); min-height: 4rem; }
+  /* `position: relative' BECAUSE THE DROP ZONES ARE ABSOLUTE INSIDE IT.
+     `.zones' is `position: absolute; inset: 0', which positions against the
+     nearest POSITIONED ancestor -- and this box was not one, so the four
+     zones were laid out against something further up and sat somewhere other
+     than over the diagram.  The drag lifted, the zones displayed, and
+     nothing droppable was ever under the cursor, so `drop' never fired and
+     dragging a window did nothing at all. */
+  .windows { display: flex; aspect-ratio: var(--screen, 1.778); min-height: 4rem;
+             position: relative; }
   .screenrow {
     display: flex; align-items: baseline; gap: .5rem; margin: 0 0 .8rem;
     font-size: .84rem; flex-wrap: wrap;
@@ -863,6 +871,77 @@
       <button type="button" id="c-ask-phi-ok">Understood</button>
     </div>
   </dialog>
+
+  <h2 data-feature="texts">The search results</h2>
+  <p class="note" data-feature="texts">What the keys do, and how the match is
+     shown. Clicking is under <b>Clicking a word</b> below, with the browser's
+     and the global gesture &mdash; three buffers, one question.</p>
+
+  <div class="field" data-feature="texts">
+    <span>What <code>C-c C-c</code> does in a result
+      <em><code>classicist-search-keys</code> &mdash; browsing, as the base
+      has it, or the dictionary</em></span>
+    <select id="c-srchccc">
+      <option value="diogenes-search-browse-passage">open the passage</option>
+      <option value="classicist-lookup-at-point">look the word up</option>
+    </select>
+  </div>
+
+  <div class="field" data-feature="texts">
+    <span>How the match is shown
+      <em><code>diogenes-search-mark-matches</code> &mdash; Diogenes brackets
+      what it found with arrows, <code>-&gt;Eu&lt;-melos</code>, and this
+      decides what becomes of them. The match is marked either way, so a
+      command can find it.</em></span>
+    <select id="c-srchmark">
+      <option value="face">coloured, as a Diorisis hit is</option>
+      <option value="arrows">left as arrows, as Diogenes sends them</option>
+      <option value="both">both</option>
+    </select>
+  </div>
+
+  <h2>Looking a word up from anywhere</h2>
+  <p class="note">A Greek or Latin word turns up in notes, in a LaTeX file, in
+     a mail &mdash; and the lookup commands could be reached only through the
+     menu or by name. These keys are bound <b>globally</b>, which is a
+     reader&rsquo;s own space and so a thing to be able to refuse.</p>
+
+  <div class="row">
+    <input type="checkbox" id="c-globalkeys" checked>
+    <label for="c-globalkeys">Bind <code>C-c l</code> everywhere
+      <em><code>classicist-global-keys</code> &mdash; <code>C-c l l</code>
+      guesses the language, <code>C-c l g</code> forces Greek,
+      <code>C-c l a</code> Latin, <code>C-c l d</code> asks which dictionary.
+      They work under evil in every state: evil binds no <code>C-c</code> of
+      its own.</em></label>
+  </div>
+
+  <div class="field">
+    <span>The prefix
+      <em>the keys hang under this &mdash; <code>C-c l</code> by default.
+      <code>C-c d</code> will not do: that is the menu&rsquo;s, and a prefix
+      cannot be a command and hold keys at once</em></span>
+    <input type="text" id="c-globalprefix" placeholder="C-c l">
+  </div>
+
+  <div class="row" data-distro="doom spacemacs">
+    <input type="checkbox" id="c-leaderkeys" checked>
+    <label for="c-leaderkeys">And on the leader
+      <em><code>classicist-leader-keys</code> &mdash; which is how anyone in
+      Doom or Spacemacs reaches anything. Through each
+      distribution&rsquo;s own API: <code>spacemacs/set-leader-keys</code>, or
+      <code>doom-leader-map</code>.</em></label>
+  </div>
+
+  <div class="field" data-distro="doom spacemacs">
+    <span>Where on the leader
+      <em><code>classicist-leader-prefix</code> &mdash; <code>ol</code>, so
+      <code>SPC o l g</code>, because Spacemacs documents <code>SPC o</code>
+      as reserved for its users and promises never to bind there. Doom
+      reserves none and keeps its own app commands at <code>SPC o</code>, so a
+      collision is possible there</em></span>
+    <input type="text" id="c-leaderprefix" placeholder="ol">
+  </div>
 
   <h2>Your own keys</h2>
   <p class="note">Optional, and it makes the warnings below far better: add the
@@ -1437,13 +1516,20 @@
     </div>
   </div>
 
-  <h3 data-feature="texts">Clicking a word</h3>
+  <h2>Clicking a word</h2>
   <p class="note">Heslin&rsquo;s Diogenes looks a word up when you click it, and
-     the browser can too. Off unless you choose a gesture, an Emacs buffer
-     ordinarily placing point when it is clicked.</p>
+     so can this &mdash; in three places, which are asked separately because
+     they are three different buffers and a click means something different in
+     each.</p>
   <p class="note">A plain click is safe to take: Emacs fires it only on a click
      in place, and dragging to mark a passage is a different event which is left
-     alone. So you can still mark a stretch of lines.</p>
+     alone. So you can still mark a stretch of lines. And point moves to the
+     click before any command runs, whatever the command &mdash; without that
+     a click would look up whatever was under point before.</p>
+
+  <h3 data-feature="texts">In a text</h3>
+  <p class="note">Off unless you choose a gesture, an Emacs buffer ordinarily
+     placing point when it is clicked.</p>
   <div class="field">
     <span>The gesture &mdash; <code>classicist-browser-mouse-keys</code></span>
     <select id="mousegesture">
@@ -1475,6 +1561,45 @@
       <option value="&lt;S-mouse-1&gt;">Shift-click</option>
       <option value="&lt;mouse-3&gt;">The right button</option>
     </select>
+  </div>
+
+  <h3 data-feature="texts">In a search result</h3>
+  <p class="note">A result has two kinds of line: the header names the author,
+     the work, the edition and the citation, and the body holds the passage
+     with the match in it. A citation is a place to go and a match is a word to
+     look up, so a click can mean either &mdash; and the base gave them one
+     behaviour, opening the passage from <code>RET</code>,
+     <code>C-c C-c</code> and a double click alike.</p>
+  <div class="field">
+    <span>What a plain click does
+      <em><code>classicist-search-mouse-keys</code> and
+      <code>classicist-search-header-links</code></em></span>
+    <select id="c-srchclick">
+      <option value="header">opens the passage, when the click is on a citation</option>
+      <option value="lookup">looks the word up, wherever it is</option>
+      <option value="">nothing &mdash; places point, as elsewhere in Emacs</option>
+    </select>
+  </div>
+  <div class="row">
+    <input type="checkbox" id="c-srchdouble" checked>
+    <label for="c-srchdouble">A double click opens the passage
+      <em><code>classicist-search-double-click</code> &mdash; the base binds
+      it. Untick if you would rather one gesture meant one thing: a single
+      click opening a passage and a double click doing it again is an
+      ambiguity that depends on how fast you click.</em></label>
+  </div>
+
+  <h3>Anywhere else</h3>
+  <p class="note">In notes, in a LaTeX file, in a mail &mdash; wherever a Greek
+     or Latin word turns up.</p>
+  <div class="row">
+    <input type="checkbox" id="c-globalmouse" checked>
+    <label for="c-globalmouse"><code>C-M-click</code> looks the word up
+      <em><code>classicist-global-mouse-keys</code> &mdash; a click is the
+      obvious gesture and cannot have the obvious button: a bare
+      <code>mouse-1</code> bound globally would fire on every click in every
+      buffer. The language is guessed from the script where the buffer has no
+      opinion.</em></label>
   </div>
 
   <div id="c-keys-evil-group" hidden>
@@ -1764,8 +1889,9 @@
   </div>
   <p class="note" id="scannote"></p>
 
-  <h2>How a window is made</h2>
-  <div class="pair">
+  <h2 id="splithead">How a window is made</h2>
+  <p class="warnline" id="splitidle" hidden></p>
+  <div class="pair" id="splitpair">
     <div class="field">
       <span>Direction &mdash; <code>classicist-split-direction</code></span>
       <select id="direction">
@@ -1790,10 +1916,12 @@
      through <code>split-window-sensibly</code>, which consults
      <code>split-height-threshold</code> &mdash; and a distribution may set that so
      that no frame you have can be split.</p>
-  <p class="note"><b>Or drag a window</b> in the diagram to a side of its frame.
-     One setting serves every kind, so dragging the entry to the right puts
-     scans there too &mdash; <code>classicist-split-direction</code> is a single
-     direction and not one per kind.</p>
+  <p class="warnline" id="splitdragwait" hidden></p>
+  <p class="note" id="splitdragnote"><b>Or drag a window</b> in the diagram to a
+     side of its frame. One setting serves every kind, so dragging the entry to
+     the right puts scans there too &mdash;
+     <code>classicist-split-direction</code> is a single direction and not one
+     per kind.</p>
 
   <h2>Proportions <i id="propshint"></i></h2>
   <div id="proportions"></div>
@@ -1846,15 +1974,26 @@
     <input type="text" id="escapekey" value="&lt;escape&gt;">
   </div>
 
+  <div id="p-idxblock">
   <h2>The index of passage notes</h2>
   <p class="note">Where it sits and how much room it takes &mdash; which is
-     what a preset is for. Shown because you have ticked the package on the
+     what a preset is for. Shown because you have ticked a note system on the
      Configuration tab; a preset setting options of a package you have not
      installed would be noise in a file you read.</p>
+  <p class="note"><b>ONE QUESTION, WHICHEVER SYSTEM.</b> The org index and the
+     phi-notes work note are the same window doing the same job &mdash;
+     <code>C-c n i</code> writes the list of passage notes into the work note,
+     and that note is what sits beside the text. So this asks once and writes
+     whichever pair of options is awake &mdash; the org index&rsquo;s side and
+     size, or the phi sidebar&rsquo;s. The two note features exclude each
+     other, so only one can be, and the line below says which this will
+     write.</p>
+  <p class="note">It is a <b>side window</b>, which none of the behaviours
+     above reaches: a preset sets the edge directly. That is why the diagram
+     does not draw it.</p>
   <div class="field">
     <span>Which edge, in this preset
-      <em><code>diogenes-roam-index-side</code> &mdash; as the Configuration
-      tab says, unless you change it here</em></span>
+      <em>as the Configuration tab says, unless you change it here</em></span>
     <select id="p-idxside">
       <option value="">As configured &mdash; say nothing about it</option>
       <option value="right">right</option>
@@ -1865,9 +2004,11 @@
   </div>
   <div class="field">
     <span>How much room, in this preset
-      <em><code>diogenes-roam-index-size</code> &mdash; a fraction of the
-      frame, or a whole number of columns or lines. Empty to leave it</em></span>
+      <em>a fraction of the frame, or a whole number of columns or lines.
+      Empty to leave it</em></span>
     <input type="number" id="p-idxsize" step="0.05" placeholder="0.35">
+  </div>
+  <p class="note" id="p-idxwhich"></p>
   </div>
 
   <h2>The file</h2>
@@ -2102,15 +2243,28 @@ const KIND_ROW = (k, name, blurb) => `
   </select>`;
 
 document.addEventListener('change', e => {
-  if (e.target.id === 'scanplace') reset();
+  // REPLAYED AND NOT WIPED.  Both of these used to `reset()': change a
+  // behaviour and the drawing went back to the startup screen, so a reader
+  // who had opened two windows and then chose `split' saw the diagram empty
+  // rather than the same two windows arranged the new way.  Which is the
+  // question they were asking.
+  if (e.target.id === 'scanplace') { replay(); return; }
   if (e.target.dataset.kind) {
     kind[e.target.dataset.kind] = e.target.value;
     // AND FALSE WHERE NONE IS.  This only set it true, so the box latched
     // on: once frames had been chosen it stayed checked for the session.
     el('popupframes').checked = Object.values(kind).includes('frames');
-    reset();
+    replay();
+    return;
   }
   render();
+});
+// AND THE SAME FOR THE SETTINGS A PLACEMENT READS.  The direction, the
+// window divided and the proportions are consulted by `place' as it runs, so
+// changing one of them changes where the windows already drawn would have
+// gone -- and only a replay shows that.
+document.addEventListener('change', e => {
+  if (['direction', 'from', 'scanplace'].includes(e.target.id)) replay();
 });
 document.addEventListener('input', render);
 
@@ -2322,7 +2476,9 @@ function installDrags() {
         zone.classList.remove('over');
         zones.classList.remove('on');
         el('direction').value = zone.dataset.dir;
-        render();
+        // REPLAY, NOT REDRAW: the direction is read by `place' as it runs, so
+        // the windows already drawn would have gone elsewhere with it set.
+        replay();
       });
     });
   });
@@ -2530,10 +2686,38 @@ const STEPS = {
   },
   reset: () => reset(),
 };
+// THE STEPS TAKEN, so that they can be taken again.
+//
+// A SCENE BUILT UNDER ONE BEHAVIOUR STAYED BUILT UNDER THE NEXT.  Pressing
+// two steps with `defer' set and then choosing `split' left the drawing
+// exactly as it was: the new behaviour governed only the NEXT press, and
+// pressing the same step again reused the window it had already made -- so
+// nothing changed and the previewer looked as though it had not noticed.
+//
+// So every press is remembered and every change replays them.  Which is what
+// a previewer is for: it should show what the settings do, not what they did
+// when a button was last pressed.
+let taken = [];
+
+function replay() {
+  const again = taken.slice();
+  reset();
+  taken = [];
+  again.forEach(step => {
+    if (!STEPS[step] || step === 'reset') return;
+    scene.forEach(f => f.isFresh = false);
+    STEPS[step]();
+    taken.push(step);
+  });
+  render();
+}
+
 document.querySelectorAll('.steps button').forEach(b =>
   b.addEventListener('click', () => {
     scene.forEach(f => f.isFresh = false);
     STEPS[b.dataset.step]();
+    if (b.dataset.step === 'reset') taken = [];
+    else taken.push(b.dataset.step);
     render();
   }));
 
@@ -2753,6 +2937,46 @@ function render() {
     box.classList.toggle('wm-' + w, many && wmKind === w));
   const pick = el('wmpick');
   if (pick) pick.hidden = !framesChosen;
+  // AND THE SPLITTING, WHICH ONLY A SPLIT CONSULTS.  `split-direction' and
+  // `split-from' are read by the `split' action and by nothing else, so with
+  // every kind on `defer', `reuse' or `frames' they are two questions whose
+  // answers cannot be reached -- and dragging a window in the diagram sets a
+  // direction that will not be used.
+  //
+  // SAID AND NOT HIDDEN.  A section that vanishes leaves a reader wondering
+  // where it went; one that says why it is idle teaches them what `split'
+  // does.  The controls are disabled so that an answer cannot be given to a
+  // question that is not being asked.
+  const splitChosen = kindsNow().some(([k]) => kind[k] === 'split');
+  const idle = el('splitidle');
+  if (idle) {
+    idle.hidden = splitChosen;
+    idle.textContent = splitChosen ? ''
+      : 'Nothing is set to split, so a direction is not consulted. '
+        + 'Set a kind above to "beside the text, and reused" to use these.';
+  }
+  ['direction', 'from'].forEach(id => {
+    const box = el(id);
+    if (box) box.disabled = !splitChosen;
+  });
+  // THE DRAG NOTE PROMISES A GESTURE, so it appears only when the gesture can
+  // be made: something must be set to split AND a real window must be on the
+  // screen.  The startup window is deliberately not draggable -- there is no
+  // role to place -- so in the opening state the diagram held one window,
+  // nothing was draggable, and an invitation to drag was a thing that did
+  // nothing.  Which is how it read as a broken drag rather than an empty
+  // board.
+  const anyDraggable = scene.some(f =>
+    f.wins.some(w => w.kind && w.kind !== 'home'));
+  const dragnote = el('splitdragnote');
+  if (dragnote) dragnote.hidden = !(splitChosen && anyDraggable);
+  const dragwait = el('splitdragwait');
+  if (dragwait) {
+    dragwait.hidden = !(splitChosen && !anyDraggable);
+    dragwait.textContent = 'Open something first -- press a step below -- and '
+      + 'the windows can be dragged to an edge. The startup window cannot: '
+      + 'there is no role in it to place.';
+  }
   const count = el('framecount');
   if (count) {
     count.hidden = !many;
@@ -2925,7 +3149,20 @@ function preset() {
     splitBits.push('(setq classicist-split-size\n      \'(' +
                    lines.join('\n').trimStart() + '))');
   }
-  if (splitBits.length) { out.push(''); out.push(';; How a window is made.'); out.push(...splitBits); }
+  if (splitBits.length) {
+    out.push('');
+    out.push(';; How a window is made.');
+    // AND A WORD WHERE NOTHING SPLITS.  The settings are emitted anyway --
+    // a reader who wrote them meant them, and a preset loaded later may set
+    // `split' -- but a configuration that reads as though it arranged
+    // windows and does not is worse than one that says so.
+    if (!kindsNow().some(([k]) => kind[k] === 'split')) {
+      out.push(';; NOTHING IS SET TO SPLIT, so these are not consulted yet:');
+      out.push(';; the `split\' behaviour is what reads them.  Kept because a');
+      out.push(';; preset loaded later may ask for it.');
+    }
+    out.push(...splitBits);
+  }
   const frameBits = [];
   if (el('popupframes').checked) frameBits.push("(setq pop-up-frames 'graphic-only)");
 
@@ -2951,14 +3188,27 @@ function preset() {
   // defines -- `diogenes-preset''s own docstring makes that the point of the
   // mechanism -- so this needs no role: the file sets the two options and
   // loading it moves the index.
-  if (el('c-useroam') && el('c-useroam').checked) {
-    const iside = el('p-idxside').value;
-    const isize = el('p-idxsize').value.trim();
-    if (iside || isize) {
+  // WHICHEVER NOTE SYSTEM IS AWAKE, one question having been asked.  The org
+  // index and the phi work note are the same window: `C-c n i' writes the
+  // list into the work note and that note is what sits beside the text.  So
+  // the preset writes the pair belonging to the system in use, and the two
+  // features exclude each other so there is never a choice to make.
+  const iside = el('p-idxside') ? el('p-idxside').value : '';
+  const isize = el('p-idxsize') ? el('p-idxsize').value.trim() : '';
+  if (iside || isize) {
+    const phi = featureOn('phi-notes');
+    const org = el('c-useroam') && el('c-useroam').checked;
+    if (phi || org) {
       out.push('');
       out.push(';; The index of passage notes.');
-      if (iside) out.push(`(setq diogenes-roam-index-side '${iside})`);
-      if (isize) out.push(`(setq diogenes-roam-index-size ${isize})`);
+      if (iside)
+        out.push(phi
+                 ? `(setq classicist-phi-sidebar-side '${iside})`
+                 : `(setq diogenes-roam-index-side '${iside})`);
+      if (isize)
+        out.push(phi
+                 ? `(setq classicist-phi-sidebar-size ${isize})`
+                 : `(setq diogenes-roam-index-size ${isize})`);
     }
   }
 
@@ -3890,6 +4140,74 @@ function configText() {
     if (pairs.length)
       block.push(`  (setq classicist-phi-keys '(${pairs.join(' ')}))`);
   }
+  // THE SEARCH RESULTS, where a header is a place and a match is a word.
+  // Only where the texts are awake: no browser, no search buffer.
+  if (featureOn('texts')) {
+    const srch = [];
+    // ONE QUESTION, THREE OUTCOMES.  The click and the header links are two
+    // options in the package and one decision for a reader: a click opens the
+    // passage from a citation, or looks a word up wherever it is, or does
+    // nothing.  The builder asks it once and writes both.
+    const click = el('c-srchclick') ? el('c-srchclick').value : 'header';
+    if (click === 'lookup') {
+      srch.push('(setq classicist-search-mouse-keys\n'
+                + '      \'(("<mouse-1>" . classicist-lookup-at-point)))');
+      srch.push('(setq classicist-search-header-links nil)');
+    } else if (click === '') {
+      srch.push('(setq classicist-search-mouse-keys nil)');
+      srch.push('(setq classicist-search-header-links nil)');
+    }
+    if (el('c-srchdouble') && !el('c-srchdouble').checked)
+      srch.push("(setq classicist-search-double-click nil)");
+    const ccc = el('c-srchccc') && el('c-srchccc').value;
+    if (ccc && ccc !== 'diogenes-search-browse-passage')
+      srch.push('(setq classicist-search-keys\n      \'(("C-c C-c" . '
+                + ccc + ')))');
+    const mark = el('c-srchmark') && el('c-srchmark').value;
+    if (mark && mark !== 'face')
+      srch.push(`(setq diogenes-search-mark-matches '${mark})`);
+    if (srch.length) {
+      block.push('');
+      block.push('  ;; The search results.');
+      srch.forEach(line => block.push('  ' + line));
+    }
+  }
+
+  // LOOKING A WORD UP FROM ANYWHERE.  Nil where a reader refuses the keys:
+  // they are under `C-c', which is theirs and not a package's.
+  {
+    const globals = [];
+    if (el('c-globalkeys') && !el('c-globalkeys').checked) {
+      globals.push('(setq classicist-global-keys nil)');
+    } else {
+      const pre = el('c-globalprefix')
+        ? el('c-globalprefix').value.trim() : '';
+      if (pre && pre !== 'C-c l')
+        globals.push('(setq classicist-global-keys\n'
+          + "      '((\"" + pre + " l\" . classicist-lookup-at-point)\n"
+          + "        (\"" + pre + " g\" . classicist-parse-and-lookup-greek)\n"
+          + "        (\"" + pre + " a\" . classicist-parse-and-lookup-latin)\n"
+          + "        (\"" + pre + " d\" . classicist-lookup-in-dictionary)))");
+    }
+    if (el('c-globalmouse') && !el('c-globalmouse').checked)
+      globals.push('(setq classicist-global-mouse-keys nil)');
+    if (distro === 'doom' || distro === 'spacemacs') {
+      if (el('c-leaderkeys') && !el('c-leaderkeys').checked) {
+        globals.push('(setq classicist-leader-keys nil)');
+      } else {
+        const lp = el('c-leaderprefix')
+          ? el('c-leaderprefix').value.trim() : '';
+        if (lp && lp !== 'ol')
+          globals.push(`(setq classicist-leader-prefix ${JSON.stringify(lp)})`);
+      }
+    }
+    if (globals.length) {
+      block.push('');
+      block.push('  ;; Looking a word up from anywhere.');
+      globals.forEach(line => block.push('  ' + line));
+    }
+  }
+
   // TODAY'S TWO, both found by installing rather than by reading.
   if (normalisePath(el('c-teiscript') && el('c-teiscript').value))
     block.push(`  (setq tei-read-script ${JSON.stringify(
@@ -3928,12 +4246,28 @@ function configText() {
   // reveals its options and the block says how to install it, because a
   // reader who wants notes filed by author and work will not find it here.
   const roam = el('c-useroam') && el('c-useroam').checked;
-  // AND THE PRESET TAB'S TWO ROWS WITH IT.
-  const pidx = document.querySelector('#panel-preset h2');
-  document.querySelectorAll('#panel-preset [id^="p-idx"]').forEach(box => {
-    const field = box.closest('.field');
-    if (field) field.hidden = !roam;
-  });
+  // AND THE PRESET TAB'S BLOCK WITH IT -- THE HEADING AND THE NOTE TOO.
+  //
+  // This hid the two fields and left the heading standing, because the
+  // element it found for the heading was assigned and never used: a section
+  // titled `The index of passage notes' with nothing under it, above a note
+  // claiming it was shown BECAUSE the package was ticked.  Hiding the block
+  // says what the note says.
+  const pidx = el('p-idxblock');
+  const phiNotes = featureOn('phi-notes');
+  if (pidx) pidx.hidden = !(roam || phiNotes);
+  // AND WHICH OPTIONS IT WILL WRITE, said rather than left to be guessed: the
+  // two names differ and a reader reading the preset afterwards should not
+  // have to work out why.
+  const which = el('p-idxwhich');
+  if (which)
+    which.innerHTML = phiNotes
+      ? 'Writes <code>classicist-phi-sidebar-side</code> and '
+        + '<code>classicist-phi-sidebar-size</code>.'
+      : roam
+      ? 'Writes <code>diogenes-roam-index-side</code> and '
+        + '<code>diogenes-roam-index-size</code>.'
+      : '';
   const ropts = el('c-roamopts');
   if (ropts) ropts.hidden = !roam;
   if (roam) {

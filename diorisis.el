@@ -47,6 +47,9 @@
 ;; guards fall back to what they did before, which is why the one in the
 ;; autoloaded form asks fboundp first.
 (declare-function classicist-feature-p "classicist-groups" (feature))
+;; THE OTHER CORPUS'S QUERY BUILDER, for a saved search that is not this
+;; corpus's: one directory holds both.
+(declare-function classicist-query-open "classicist-query" (&optional spec))
 
 (declare-function diogenes--beta-to-utf8 "diogenes-utils" (str))
 
@@ -4306,10 +4309,20 @@ than `lemma \u03bc\u03cd\u03c9 \u00b7 morphology perf part\\=' does."
                                                 labels nil t)
                                labels)))
            (spec (plist-get chosen :spec)))
+      ;; A QUERY OF ANOTHER CORPUS IS HANDED OVER.  One directory holds both
+      ;; -- see `diorisis-query-file', which says why keeping them apart was
+      ;; wrong -- so a spec carries `:corpus' where it is not this one's, and
+      ;; `:elements' alone no longer says whose it is: a TLG query has those
+      ;; too, and rendering them here would describe them as something they
+      ;; are not.
+      (when (and (plist-get spec :corpus)
+                 (fboundp 'classicist-query-open))
+        (classicist-query-open spec)
+        (setq spec nil))
       ;; A QUERY OF ELEMENTS OPENS IN THE BUILDER, a plain search in the
       ;; results: what one wants to do with a query is add to it, and what one
       ;; wants to do with a search is read it.
-      (if (plist-get spec :elements)
+      (if (and spec (plist-get spec :elements))
           (let ((buffer (get-buffer-create "*Diorisis query*")))
             (with-current-buffer buffer
               (unless (derived-mode-p 'diorisis-query-mode)

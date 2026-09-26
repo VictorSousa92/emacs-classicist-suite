@@ -56,7 +56,13 @@
     classicist-analysis-mode
     diogenes-search-mode
     diogenes-select-forms-mode
-    diogenes-corpus-mode)
+    diogenes-corpus-mode
+    ;; AND THE QUERY BUILDER, whose keys are single letters like the rest:
+    ;; `a' adds an element, `d' deletes, `n' says how near, `S' saves, `q'
+    ;; quits.  In normal state evil has every one of them -- `d' is the
+    ;; delete operator, `q' records a macro -- and the buffer has nothing
+    ;; for evil to edit, being a list of what has been chosen.
+    classicist-query-mode)
   "Diogenes modes to start in evil's Emacs state.
 Each is a read-only view whose keys are single letters: the lookup and
 analysis buffers carry the eleven dictionary keys, and the search, forms and
