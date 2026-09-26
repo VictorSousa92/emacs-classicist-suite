@@ -692,6 +692,19 @@ Idempotent: defining a transient prefix again simply replaces it."
   (when (fboundp 'classicist-browser-install-turn-keys)
     (classicist-browser-install-turn-keys))))
 
+;; AND THE GLOBAL LOOKUP KEYS, which are not the browser's and want no
+;; feature awake: the point of them is a Greek word met in a LaTeX file or a
+;; note, where no Diogenes buffer is in sight.
+;;
+;; INSTALLED FROM HERE AND NOT BY AN AUTOLOADED CALL OF ITS OWN.  An
+;; autoloaded form must be a definition or ask nothing -- `make check' says
+;; so, and cannot see that the function named is autoloaded too -- and
+;; writing an exception into the checker is the kind that outlives the fact
+;; justifying it.  This file is loaded whenever the suite is.
+(with-eval-after-load 'classicist-lookup
+  (when (fboundp 'classicist-install-global-keys)
+    (classicist-install-global-keys)))
+
 ;;;; --------------------------------------------------------------------
 ;;;; THE BASE'S OWN NAMES, POINTED HERE
 ;;;; --------------------------------------------------------------------

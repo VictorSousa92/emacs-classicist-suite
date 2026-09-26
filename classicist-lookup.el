@@ -91,8 +91,14 @@
 ;; THE SEARCH BUFFER'S, which `classicist--language-at-point' consults: a
 ;; bare defvar because it is another file's and is asked `boundp' first.
 (defvar diogenes--search-language)
-(defvar diogenes-search-mode-map)
-(declare-function classicist-browser--at-click "classicist-browser" (command))
+(declare-function classicist-parse-and-lookup-greek "classicist"
+                  (word &optional dictionary))
+(declare-function classicist-parse-and-lookup-latin "classicist"
+                  (word &optional dictionary))
+;; SPACEMACS' AND DOOM'S, asked `fboundp' and `boundp' before either is used.
+(declare-function spacemacs/set-leader-keys "spacemacs"
+                  (key def &rest bindings))
+(defvar doom-leader-map)
 
 (defgroup classicist-lookup nil
   "The buffer a dictionary entry is read in, and the registry the\ndictionaries announce themselves to."
@@ -1653,73 +1659,137 @@ the file only at the first call."
 	       (file-name-concat (diogenes--perseus-path)
 				 (concat lang "-lemmata.txt")))))))
 
-(defcustom classicist-search-lookup-keys
-  '(("l" . classicist-perseus-action))
-  "Keys that look a word up in a search-results buffer, as (KEY . COMMAND).
+(defcustom classicist-global-keys
+  '(("C-c l l" . classicist-lookup-at-point)
+    ("C-c l g" . classicist-parse-and-lookup-greek)
+    ("C-c l a" . classicist-parse-and-lookup-latin)
+    ("C-c l d" . classicist-lookup-in-dictionary))
+  "Keys bound EVERYWHERE, for looking a word up outside a corpus buffer.
 
-BECAUSE NOTHING THERE LOOKED A WORD UP.  `diogenes-search-mode-map\=' binds
-`RET\=', `C-c C-c\=' and a double click all to
-`diogenes-search-browse-passage\=', and `mouse-1\=' is left as
-`mouse-set-point\=' -- so a reader who has found a word by searching for it
-could open the passage and not the dictionary, which is the wrong way round
-for a search whose point was the word.
+FOR A WORD MET ANYWHERE.  The commands are useful in notes, in a LaTeX
+document, in a mail -- anywhere a Greek or Latin word turns up -- and until
+now they could be reached only through the menu or by name.
 
-`l\=' BY DEFAULT, the mode\='s own keys being single letters -- `n\=', `p\=',
-`d\=', `u\=', `q\=' -- and `l\=' free among them.  `C-c C-c\=' is not taken from
-browsing: a reader who has pressed it for a year should not find it doing
-something else.
+    C-c l l   look the word up, the language guessed
+    C-c l g   as Greek, however it is written
+    C-c l a   as Latin -- `a\=' because `l\=' is taken and Latin has no free
+              initial here
+    C-c l d   in a dictionary of your choosing, asked for
 
-Mouse gestures belong in `classicist-search-mouse-keys\=', point having to be
-moved to the click before the command runs."
-  :type '(alist :key-type key-sequence :value-type function)
+`C-c l\=' AND NOT `C-c d\=': that is the menu\='s prefix, which a reader binds
+themselves, and a prefix cannot be a command and hold keys at the same time.
+
+THESE WORK UNDER EVIL TOO, in every state: evil binds no `C-c\=' of its own,
+so the sequence falls through to the global map from normal state as from
+insert.  A reader of Doom or Spacemacs who would rather have them on the
+leader gets that as well -- see `classicist-leader-keys\='.
+
+UNDER `C-c\=' AND SO IN A READER'S OWN SPACE, which is not a liberty a package
+should take quietly: set this to nil and nothing is bound globally.  Call
+`classicist-install-global-keys\=' after changing it."
+  :type '(choice (const :tag "None" nil)
+                 (alist :key-type key-sequence :value-type function))
   :group 'classicist-lookup)
 
-(defcustom classicist-search-mouse-keys nil
-  "Mouse gestures that look a word up in a search buffer.
+(defcustom classicist-leader-keys
+  '(("l" . classicist-lookup-at-point)
+    ("g" . classicist-parse-and-lookup-greek)
+    ("a" . classicist-parse-and-lookup-latin)
+    ("d" . classicist-lookup-in-dictionary))
+  "The same commands on the leader, where a distribution has one.
 
-As (GESTURE . COMMAND), and nil by default and off, as
-`classicist-browser-mouse-keys\=' is: clicking a word and getting a
-dictionary entry is not what a reader expects of an Emacs buffer.
+WHICH IS WHAT A DOOM OR SPACEMACS READER EXPECTS.  `C-c l l\=' works there and
+is not how anyone in those configurations reaches anything; the leader is.
+So the keys below are bound under `classicist-leader-prefix\=' as well,
+through whichever API is present, and `C-c l\=' remains for a reader who
+wants it and for every other Emacs.
 
-    (setq classicist-search-mouse-keys
-          \='((\"<mouse-1>\" . classicist-perseus-action)))
+Nil binds nothing on the leader."
+  :type '(choice (const :tag "None" nil)
+                 (alist :key-type string :value-type function))
+  :group 'classicist-lookup)
 
-The mouse-1 gesture is safe to take: Emacs fires it only on a click in place,
-a drag being drag-mouse-1, so marking still works.  Point is moved to the
-click before the command runs, whatever the command.
+(defcustom classicist-leader-prefix "ol"
+  "Where `classicist-leader-keys\=' hang, as keys after the leader.
 
-Call `classicist-search-install-lookup-keys\=' after changing this."
-  :type '(alist :key-type key-sequence :value-type function)
+`ol\=' -- so `SPC o l g\=' in Spacemacs -- BECAUSE SPACEMACS RESERVES `SPC o\='
+FOR ITS USERS and documents that it will never bind anything there.  Nothing
+of a reader\='s can be shadowed under it, which is the only prefix of which
+that can be said.
+
+Doom reserves none, so the same is used there for want of a documented
+alternative: `SPC o l\=' is where Doom keeps its own app commands, and a
+collision is possible.  Change it if you have one."
+  :type 'string
   :group 'classicist-lookup)
 
 ;;;###autoload
-(defun classicist-search-install-lookup-keys ()
-  "Bind the word-lookup keys in a Diogenes search-results buffer.
+(defun classicist-lookup-at-point (&optional dictionary)
+  "Look the word at point up, guessing whether it is Greek or Latin.
 
-Both `classicist-search-lookup-keys\=' and
-`classicist-search-mouse-keys\=', the latter wrapped so that point moves to
-the click first -- see `classicist-browser--at-click\=', whose reasoning is
-the same and whose wrapper this borrows."
+FOR ANY BUFFER, which is what distinguishes it from `C-c C-c\=': in a text or
+a dictionary entry the markup says what a word is, and everywhere else there
+is only the word.  So the script decides -- Greek letters are Greek, and
+anything else is tried as Latin.
+
+`classicist--language-at-point\=' answers first, since in a corpus buffer it
+knows better than the script does; Latin is the default only where it has no
+opinion.
+
+With a prefix argument, ask which dictionary."
+  (interactive
+   (list (when (or current-prefix-arg classicist-lookup-always-ask-dictionary)
+           (classicist--read-dictionary
+            (or (classicist--language-at-point) "latin")))))
+  (let* ((lang (or (classicist--language-at-point) "latin"))
+         (word (classicist--word-at-point-for-lookup)))
+    (unless (and word (not (string-empty-p word)))
+      (user-error "No word at point"))
+    (if (equal lang "greek")
+        (classicist-parse-and-lookup-greek word dictionary)
+      (classicist-parse-and-lookup-latin word dictionary))))
+
+;;;###autoload
+(defun classicist-install-global-keys ()
+  "Bind `classicist-global-keys\=' globally, and the leader keys where there
+is a leader.
+Called at load, and again after changing either option."
   (interactive)
-  (when (boundp 'diogenes-search-mode-map)
-    (dolist (cell classicist-search-lookup-keys)
-      (when (and (car cell) (cdr cell))
-        (keymap-set (symbol-value 'diogenes-search-mode-map)
-                    (car cell) (cdr cell))))
-    (when (fboundp 'classicist-browser--at-click)
-      (dolist (cell classicist-search-mouse-keys)
-        (when (and (car cell) (cdr cell))
-          (keymap-set (symbol-value 'diogenes-search-mode-map)
-                      (car cell)
-                      (classicist-browser--at-click (cdr cell))))))))
+  (dolist (cell classicist-global-keys)
+    (when (and (car cell) (cdr cell))
+      (keymap-global-set (car cell) (cdr cell))))
+  (classicist--install-leader-keys))
 
-;; AFTER THE SEARCH FILE LOADS, the keymap being its own.  The cookie copies
-;; this into the generated autoloads, where it runs before this file is
-;; loaded -- so it names only what is autoloaded, which
-;; `classicist-search-install-lookup-keys' is.
-;;;###autoload
-(with-eval-after-load 'diogenes-search
-  (classicist-search-install-lookup-keys))
+(defun classicist--install-leader-keys ()
+  "Bind `classicist-leader-keys\=' under the distribution\='s leader.
+
+THROUGH EACH DISTRIBUTION'S OWN API and not by guessing at a keymap.
+Spacemacs has `spacemacs/set-leader-keys\=', which takes the keys after the
+leader as a string; Doom has `doom-leader-map\=', an ordinary keymap.  A
+plain evil configuration has no leader to speak of and gets nothing here --
+`C-c l\=' works in every evil state, evil binding no `C-c\=' of its own.
+
+Nothing is required or loaded: if neither is present this does nothing, which
+is the right answer for vanilla Emacs."
+  (when classicist-leader-keys
+    (cond
+     ;; SPACEMACS, whose function takes `ol g' and does the rest.
+     ((fboundp 'spacemacs/set-leader-keys)
+      (dolist (cell classicist-leader-keys)
+        (when (and (car cell) (cdr cell))
+          (funcall 'spacemacs/set-leader-keys
+                   (concat classicist-leader-prefix (car cell))
+                   (cdr cell)))))
+     ;; DOOM, whose leader is a keymap and wants the prefix spelled out.
+     ((and (boundp 'doom-leader-map)
+           (keymapp (symbol-value 'doom-leader-map)))
+      (dolist (cell classicist-leader-keys)
+        (when (and (car cell) (cdr cell))
+          (keymap-set (symbol-value 'doom-leader-map)
+                      (concat (mapconcat #'string
+                                         classicist-leader-prefix " ")
+                              " " (car cell))
+                      (cdr cell))))))))
 
 (defun classicist-perseus-action (char)
   "Callback for the links in Diogenes Lookup and Analysis Mode."
