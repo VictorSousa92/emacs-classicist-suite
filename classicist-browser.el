@@ -813,7 +813,36 @@ are being asked for one at a time."
   :type 'boolean
   :group 'diogenes)
 
-(defun classicist-browser--pad-levels (levels labels)
+(defcustom classicist-browser-lettered-levels
+  '(("section" . "a"))
+  "Levels whose first value is a LETTER, by the name the work gives them.
+
+WHY A GUESS IS NEEDED AT ALL.  A citation one or more levels short is padded
+with the beginning of each missing level, and a line begins at 1 while a
+Stephanus section begins at `a\='.  Where the browser is already open the
+shape is READ from the citation on screen and this is not consulted; it is
+the FIRST opening that has nothing to read, and `1\=' for Plato\='s section is
+nowhere in the corpus, so the corpus answers by opening the head of the work
+-- which looks exactly like the page not being found.
+
+WHICH IS THE BUG THIS EXISTS FOR: `bg\=', a Stephanus page, and the Republic
+opening at 327a whatever page was asked for.
+
+THE NAME IS NOT ENOUGH ON ITS OWN, and the entry may say so.  Plato and
+Cicero both report a level called `section\=' and Plato\='s is lettered where
+Cicero\='s is numbered, so an entry may be keyed by the author as well:
+
+    (setq classicist-browser-lettered-levels
+          \='((\"section\" . \"a\")              ; anywhere, unless overridden
+            ((\"0474\" . \"section\") . \"1\")))  ; but Cicero\='s is numbered
+
+An author-and-level entry wins over a bare level name.  Anything not named
+here begins at 1, which is right for every numbered level and for the last
+level of every work looked at, a line."
+  :type '(alist :key-type sexp :value-type string)
+  :group 'classicist-browser)
+
+(defun classicist-browser--pad-levels (levels labels &optional author)
   "LEVELS with the last one filled in, where LABELS says one is missing.
 
 THE CORPUS WILL NOT FIND A CITATION ONE LEVEL SHORT.  Aristotle is cited by
@@ -848,11 +877,14 @@ another package all pass through `classicist-browser-goto-passage\='."
                 ;; stops means the beginning of that page, however many
                 ;; levels the work counts it in.
                 (classicist-browser--level-starts (length levels)
-                                                  (length labels)))
+                                                  (length labels)
+                                                  labels author))
       levels)))
 
-(defun classicist-browser--level-starts (have want)
+(defun classicist-browser--level-starts (have want &optional labels author)
   "Starting values for the levels from HAVE to WANT, as strings.
+LABELS are the work\='s level names and AUTHOR its number, consulted through
+`classicist-browser-lettered-levels\=' where there is no citation to read.
 
 A LINE STARTS AT 1 AND A STEPHANUS SECTION AT `a\=', and the difference
 cannot be had from the level\='s NAME: Plato and Cicero both report a level
@@ -872,13 +904,31 @@ every numbered level and for every last level there is, a line."
   (let ((here (ignore-errors (classicist-browser-citation-at (point))))
         (out nil))
     (dotimes (i (- want have))
-      (let ((value (nth (+ have i) here)))
-        (push (if (and value
-                       (string-match-p "\\`[a-zA-Z]\\'" (format "%s" value)))
-                  "a"
-                "1")
-              out)))
+      (let* ((n (+ have i))
+             (value (nth n here))
+             (label (nth n labels)))
+        (push
+         (cond
+          ;; THE BUFFER FIRST, where there is one: a citation on screen is a
+          ;; fact about this very work, and beats any table.
+          ((and value (string-match-p "\\`[a-zA-Z]\\'" (format "%s" value)))
+           "a")
+          (value "1")
+          ;; AND THE TABLE WHERE THERE IS NOT -- the first opening, which had
+          ;; nothing to read and answered `1' for a level that begins at `a'.
+          ((and label (classicist-browser--lettered-start label author)))
+          (t "1"))
+         out)))
     (nreverse out)))
+
+(defun classicist-browser--lettered-start (label author)
+  "The start `classicist-browser-lettered-levels\=' gives LABEL for AUTHOR.
+Nil where it names neither.  An author-and-level entry wins over a bare
+level name, a name meaning different things in different authors."
+  (or (and author
+           (cdr (assoc (cons author label)
+                       classicist-browser-lettered-levels)))
+      (cdr (assoc label classicist-browser-lettered-levels))))
 
 (defun classicist-browser--drop-blank-levels (levels)
   "LEVELS without the empty ones at the end.
@@ -1373,8 +1423,12 @@ Uses the Diogenes Perl module."
 	 (labels (ignore-errors
 		   (diogenes--get-work-labels (list :type type)
 					      (list author work))))
+	 ;; THE AUTHOR IS PASSED, which is the whole of the first-opening fix:
+	 ;; there is no browser buffer yet, so the shape of a missing level can
+	 ;; only come from `classicist-browser-lettered-levels', and that is
+	 ;; keyed by the author as well as the level name.
 	 (passage (if (and asked labels)
-		      (classicist-browser--pad-levels asked labels)
+		      (classicist-browser--pad-levels asked labels author)
 		    asked)))
     (classicist--browse-work (list :type type) (nconc (list author work)
 						    passage))))

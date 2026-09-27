@@ -65,7 +65,7 @@
 (declare-function diogenes--get-work-labels "diogenes-perl-interface"
                   (options author-and-work))
 (declare-function classicist-browser--pad-levels "classicist-browser"
-                  (levels labels))
+                  (levels labels &optional author))
 (declare-function diogenes--get-author-list "diogenes-perl-interface" (options &optional author-regex))
 (declare-function diogenes--get-works-list "diogenes-perl-interface"
                   (options author))
@@ -568,8 +568,12 @@ and where the answer cannot be had the citation is taken as written."
     ;; citation written the same way, and one place should take it apart.
     ;; The padding is the browser's too, so a book that reaches only its page
     ;; and section gets its line of 1 from there.
+    ;; AND THE AUTHOR WITH THEM, which is in this very `let*': without it the
+    ;; padding has no citation on screen to read the shape from -- a book is
+    ;; opened before any browser exists, exactly as `bg' is -- and a lettered
+    ;; level would be filled with 1.
     (if (fboundp 'classicist-browser--pad-levels)
-        (classicist-browser--pad-levels parts labels)
+        (classicist-browser--pad-levels parts labels author)
       parts)))
 
 (provide 'classicist-books)
