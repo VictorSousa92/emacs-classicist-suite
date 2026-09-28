@@ -838,7 +838,39 @@ Cicero\='s is numbered, so an entry may be keyed by the author as well:
 
 An author-and-level entry wins over a bare level name.  Anything not named
 here begins at 1, which is right for every numbered level and for the last
-level of every work looked at, a line."
+level of every work looked at, a line.
+
+WHY A TABLE AND NOT A READING FROM THE CORPUS, which would scale to every
+author and want no editing.  Because there is nothing to read: `seek_passage\='
+in `Browser.pm\=' walks the text comparing what it was GIVEN against what it
+passes, and
+
+    next LEV unless $target{$lev};
+
+skips a level it was given no target for.  So no starting value for a level
+exists anywhere upstream -- the corpus knows where a work begins only by
+arriving there.  Read once, so as not to be looked for again.
+
+WHICH ALSO SAYS WHY THE PADDING WORKS, and it is not the values.  A citation
+of one element should be found, unmatched levels being skipped -- and is not,
+`%target\=' being keyed by level NUMBER and matched in reverse, so a lone
+`327\=' can arrive as the lowest level rather than the highest: line 327 and
+not Stephanus page 327.  Padding cures that by making every level explicit,
+so its LENGTH matters more than the values it fills with.
+
+TWO KINDS OF WORK THIS CANNOT HELP, both from the same function:
+
+  A `*\='-PREFIXED LABEL IS NOT HIERARCHICAL and `seek_passage\=' skips it
+  outright.  A work with one has fewer levels that count than labels, so the
+  arithmetic of how many are missing is wrong for it and the padding will
+  fill a level that is not there.
+
+  AND SOME TEXTS ARE MATCHED STRICTLY -- Sextus Empiricus (`tlg0544\='),
+  whose Adversus Mathematicos has books 1-6 after 7-11, and Plato\='s Spuria
+  (`tlg0059038\='), where the Stephanus numbers jump about.  `seek_passage\='
+  compares for equality in those rather than for `at least\=', so a citation
+  that is nearly right finds nothing at all rather than the passage after
+  it."
   :type '(alist :key-type sexp :value-type string)
   :group 'classicist-browser)
 
