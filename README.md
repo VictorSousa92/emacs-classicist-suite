@@ -105,6 +105,18 @@ have a Greek corpus search and a reader for the editions.
 - **sqlite**, built into Emacs 29 and later, for Diorisis. `(sqlite-available-p)`
   says whether you have it.
 - **Python 3** on `PATH`, for reading TEI.
+- **A font with polytonic Greek.** Beta code is ASCII and always renders, but
+  the corpus text, the dictionary entries and the lemma prompts are accented
+  Greek, and a font without polytonic coverage gives you empty boxes.
+  [New Athena Unicode][nau], Brill and GFS Porson all have it. Emacs is told
+  which to use for the Greek script, not by this package:
+
+      (set-fontset-font t 'greek "New Athena Unicode")
+
+  **New Athena Unicode in particular** if you want the DGE: it sets epigraphic
+  letterforms in the private-use area, which by definition no other font can
+  supply. Looking a word up works without it — see
+  [The printed dictionaries](#the-printed-dictionaries).
 - Optional: Ghostscript or poppler for the scanned dictionaries, and
   [Morpheus][morpheus] if you want a parser beyond the shipped word lists —
   it is source only, so you build it yourself; see
@@ -445,6 +457,30 @@ behave like the LSJ — a formatted entry, clickable citations, keys to every
 other dictionary. Some need a one-off conversion from the source file, which
 the relevant `-source-file` option points at.
 
+> **The DGE wants New Athena Unicode for some glyphs.** It sets epigraphic
+> letterforms in the **private-use area**, which by definition no other font
+> can supply — twenty-two characters in all, and without that font they show
+> as boxes. Fifteen occur only in quoted text; seven occur in lemmas, in
+> thirty-eight entries.
+>
+> **What to add.** Install [New Athena Unicode][nau], then give Emacs that font
+> for the private-use area alone — the block runs `E000`–`F8FF`:
+>
+> ```elisp
+> (set-fontset-font t '(#xE000 . #xF8FF) "New Athena Unicode" nil 'prepend)
+> ```
+>
+> Only for that range, so whatever you have chosen for Greek keeps the rest of
+> the entry. `prepend` puts it ahead of anything already set for those
+> characters.
+>
+> **Looking a word up works regardless**, and needs no font at all. Those seven
+> are known by their epichoric value — `diogenes-dge-epichoric-substitutions`,
+> each one vouched for by the DGE's own `xml:id`, which spells the character
+> out: `διαιτατ<E1B4>ρ` is normalised to `διαιτατερ`. So the lemma is keyed
+> correctly whether or not you can see the glyph. The font is for reading the
+> entry, not for finding it.
+
 **As pages**, from scans: the OLD, the TLL, Montanari, the CGL, BDAG, Passow,
 the TGL, and the printed Gaffiot, Georges and Bailly. These open a PDF at the
 page the headword is on, found through a prebuilt index where one exists.
@@ -588,6 +624,15 @@ both askable.
 With `treebank` awake and Diorisis beside it, a sentence can be annotated as a
 dependency tree and exported as ALDT or CoNLL-U. `sa` searches the trees you
 have already made.
+
+The tree is also drawn in Emacs, as an SVG. **An SVG cannot see Emacs' faces**,
+so the Greek has to be named by family rather than inherited: if the drawing
+comes out in boxes while the buffer's Greek is fine, that is why.
+`treebank-svg-greek-fonts` is the order tried — New Athena Unicode, then Brill,
+then GFS Porson — and all of them are offered to fontconfig at once, which
+knows better than Emacs which are installed. A Greek font set in your own
+configuration is preferred to any of them; `treebank-svg-greek-font` forces one
+outright.
 
 `tools/viewer` serves the tree to Arethusa in a browser, with `serve.py` —
 which answers the tree by URL, accepts a write back, and binds to 127.0.0.1.
@@ -980,6 +1025,7 @@ GPL-3.0-or-later, as `diogenes.el` is.
 [base]: https://github.com/nitardus/diogenes.el
 [fork]: https://github.com/VictorSousa92/diogenes.el/tree/classicist-base
 [roam]: https://github.com/VictorSousa92/diogenes-roam/tree/classicist-roam
+[nau]: https://classicalstudies.org/publications-and-research/about-new-athena-unicode
 [orgreadme]: https://github.com/VictorSousa92/diogenes.el/tree/org-integration
 [morpheus]: https://github.com/VictorSousa92/morpheus
 [phi]: https://github.com/brunocbr/phi-notes

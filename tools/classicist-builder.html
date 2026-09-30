@@ -2144,7 +2144,22 @@ const DICTS = [
              ['diogenes-pape-file', 'built XML']] },
   { id: 'dge',       name: 'DGE', lang: 'Greek', key: 'd',
     fields: [['diogenes-dge-source-file', 'the DGE folder, as downloaded'],
-             ['diogenes-dge-file', 'built XML']] },
+             ['diogenes-dge-file', 'built XML']],
+    // A FONT THIS ONE WANTS AND NO OTHER DOES.  Said in the row where the
+    // DGE is ticked, because a reader who meets it later meets it as boxes
+    // in an entry and has no reason to suspect a font.
+    note: '<b>Wants New Athena Unicode for some glyphs.</b> The DGE sets '
+        + 'epigraphic letterforms in the <b>private-use area</b>, which by '
+        + 'definition no other font can supply &mdash; twenty-two '
+        + 'characters, and without it they show as boxes. Install the font '
+        + 'and give Emacs it for that block alone, so your own Greek font '
+        + 'keeps the rest of the entry:'
+        + '<br><code>(set-fontset-font t \'(#xE000 . #xF8FF) '
+        + '"New Athena Unicode" nil \'prepend)</code><br>'
+        + '<b>Looking a word up works without it.</b> The seven that occur '
+        + 'in lemmas are known by their epichoric value, so the word is '
+        + 'keyed whether or not you can see the glyph. The font is for '
+        + 'reading an entry, not for finding one.' },
   { id: 'lewis',     name: 'Lewis & Short', lang: 'Latin', key: 'l',
     fields: [], shipped: true },
   { id: 'lsj',       name: 'LSJ', lang: 'Greek', key: 'l',     fields: [], shipped: true },
@@ -3292,6 +3307,7 @@ el('c-dicts').innerHTML = DICTS.map(d => `
                  data-drop="1">
         </div>`).join('') ||
         '<p class="note" style="margin:0">No path: it is part of the installation.</p>'}
+      ${d.note ? `<p class="note" style="margin:.5rem 0 0">${d.note}</p>` : ''}
     </div>
     <div class="keycol">
       <span>key</span>
@@ -3892,6 +3908,25 @@ function configText() {
     out.push('  ;; Offered on every entry of their language, whatever the paths');
     out.push('  ;; say -- so a key explains what to set rather than doing nothing.');
     out.push(`  (setq classicist-declared-dictionaries '(${declared.join(' ')}))`);
+  }
+
+  // THE DGE'S FONT, WRITTEN OUT AND LEFT COMMENTED.  A font is a reader's
+  // own choice and nothing here should set one for them -- but the DGE's
+  // epigraphic letterforms are in the PRIVATE-USE AREA, which no other font
+  // can supply, so a reader who has ticked it will meet boxes in an entry and
+  // will not think of a font.  The line is here to uncomment, scoped to that
+  // block alone so whatever they use for Greek keeps the rest of the entry.
+  if (declared.includes('dge')) {
+    out.push('');
+    out.push('  ;; THE DGE WANTS NEW ATHENA UNICODE for its epigraphic');
+    out.push('  ;; letterforms: they are in the private-use area, which by');
+    out.push('  ;; definition no other font supplies, and without it they');
+    out.push('  ;; show as boxes.  Uncomment once the font is installed.');
+    out.push('  ;;');
+    out.push('  ;; Looking a word up needs no font: the seven that occur in');
+    out.push('  ;; lemmas are keyed by their epichoric value either way.');
+    out.push("  ;; (set-fontset-font t '(#xE000 . #xF8FF)");
+    out.push('  ;;                  "New Athena Unicode" nil \'prepend)');
   }
 
   // Reading, only where it differs from the default.
