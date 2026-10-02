@@ -198,6 +198,27 @@ lemma prompt is used and read at every one after."
 PAIRS is (CANDIDATE . BARE) and OFFSETS a hash from a candidate to the places
 in the word list where its records are.")
 
+(defvar diogenes-complete--built (make-hash-table :test 'equal)
+  "The built candidate lists by language, as LANG -> (PAIRS . CANDIDATES).
+
+WHY A CACHE AND NOT A `mapcar\=' EACH TIME.  Every prompt rebuilt every
+candidate -- a hundred thousand of them, each one propertized with its Greek
+and its bare letters so helm can match them -- and then sorted the result by
+length.  Measured at 2.7 SECONDS A PROMPT, and the same on the second
+prompt of a session as on the first: nothing about it was once-only.
+
+AND NONE OF IT DEPENDS ON WHAT WAS TYPED.  The candidates are a function of
+the word list alone, which `diogenes-complete--pairs\=' already caches and
+which this file already checks for staleness by size and modification time.
+So the built list is as cacheable as the pairs it is built from.
+
+READING THE INDEX WAS NEVER THE COST, for the record: that is one
+`insert-file-contents\=' and a split, measured at a fifth of a second.  The
+three seconds were all in the building.
+
+`diogenes-complete-rebuild\=' empties this along with the rest, a new Perseus
+release wanting new candidates as much as new pairs.")
+
 (defun diogenes-complete--lemmata-file (lang)
   "The word list of LANG."
   (unless (fboundp 'diogenes--perseus-path)
@@ -401,6 +422,12 @@ and is cheap to rule out."
   (dolist (one (if lang (list lang) '("greek" "latin")))
     (setq diogenes-complete--cache
           (assoc-delete-all one diogenes-complete--cache))
+    ;; THE BUILT CANDIDATES GO TOO.  They are made from the pairs, so pairs
+    ;; rebuilt and candidates kept would answer a new word list from the old
+    ;; strings -- and a lemma simply missing is the hardest kind of fault to
+    ;; think to blame on a cache, which is what the staleness check above
+    ;; already says about this file's other one.
+    (remhash one diogenes-complete--built)
     (ignore-errors
       (push (cons one (diogenes-complete--build one))
             diogenes-complete--cache))))
@@ -482,6 +509,27 @@ useful to do with forty Greek words beyond showing them."
 ;;; The prompt
 
 ;;;###autoload
+
+(defun diogenes-complete--built (lang)
+  "LANG\='s candidates, built once: (PAIRS . CANDIDATES), or nil.
+
+PAIRS carry the propertized candidate in the car and the bare letters in the
+cdr, which is what the completion style compares.  CANDIDATES are the cars
+sorted shorter-first -- see the comment in `diogenes-read-lemma\=' for why the
+order has to live in the list and not in the style."
+  (or (gethash lang diogenes-complete--built)
+      (let ((pairs (ignore-errors (diogenes-complete--pairs lang))))
+        (when pairs
+          (let* ((built (mapcar (lambda (pair)
+                                  (cons (diogenes-complete--candidate
+                                         (car pair) (cdr pair))
+                                        (cdr pair)))
+                                pairs))
+                 (sorted (sort (mapcar #'car built)
+                               (lambda (a b) (< (length a) (length b))))))
+            (puthash lang (cons built sorted)
+                     diogenes-complete--built))))))
+
 (defun diogenes-read-lemma (lang &optional prompt)
   "Read a lemma of LANG, completing on its word list, and return it as stored.
 
@@ -502,8 +550,8 @@ word list cannot be read, so a caller may use this unconditionally."
   (let ((prompt (or prompt (format "Lemma (%s): " lang))))
     (if (not diogenes-complete-lemmata)
         (diogenes-complete--as-stored (read-from-minibuffer prompt) lang)
-      (let* ((pairs (ignore-errors (diogenes-complete--pairs lang))))
-        (if (not pairs)
+      (let* ((built (diogenes-complete--built lang)))
+        (if (not built)
             (diogenes-complete--as-stored (read-from-minibuffer prompt) lang)
           (let* ((pairs
                   ;; EACH CANDIDATE CARRIES ITS GREEK AND ITS BARE LETTERS,
@@ -511,11 +559,10 @@ word list cannot be read, so a caller may use this unconditionally."
                   ;; completion style and this file does all its matching in
                   ;; one.  The style is unaffected -- the beta is still the
                   ;; prefix it compares, and the bare is still the cdr.
-                  (mapcar (lambda (pair)
-                            (cons (diogenes-complete--candidate
-                                   (car pair) (cdr pair))
-                                  (cdr pair)))
-                          pairs))
+                  ;; BUILT ONCE AND KEPT: see `diogenes-complete--built',
+                  ;; which holds this and the sorted candidates below.  The
+                  ;; `mapcar' was here and ran on every prompt.
+                  (car built))
                  (diogenes-complete--pairs pairs)
                  (candidates
                   ;; SHORTER FIRST, because the list is alphabetical and a
@@ -535,8 +582,9 @@ word list cannot be read, so a caller may use this unconditionally."
                   ;; gone and orderless matches instead.  An order in the
                   ;; candidate list survives whatever style a reader has,
                   ;; display-sort-function being identity already.
-                  (sort (mapcar #'car pairs)
-                        (lambda (a b) (< (length a) (length b)))))
+                  ;; AND SORTED ONCE, the sort being over a hundred
+                  ;; thousand strings and no cheaper than the building.
+                  (cdr built))
                  (shown
                   ;; GREEK IS SHOWN AS GREEK, AND FIRST.  The list is beta
                   ;; code and a reader completing on `memuk' is completing on
@@ -628,6 +676,15 @@ comes back unchanged."
             ;; THE BETA PART ONLY.  The candidate carries its Greek and its
             ;; bare letters invisibly -- see `diogenes-complete--candidate'
             ;; -- and converting the whole of it would convert those too.
+            ;;
+            ;; CONVERTED HERE AND NOT READ BACK, though it is in the
+            ;; candidate already and this is the second conversion of the
+            ;; same string.  Two attempts at reading it instead both broke
+            ;; the prompt: splitting on two spaces lost the Greek, the
+            ;; extras being joined by two spaces as well as separated by
+            ;; them; and a text property of its own stopped the completion
+            ;; matching altogether.  A second a prompt is the price of a
+            ;; prompt that works, until somebody understands why.
             (greek (diogenes--beta-to-utf8 beta))
             (pad (max 1 (- diogenes-complete-greek-width
                            (string-width greek)))))
