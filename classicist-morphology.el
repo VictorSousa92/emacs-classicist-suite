@@ -286,16 +286,111 @@ Returns a list with the form (lemma raw-lemma lemma-nr &rest analyses)"
 
 ;;; Parsing functions
 
+(defcustom classicist-parse-unaccented-variants t
+  "Whether a form typed without accents is looked for under its accented
+spellings as well.
+
+BECAUSE THAT IS HOW A WORD IS TYPED.  `grafhs\=' is four words in the
+analyses file --
+
+    gra/fhs    gra/fw, aor ind pass 2nd sg
+    gra/fh|s   gra/fw, pres subj act 2nd sg
+    grafh/s    grafh/s, masc nom sg
+    grafh=s    grafeu/s twice, and grafh/ fem gen sg
+
+-- and a binary search answers with ONE, whichever its comparison reaches
+first.  A reader who leaves the accents off is asking what the form could be,
+and the honest answer is all four.
+
+ONLY WHERE THE FORM CARRIES NO ACCENT OF ITS OWN.  A spelling that has one is
+a question about that spelling and is answered exactly; see
+`classicist--parse-word\='.
+
+Nil restores the older behaviour, one entry for a bare form."
+  :type 'boolean
+  :group 'classicist)
+
+(defun classicist--parse-word-accented-variants (normalized)
+  "Every accented spelling of NORMALIZED that the analyses file may hold.
+
+FROM THE INDEX AND NOT FROM A RULE.  Where a Greek accent may fall is not
+something to generate -- `grafhs\=' admits an acute on either syllable, a
+circumflex, an iota subscript, and combinations -- so the file\='s own letter
+block is read and every key whose letters match is taken.  Which is what the
+orphaned `diogenes--parse-word-letters-only\=' in the base does, and why this
+is a routing question rather than a new search."
+  (when (and (fboundp 'classicist--analyses-keys-matching)
+             normalized)
+    (classicist--analyses-keys-matching normalized)))
+
+(defun classicist--analyses-keys-matching (normalized &optional lang)
+  "Every key in the analyses file whose letters are NORMALIZED\='s.
+
+READ OUT OF THE FILE\='S OWN LETTER BLOCK.  The index gives where each
+three-letter prefix begins and ends; between those two offsets the keys are
+scanned and the ones that strip to NORMALIZED are kept.
+
+NOT GENERATED FROM A RULE, because where a Greek accent may fall is not a
+rule worth writing: `grafhs\=' admits an acute on either syllable, a
+circumflex, an iota subscript, and combinations of them -- and the only
+authority on which exist is the file.
+
+IN THE FILE\='S ORDER, which puts the commonest spelling first about as often
+as not; the caller merges every one of them, so the order decides only how
+the analyses are listed."
+  (let* ((lang (or lang "greek"))
+         (file (file-name-concat (diogenes--perseus-path)
+                                 (concat lang "-analyses.txt")))
+         (index (ignore-errors (classicist--get-analyses-index lang)))
+         (key (if (> (length normalized) 3)
+                  (substring normalized 0 3)
+                normalized))
+         (start (let ((s (cdr (assoc key (plist-get index :index-start)))))
+                  (if s (max 0 (- s 2)) 0)))
+         (end (or (cdr (assoc key (plist-get index :index-end)))
+                  (plist-get index :index-max)))
+         (out nil))
+    (when (and index end (file-readable-p file))
+      (with-temp-buffer
+        (set-buffer-multibyte nil)
+        (insert-file-contents-literally file nil start end)
+        (goto-char (point-min))
+        (while (not (eobp))
+          (let* ((line (buffer-substring-no-properties
+                        (line-beginning-position) (line-end-position)))
+                 (tab (string-match "\t" line))
+                 (found (and tab (substring line 0 tab))))
+            (when (and found
+                       (equal normalized
+                              (downcase
+                               (diogenes--ascii-alpha-only found))))
+              (push found out)))
+          (forward-line 1))))
+    (nreverse out)))
+
 (defun classicist--parse-word-keys (normalized lang)
   "The keys to try for NORMALIZED, in order.
 The form as it stands first, so nothing that works today stops working.  Then,
 for Greek, the form with an enclitic\='s accent taken off -- see
-`classicist--beta-drop-extra-accents\='."
+`classicist--beta-drop-extra-accents\=' -- and, where the form carries no
+accent at all, every accented spelling the file holds for those letters."
   (let ((keys (list normalized)))
     (when (string= lang "greek")
       (let ((dropped (classicist--beta-drop-extra-accents normalized)))
         (unless (equal dropped normalized)
-          (setq keys (append keys (list dropped))))))
+          (setq keys (append keys (list dropped)))))
+      ;; AND THE ACCENTED SPELLINGS, for a form typed without any.  Tested by
+      ;; the form being its own letters: a query that has lost nothing to the
+      ;; stripping is a query that was never accented.
+      (when (and classicist-parse-unaccented-variants
+                 (equal normalized
+                        (downcase (diogenes--ascii-alpha-only normalized))))
+        (setq keys
+              (append keys
+                      (seq-remove
+                       (lambda (k) (member k keys))
+                       (classicist--parse-word-accented-variants
+                        normalized))))))
     keys))
 
 (defun classicist--parse-word (word lang)
@@ -329,10 +424,40 @@ spelling rather than answered with its alphabetical neighbour."
 	     ;; to the word AS WRITTEN is the one to show, not the nearest to a
 	     ;; spelling the reader never typed.
 	     do (unless nearest (setq nearest result))
-	     when (nth 3 result) return (classicist--parse-word-result result lang)
-	     finally return (progn
-			      (message "No result for %s! Showing nearest entry" word)
-			      (classicist--parse-word-result nearest lang)))))
+	     ;; EVERY HIT AND NOT THE FIRST.  This returned on the first
+	     ;; key that found anything, which is right where the keys
+	     ;; are spellings of ONE word -- the form as written, then
+	     ;; without an enclitic's accent -- and wrong where they are
+	     ;; the accented spellings of a bare form.  `grafhs' is four
+	     ;; words, and answering with whichever the search reached
+	     ;; first was answering a question nobody asked.
+	     when (nth 3 result) collect result into hits
+	     finally return
+	     (if hits
+		 (classicist--parse-word-merge hits lang)
+	       (message "No result for %s! Showing nearest entry" word)
+	       (classicist--parse-word-result nearest lang)))))
+
+(defun classicist--parse-word-merge (hits lang)
+  "HITS from several keys, as one result.
+
+THE ANALYSES RUN TOGETHER AND THE OFFSETS COME FROM THE FIRST.  A caller
+binds the offsets to `_start\=' and `_stop\=' -- underscored, which is to say
+ignored -- so there is nothing to be lost by taking one pair of them; the
+analyses are the answer and they are a list already.
+
+EXACT, BECAUSE SEVERAL REAL LINES WERE FOUND.  The fourth element says
+whether the query was found rather than approached, and four spellings of
+`grafhs\=' in the file is a finding and not a near miss -- it used to say so
+of ONE of them and now says so of all."
+  (let ((first (car hits)))
+    (cons (apply #'append
+                 (mapcar (lambda (hit)
+                           (and (car hit)
+                                (classicist--process-parse-result
+                                 (car hit) lang)))
+                         hits))
+          (cdr first))))
 
 (defun classicist--parse-word-result (result lang)
   "RESULT from the binary search, shaped as `classicist--parse-word\=' returns it."
