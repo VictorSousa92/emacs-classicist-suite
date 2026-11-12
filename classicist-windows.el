@@ -73,7 +73,7 @@
     (diogenes-search-mode . search)
     (pdf-view-mode . dictionary)
     (doc-view-mode . dictionary)
-    (reader-mode . dictionary)
+    (emureader-mode . dictionary)
     ;; A TEI TEXT IS A TEXT, and only the mode route reaches it: its buffer is
     ;; named `Author, Work (version)' with no leading star, so no name regexp
     ;; can tell it from an ordinary file.  `tei-mode' is set the line after the

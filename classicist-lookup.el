@@ -1175,7 +1175,7 @@ prompt got a lookup of that.  A default is a guess at what the reader means,
 and in those buffers there is nothing to guess from."
   (unless (or (classicist--home-buffer-p (buffer-name))
               (derived-mode-p 'pdf-view-mode 'doc-view-mode)
-              (and (fboundp 'reader-mode) (derived-mode-p 'reader-mode)))
+              (and (fboundp 'emureader-mode) (derived-mode-p 'emureader-mode)))
     (or
      ;; A word the text broke across two lines is one word, and looking up
      ;; either half finds nothing: no dictionary has `praeci' or `pitur'.  The

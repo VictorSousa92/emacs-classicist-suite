@@ -223,7 +223,7 @@ this module needs to know about."
 ;; sequence never reaches Emacs at all on that desktop.
 ;;
 ;; A dictionary buffer is an ordinary `pdf-view-mode' (or `doc-view-mode',
-;; or `reader-mode') buffer, which as the Commentary above notes is not
+;; or `emureader-mode') buffer, which as the Commentary above notes is not
 ;; distinguishable by mode or name.  So this tracks them itself: every
 ;; buffer Diogenes displays through `diogenes-old--display-page-buffer'
 ;; gets `diogenes-purpose-dict-mode', a minor mode whose only job is to

@@ -235,7 +235,7 @@ Single-file dictionaries match by truename against their
 (defun diogenes-pdf-search--goto-page (page)
   "Jump the CURRENT PDF buffer to PAGE.
 Works in `pdf-view-mode' (clamping to the document length),
-`doc-view-mode', and the Emacs Reader's `reader-mode'.  Signals a
+`doc-view-mode', and the Emacs Reader's `emureader-mode'.  Signals a
 user-error in any other mode."
   (cond
    ((derived-mode-p 'pdf-view-mode)
@@ -245,18 +245,18 @@ user-error in any other mode."
       (pdf-view-goto-page page)))
    ((derived-mode-p 'doc-view-mode)
     (doc-view-goto-page (max 1 page)))
-   ((and (derived-mode-p 'reader-mode) (fboundp 'reader-goto-page))
+   ((and (derived-mode-p 'emureader-mode) (fboundp 'emureader-goto-page))
     ;; The Emacs Reader renders asynchronously; reuse the robust poll
     ;; from diogenes-old if available, else jump directly.
     (if (progn (require 'diogenes-old nil t)
                (fboundp 'diogenes-old--reader-goto-when-ready))
         (diogenes-old--reader-goto-when-ready (current-buffer) page)
-      (let ((page (if (boundp 'reader-current-doc-pagecount)
-                      (max 1 (min page reader-current-doc-pagecount))
+      (let ((page (if (boundp 'emureader-current-doc-pagecount)
+                      (max 1 (min page emureader-current-doc-pagecount))
                     (max 1 page))))
-        (reader-goto-page page))))
+        (emureader-goto-page page))))
    (t
-    (user-error "Not in a PDF buffer (pdf-view-mode, doc-view-mode, or reader-mode)"))))
+    (user-error "Not in a PDF buffer (pdf-view-mode, doc-view-mode, or emureader-mode)"))))
 
 ;;;; --------------------------------------------------------------------
 ;;;; PER-DICTIONARY: WORD -> (PAGE [. FILE]) FOR THE OPEN BUFFER
@@ -360,7 +360,7 @@ is the sensible guess and is used."
     (let ((txt (car (pdf-view-active-region-text))))
       (and txt (string-trim txt))))
    ((or (derived-mode-p 'pdf-view-mode 'doc-view-mode)
-        (and (fboundp 'reader-mode) (derived-mode-p 'reader-mode)))
+        (and (fboundp 'emureader-mode) (derived-mode-p 'emureader-mode)))
     nil)
    (t (thing-at-point 'word t))))
 
@@ -734,7 +734,7 @@ in a dictionary."
   (when diogenes-pdf-search-key
     (keymap-set diogenes-pdf-search-mode-map diogenes-pdf-search-key
                 #'diogenes-pdf-lookup-entry)
-    (dolist (hook '(pdf-view-mode-hook doc-view-mode-hook reader-mode-hook))
+    (dolist (hook '(pdf-view-mode-hook doc-view-mode-hook emureader-mode-hook))
       (add-hook hook #'diogenes-pdf-search--maybe-enable))
     (with-eval-after-load 'evil
       (when (fboundp 'evil-make-overriding-map)

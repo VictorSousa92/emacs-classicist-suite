@@ -188,7 +188,7 @@ binds nothing."
     ;; and this being only a mode map.
     pdf-view-mode-map
     doc-view-mode-map
-    reader-mode-map)
+    emureader-mode-map)
   "The mode maps to give the way out of Emacs state.")
 
 (defun diogenes-evil-bind-normal-state-key ()

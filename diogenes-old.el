@@ -58,11 +58,11 @@
 ;; defined inside a `let', which the compiler does not count as a
 ;; definition at all.
 (declare-function classicist-focus-dictionary "classicist-windows" ())
-(declare-function reader-open-doc "reader" (file))
+(declare-function emureader-open-doc "emureader" (file))
 
 (declare-function classicist--lookup-assert-lang "classicist-lookup" (expected dict-name))
 (declare-function pdf-info-outline "pdf-info" (&optional file-or-buffer))
-(declare-function reader-fit-to-width "reader" ())
+(declare-function emureader-fit-to-width "emureader" ())
 (declare-function pdf-info-number-of-pages "pdf-info" (&optional file-or-buffer))
 (declare-function pdf-view-goto-page "pdf-view" (page &optional window))
 (declare-function pdf-view-mode "pdf-view" ())
@@ -166,12 +166,12 @@ are what there are."
   '((display-buffer-reuse-window
      display-buffer-reuse-mode-window
      diogenes-old-display-in-lookup-window)
-    (mode . (reader-mode pdf-view-mode doc-view-mode))
+    (mode . (emureader-mode pdf-view-mode doc-view-mode))
     (reusable-frames . visible)
     (inhibit-same-window . t))
   "`display-buffer' ACTION for showing a dictionary page.
 Two ways of reusing a window and no third: the window already showing THIS
-document, then any window showing a document at all -- `reader-mode',
+document, then any window showing a document at all -- `emureader-mode',
 `pdf-view-mode', `doc-view-mode', per the `mode' entry.  So one dictionary
 after another replaces the page on screen instead of splitting the frame
 again.
@@ -211,7 +211,7 @@ document buffer.  Close it and the next dictionary opens a fresh frame
 again.
 
 Two things have to give way for that.  The Reader's entry point
-`reader-open-doc' DISPLAYS the document as part of loading it, before
+`emureader-open-doc' DISPLAYS the document as part of loading it, before
 Diogenes has any say in where it goes, and `save-window-excursion' cannot
 take a new frame back -- it restores the window configuration of a frame,
 not the set of frames.  So when a document window exists, `pop-up-frames'
@@ -233,12 +233,12 @@ window is involved."
 `once' (the default) fits each document the first time Diogenes shows a
 page in it, and then leaves it alone, so a zoom level you set by hand
 survives the next lookup.  t re-fits on every jump.  nil never fits, and
-you press \\<reader-mode-map>\\[reader-fit-to-width] yourself.
+you press \\<emureader-mode-map>\\[emureader-fit-to-width] yourself.
 
 The fit is done from `diogenes-old--reader-goto-when-ready', at the one
 moment it can work: the Reader renders asynchronously, and
-`reader-fit-to-width' scales the page in the selected window, so it needs
-both a rendered document and a live window.  A `reader-mode-hook' runs too
+`emureader-fit-to-width' scales the page in the selected window, so it needs
+both a rendered document and a live window.  A `emureader-mode-hook' runs too
 early for the first (nothing to scale yet) and not at all for a document
 whose buffer is merely redisplayed, which is why this is not a hook.
 
@@ -579,8 +579,19 @@ the `diogenes-lookup-open-*' commands -- display their PDF through
                  to the built-in `doc-view'.  This is the default.
   `pdf-tools'    Force `pdf-view-mode'.
   `doc-view'     Force the built-in `doc-view-mode'.
-  `emacs-reader' Use the Emacs Reader (`reader-mode', the MuPDF-backed
-                 reader from https://codeberg.org/MonadicSheep/emacs-reader).
+  `emacs-reader' Use EMuReader (`emureader-mode', the MuPDF-backed reader
+                 from https://codeberg.org/MonadicSheep/emacs-reader).
+
+                 CALLED EMACS READER UNTIL 0.4.0, which renamed every symbol
+                 from `reader-' to `emureader-' AND SHIPPED NO OBSOLETE
+                 ALIASES -- so a reader on 0.3 and a reader on 0.4 want
+                 different symbols and there is no version that answers to
+                 both.  The suite names the new ones; 0.3 will report every
+                 one of them void.
+
+                 The VALUE here stays `emacs-reader', a reader who has set it
+                 having set that word, and the repository is still at that
+                 address.
 
 All four are in-Emacs viewers, so window management (including
 `window-purpose') applies to their buffers normally.
@@ -589,12 +600,12 @@ Note: the reverse in-PDF lookup, `diogenes-pdf-lookup-entry' (the `L'
 key), works only with `pdf-tools' (and, partially, `doc-view').  It
 reads the word under point from the PDF's text layer, which
 `emacs-reader' does not expose (it renders pages as images), so `L' is
-unavailable when the dictionary is open in the Emacs Reader.  The
-forward openers work with every viewer."
+unavailable when the dictionary is open in EMuReader.  The forward
+openers work with every viewer."
   :type '(choice (const :tag "Auto (pdf-tools, else doc-view)" auto)
                  (const :tag "pdf-tools" pdf-tools)
                  (const :tag "doc-view" doc-view)
-                 (const :tag "Emacs Reader (reader-mode)" emacs-reader))
+                 (const :tag "Emacs Reader (emureader-mode)" emacs-reader))
   :group 'diogenes)
 
 (defun diogenes-old--resolved-viewer ()
@@ -670,11 +681,11 @@ consulted first."
       ('width 'doc-view-fit-width-to-window)
       ('height 'doc-view-fit-height-to-window)
       (_ 'doc-view-fit-page-to-window)))
-   ((and (fboundp 'reader-mode) (derived-mode-p 'reader-mode))
+   ((and (fboundp 'emureader-mode) (derived-mode-p 'emureader-mode))
     (pcase diogenes-old-pdf-fit
-      ('width 'reader-fit-to-width)
-      ('height 'reader-fit-to-height)
-      (_ 'reader-fit-to-page)))))
+      ('width 'emureader-fit-to-width)
+      ('height 'emureader-fit-to-height)
+      (_ 'emureader-reset-size)))))
 
 (defun diogenes-old--fit-looks-right-p ()
   "Whether the page is scaled as `diogenes-old-pdf-fit\=' asked.
@@ -743,8 +754,8 @@ jump; if BUFFER is not currently displayed, the jump is skipped rather
 than applied to the wrong window.
 
 Handles `pdf-view-mode', `doc-view-mode', and the Emacs Reader's
-`reader-mode' (via `reader-goto-page', clamped with
-`reader-current-doc-pagecount')."
+`emureader-mode' (via `emureader-goto-page', clamped with
+`emureader-current-doc-pagecount')."
   (when (buffer-live-p buffer)
     (let ((win (get-buffer-window buffer t)))
       (with-current-buffer buffer
@@ -761,18 +772,18 @@ Handles `pdf-view-mode', `doc-view-mode', and the Emacs Reader's
             (with-selected-window win
               (doc-view-goto-page (max 1 page)))
             (diogenes-old--fit-page win)))
-         ((and (derived-mode-p 'reader-mode) (fboundp 'reader-goto-page))
+         ((and (derived-mode-p 'emureader-mode) (fboundp 'emureader-goto-page))
           (when win
             (with-selected-window win
-              (let ((page (if (boundp 'reader-current-doc-pagecount)
-                              (max 1 (min page reader-current-doc-pagecount))
+              (let ((page (if (boundp 'emureader-current-doc-pagecount)
+                              (max 1 (min page emureader-current-doc-pagecount))
                             (max 1 page))))
-                (reader-goto-page page))))))))))
+                (emureader-goto-page page))))))))))
 
 (defcustom diogenes-old-reader-jump-retries 40
   "How many times to retry the Emacs Reader page jump while the doc loads.
-`reader-open-doc' returns before the document has finished rendering
-\(so `reader-current-pagenumber' is momentarily nil), and the Emacs
+`emureader-open-doc' returns before the document has finished rendering
+\(so `emureader-current-doc-pagenumber' is momentarily nil), and the Emacs
 Reader provides no \"document ready\" hook.  We therefore poll: attempt
 the jump, and if the reader is not ready yet, retry after
 `diogenes-old-reader-jump-retry-interval' seconds, up to this many
@@ -795,11 +806,11 @@ level the user chose after the document was first shown.")
 (defun diogenes-old--reader-maybe-fit-to-width (buffer window)
   "Fit BUFFER's page to WINDOW's width, if `diogenes-old-reader-fit-to-width'.
 Called only once the page has been rendered and jumped to, since
-`reader-fit-to-width' needs a live document in the selected window.  Any
+`emureader-fit-to-width' needs a live document in the selected window.  Any
 error is ignored: a page that will not scale is not worth abandoning the
 lookup for."
   (when (and diogenes-old-reader-fit-to-width
-             (fboundp 'reader-fit-to-width)
+             (fboundp 'emureader-fit-to-width)
              (buffer-live-p buffer)
              (window-live-p window))
     (with-current-buffer buffer
@@ -807,23 +818,23 @@ lookup for."
                 (not diogenes-old--reader-fitted))
         (condition-case nil
             (with-selected-window window
-              (reader-fit-to-width)
+              (emureader-fit-to-width)
               (setq diogenes-old--reader-fitted t))
           (error nil))))))
 
 (defun diogenes-old--reader-goto-when-ready (buffer page &optional attempt)
   "Jump BUFFER's Emacs Reader to PAGE once the document can accept it.
-This affects the Emacs Reader (`reader-mode') ONLY; the pdf-tools and
+This affects the Emacs Reader (`emureader-mode') ONLY; the pdf-tools and
 doc-view jumps go through `diogenes-old--goto-page-in-window' and are
 untouched.
 
-The first `reader-open-doc' of a session sets up its render state (an
-overlay) asynchronously, and a `reader-goto-page' issued before that is
+The first `emureader-open-doc' of a session sets up its render state (an
+overlay) asynchronously, and a `emureader-goto-page' issued before that is
 ready signals `(wrong-type-argument overlayp nil)' from the dynamic
-module and leaves the document on its cover page.  `reader-current-doc-pagecount'
+module and leaves the document on its cover page.  `emureader-current-doc-pagecount'
 is already set by then, so it is NOT a sufficient readiness test.  The
 reliable signal is whether the jump itself completes without error:
-we attempt `reader-goto-page' inside `condition-case', and on ANY error
+we attempt `emureader-goto-page' inside `condition-case', and on ANY error
 treat the reader as not-ready-yet and retry after
 `diogenes-old-reader-jump-retry-interval', up to
 `diogenes-old-reader-jump-retries' times.  Subsequent documents reuse
@@ -837,19 +848,19 @@ when `diogenes-old-reader-fit-to-width' asks for it."
       (let ((win (get-buffer-window buffer t)))
         (when win
           (let ((ok
-                 (and (fboundp 'reader-goto-page)
+                 (and (fboundp 'emureader-goto-page)
                       (with-selected-window win
                         (with-current-buffer buffer
-                          (let ((pg (if (and (boundp 'reader-current-doc-pagecount)
-                                             (numberp reader-current-doc-pagecount)
-                                             (> reader-current-doc-pagecount 0))
-                                        (max 1 (min page reader-current-doc-pagecount))
+                          (let ((pg (if (and (boundp 'emureader-current-doc-pagecount)
+                                             (numberp emureader-current-doc-pagecount)
+                                             (> emureader-current-doc-pagecount 0))
+                                        (max 1 (min page emureader-current-doc-pagecount))
                                       (max 1 page))))
                             ;; Success is "the jump did not error".  A cold
                             ;; first document errors here until its overlay
                             ;; exists; that error is our retry signal.
                             (condition-case nil
-                                (progn (reader-goto-page pg) t)
+                                (progn (emureader-goto-page pg) t)
                               (error nil))))))))
             (if ok
                 ;; The jump succeeded, so the document is rendered and WIN is
@@ -866,8 +877,8 @@ when `diogenes-old-reader-fit-to-width' asks for it."
 Handles the asynchronous start-up of `pdf-view-mode': if the
 buffer is not yet displaying pages, the jump is deferred to
 `pdf-view-mode-hook'.  `doc-view-mode' and the Emacs Reader's
-`reader-mode' are driven directly once present, with a `reader-mode-hook'
-deferral for a buffer still entering reader-mode.  The jump is always
+`emureader-mode' are driven directly once present, with a `emureader-mode-hook'
+deferral for a buffer still entering emureader-mode.  The jump is always
 confined to BUFFER's own window (see
 `diogenes-old--goto-page-in-window'), so it never changes the page of
 another document the user may have selected in the meantime."
@@ -877,13 +888,13 @@ another document the user may have selected in the meantime."
       (diogenes-old--goto-page-in-window buffer page))
      ((derived-mode-p 'doc-view-mode)
       (diogenes-old--goto-page-in-window buffer page))
-     ((derived-mode-p 'reader-mode)
+     ((derived-mode-p 'emureader-mode)
       ;; The Reader renders asynchronously and has no ready-hook, so poll.
       (diogenes-old--reader-goto-when-ready buffer page))
      ((and (fboundp 'pdf-view-mode)
            buffer-file-name
            (string-match-p "\\.pdf\\'" buffer-file-name)
-           (not (fboundp 'reader-goto-page)))
+           (not (fboundp 'emureader-goto-page)))
       ;; pdf-view-mode is available but the buffer hasn't finished
       ;; entering it yet.  Defer until it has.
       (let ((buf buffer) (pg page) fn)
@@ -895,9 +906,9 @@ another document the user may have selected in the meantime."
                       (lambda ()
                         (diogenes-old--goto-page-in-window buf pg))))))
         (add-hook 'pdf-view-mode-hook fn nil t)))
-     ((fboundp 'reader-goto-page)
+     ((fboundp 'emureader-goto-page)
       ;; The Emacs Reader is loaded; the buffer may still be entering
-      ;; `reader-mode' / rendering.  The poll waits for readiness.
+      ;; `emureader-mode' / rendering.  The poll waits for readiness.
       (diogenes-old--reader-goto-when-ready buffer page))
      (t
       (message "OLD entry is on page %d (couldn't drive the viewer)" page)))))
@@ -905,22 +916,22 @@ another document the user may have selected in the meantime."
 (defun diogenes-old--reader-installed-p ()
   "Non-nil if the Emacs Reader is present and claims `.pdf' files.
 When true, a plain `find-file-noselect' on a PDF would open it in
-`reader-mode', so the pdf-tools and doc-view branches must keep the
+`emureader-mode', so the pdf-tools and doc-view branches must keep the
 Reader's `auto-mode-alist' entry from claiming the file."
-  (and (fboundp 'reader-open-doc)
-       (cl-some (lambda (x) (and (consp x) (eq (cdr x) 'reader-mode)))
+  (and (fboundp 'emureader-open-doc)
+       (cl-some (lambda (x) (and (consp x) (eq (cdr x) 'emureader-mode)))
                 auto-mode-alist)))
 
 (defun diogenes-old--document-window ()
   "Return a window on a visible frame showing a document buffer, or nil.
-A document buffer is one in `reader-mode', `pdf-view-mode' or
+A document buffer is one in `emureader-mode', `pdf-view-mode' or
 `doc-view-mode' -- in practice, a dictionary already on screen.  Used to
 decide whether a dictionary should join it (see
 `diogenes-old-reader-reuse-document-frame') or open a window, or frame,
 of its own."
   (cl-find-if (lambda (window)
                 (with-current-buffer (window-buffer window)
-                  (derived-mode-p 'reader-mode 'pdf-view-mode 'doc-view-mode)))
+                  (derived-mode-p 'emureader-mode 'pdf-view-mode 'doc-view-mode)))
               (window-list-1 nil nil 'visible)))
 
 (defun diogenes-old--reader-reuse-window ()
@@ -982,11 +993,11 @@ For `pdf-tools' and `doc-view', the file is opened exactly the way it
 always was -- a plain `find-file-noselect', letting the normal
 major-mode machinery choose the viewer -- UNLESS the Emacs Reader is
 installed (see `diogenes-old--reader-installed-p'), in which case the
-Reader's `.pdf' -> `reader-mode' entry is temporarily removed for the
+Reader's `.pdf' -> `emureader-mode' entry is temporarily removed for the
 open so it does not hijack the file; the mode is not otherwise forced.
 
-For `emacs-reader', the Reader's own entry point `reader-open-doc' is
-used (a manual `pdf-view-mode'/`reader-mode' switch on an
+For `emacs-reader', the Reader's own entry point `emureader-open-doc' is
+used (a manual `pdf-view-mode'/`emureader-mode' switch on an
 already-loaded buffer is not equivalent).
 
 Either way the open is wrapped in `diogenes-old--with-quiet-open', which
@@ -997,8 +1008,8 @@ the way of a file that has nothing to say to any of them -- see
       (diogenes-old--with-quiet-open
        (pcase viewer
           ('emacs-reader
-           ;; `reader-open-doc' is the Emacs Reader's own entry point: it sets
-           ;; up the MuPDF document state and puts the buffer in `reader-mode'.
+           ;; `emureader-open-doc' is the Emacs Reader's own entry point: it sets
+           ;; up the MuPDF document state and puts the buffer in `emureader-mode'.
            ;; It DISPLAYS the document as a side effect, so shield the window
            ;; configuration and then locate the buffer it created for FILE.
            ;; That display is also why `pop-up-frames' is bound here: when a
@@ -1013,7 +1024,7 @@ the way of a file that has nothing to say to any of them -- see
                                   pop-up-frames))
                  (display-buffer-overriding-action nil))
              (save-window-excursion
-               (reader-open-doc (expand-file-name file))))
+               (emureader-open-doc (expand-file-name file))))
            (find-buffer-visiting file))
           ((or 'pdf-tools 'doc-view)
            (if (diogenes-old--reader-installed-p)
@@ -1021,7 +1032,7 @@ the way of a file that has nothing to say to any of them -- see
                ;; for this open so pdf-tools/doc-view get the file instead.
                (let ((auto-mode-alist
                       (cl-remove-if
-                       (lambda (x) (and (consp x) (eq (cdr x) 'reader-mode)))
+                       (lambda (x) (and (consp x) (eq (cdr x) 'emureader-mode)))
                        auto-mode-alist)))
                  (find-file-noselect file))
              ;; No Reader installed: open exactly as before, no interference.
@@ -1261,14 +1272,14 @@ than opening a frame beside it.  See `classicist--sole-home-window-p'."
   "Display the dictionary PDF FILE at PAGE inside Emacs.
 Opens FILE in the viewer chosen by `diogenes-old-pdf-viewer' (see
 `diogenes-old--resolved-viewer': `pdf-tools', `doc-view', or the Emacs
-Reader `reader-mode'), reusing an already-open buffer for FILE if one
+Reader `emureader-mode'), reusing an already-open buffer for FILE if one
 exists.  Honours `diogenes-old-display-in-other-window'.  Returns PAGE.
 
 For the Emacs Reader specifically, `display-buffer-overriding-action'
 is bound to nil around the open and display.  window-purpose installs
 such an overriding action, and when it intercepts the Reader's display
 the Reader's render pipeline does not run, so its page overlay is never
-created and every `reader-goto-page' fails with `(wrong-type-argument
+created and every `emureader-goto-page' fails with `(wrong-type-argument
 overlayp nil)'.  Letting the Reader display through the normal path
 fixes that.  This binding is scoped to the Reader case only, so
 pdf-tools, doc-view, and window-purpose's handling of every other
