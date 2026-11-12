@@ -1098,10 +1098,64 @@ the passage at the top rather than paged to."
       (user-error "No passage given"))
     (setq levels (classicist-browser--pad-levels levels labels))
     ;; Outermost level first, as Diogenes takes them.
-    (classicist-open-passage classicist--browser-corpus
-                           classicist--browser-author
-                           classicist--browser-work
-                           levels)))
+    ;;
+    ;; AND THIS BUFFER GIVEN UP FIRST, so that the new request lands in a
+    ;; buffer of the same name rather than beside it.
+    ;; `diogenes--get-fresh-buffer' NUMBERS a name that is taken, so every
+    ;; jump left
+    ;; `*diogenes-browser*' behind and opened `*diogenes-browser<1>*', then
+    ;; `<2>', one orphan to a jump.  A reader notices it as the text scale
+    ;; going back to nothing, the scale being buffer-local and the buffer
+    ;; being new; the stranded buffers are the larger half of it.
+    ;;
+    ;; WHAT IS WORTH KEEPING IS CARRIED, which for now is the text scale.
+    ;; `classicist-browser-mode' runs afresh in the new buffer and a major
+    ;; mode kills buffer-local variables by definition, so nothing survives
+    ;; that is not carried deliberately.
+    (classicist-browser--reopen-at classicist--browser-corpus
+                                   classicist--browser-author
+                                   classicist--browser-work
+                                   levels)))
+
+(defun classicist-browser--reopen-at (corpus author work levels)
+  "Open CORPUS AUTHOR WORK at LEVELS, in place of this browser.
+
+THE BUFFER IS KILLED AND THE NAME REUSED, rather than the process being
+pointed at the buffer that exists.  Which is the cruder of the two: the
+browser's process, its filter and its buffer are made together by
+`diogenes--start-perl\=', and untangling them is a change to the base.
+Killing the buffer first costs one line and leaves no orphans.
+
+THE SCALE IS CARRIED because it is the one thing a reader sets by hand and
+notices the loss of.  Point is not: a jump is a request to be somewhere
+else."
+  (let ((scale (and (boundp 'text-scale-mode-amount) text-scale-mode-amount))
+        (window (selected-window)))
+    ;; KILLED BEFORE THE REQUEST, so the name is free when the new buffer is
+    ;; made.  `kill-buffer' on a buffer with a live process would ask, so the
+    ;; process goes first and without a question.
+    (let ((process (get-buffer-process (current-buffer))))
+      (when (process-live-p process)
+        (set-process-query-on-exit-flag process nil)
+        (delete-process process)))
+    ;; KILLED BEFORE THE NEW REQUEST AND NOT AFTER.  Written the other way
+    ;; round first, which changed nothing: the old buffer still held the name
+    ;; when the new one was made, so it was numbered exactly as before and the
+    ;; kill merely tidied up behind it.  CORPUS, AUTHOR, WORK and LEVELS are
+    ;; arguments for this reason -- they are read from the buffer before it
+    ;; goes, and nothing here touches it afterwards.
+    (let ((old (current-buffer))
+          (kill-buffer-query-functions nil))
+      (kill-buffer old))
+    (classicist-open-passage corpus author work levels)
+    ;; AND THE SCALE PUT BACK, in whatever buffer the new browser landed in.
+    (when (and scale (/= scale 0) (fboundp 'text-scale-set))
+      (let ((buffer (if (window-live-p window)
+                        (window-buffer window)
+                      (current-buffer))))
+        (with-current-buffer buffer
+          (when (derived-mode-p 'classicist-browser-mode)
+            (text-scale-set scale)))))))
 
 (defun classicist-browser--header-button-runner (command)
   "COMMAND wrapped to run in the window whose header line was clicked.
