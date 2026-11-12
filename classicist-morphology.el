@@ -1587,6 +1587,89 @@ headword, exactly as the application does."
 	   (t t)))))
 
 
+(defcustom classicist-suppletive-lemmata
+  '(("a)po/-e)rw=" . ("a)pei=pon" "a)pole/gw1"))
+    ("e)rw=" . ("ei)=pon" "le/gw1"))
+    ("ei)=pon" . ("le/gw1" "e)rw="))
+    ("oi)/sw" . ("fe/rw" "h)/negkon"))
+    ("h)/negkon" . ("fe/rw" "oi)/sw"))
+    ("o)/yomai" . ("o(ra/w" "ei)=don"))
+    ("ei)=don" . ("o(ra/w" "o)/yomai"))
+    ("h)=lqon" . ("e)/rxomai" "ei)=mi1"))
+    ("e)/domai" . ("e)sqi/w" "e)/fagon"))
+    ("e)/fagon" . ("e)sqi/w" "e)/domai")))
+  "Lemmata whose paradigm is filled from another root, as (LEMMA . PARTNERS).
+
+WHY A TABLE IS NEEDED AT ALL.  Greek fills a paradigm from several roots --
+`a)pei=pon\=', `a)perw=\=' and `a)pei/rhka\=' are the aorist, future and perfect
+of one verb meaning FORBID -- and Morpheus files each form under the root its
+stem comes from.  Which is morphologically right and lexicographically no
+help: `a)peirhme/non\=' is reported as `a)po/-e)rw=, will say\=', and the form
+means `forbidden\='.
+
+AND NOTHING IN THE DATA CONNECTS THEM.  Checked: the analyses file gives only
+`a)po/-e)rw=\=', the lemmata file files the form under the same, and the
+bracketed number after each analysis is the PREFIX -- `a)po/\=', 11012184,
+which appears after four thousand other compounds -- and not a reference to a
+partner.  So a reader following the parse reaches an entry for the wrong
+verb and nothing offers the right one.
+
+WHAT THIS ADDS AND WHAT IT LEAVES ALONE.  Morpheus\=' own analysis is kept
+exactly as it stands; the partners are offered BESIDE it, each as its own
+heading with its own entry, and which to read is the reader\='s to judge.  The
+suite makes no claim that one is correct.
+
+THE ENTRIES ARE BETA CODE and must be lemmata as the word list spells them,
+numeral and all -- `le/gw1\=', `a)pole/gw1\=' -- or the lookup that follows
+finds nothing.  `diogenes-read-lemma\=' completes on exactly those strings and
+is the way to check one."
+  :type '(alist :key-type string :value-type (repeat string))
+  :group 'classicist)
+
+(defcustom classicist-suppletive-note "suppletive partner"
+  "What a lemma added by `classicist-suppletive-lemmata\=' is called.
+
+SHOWN WHERE A TRANSLATION WOULD BE, because the word list\='s gloss for the
+partner is not fetched: that would mean a second lookup for every parse, and
+the heading is a link -- following it gives the entry, gloss and all."
+  :type 'string
+  :group 'classicist)
+
+(defun classicist--suppletive-partners (parse-results)
+  "The suppletive partners of PARSE-RESULTS, as parse results of their own.
+
+ONE ENTRY PER PARTNER, shaped as `classicist--process-parse-result\=' shapes
+them -- (HEADWORD LEMMA LEMMA-NR TRANSLATION ANALYSIS) -- so everything
+downstream treats them as it treats the rest and nothing need know they were
+added.
+
+NO LEMMA NUMBER, which is the one field missing: the number comes from the
+analyses file and these were not in it.  The heading is keyed by the lemma
+string, which is what the lookup follows.
+
+WHERE IT CAME FROM, in the analysis field: `of a)po/-e)rw=\=' rather than a
+parse, because there is none to give -- the partner was not analysed, it was
+named by a table, and saying which lemma named it is more honest than
+inventing a morphology for it.
+
+DUPLICATES DROPPED, a partner already among the results being no addition:
+`ei)=pon\=' and `e)rw=\=' name each other, and a form attested under both
+would otherwise be offered twice."
+  (let ((have (mapcar (lambda (r) (or (nth 1 r) (nth 0 r))) parse-results))
+        (out nil))
+    (dolist (result parse-results)
+      (let* ((lemma (or (nth 1 result) (nth 0 result)))
+             (partners (cdr (assoc lemma classicist-suppletive-lemmata))))
+        (dolist (partner partners)
+          (unless (or (member partner have)
+                      (assoc partner out))
+            (push (cons partner lemma) out)))))
+    (mapcar (lambda (pair)
+              (list (car pair) (car pair) nil
+                    classicist-suppletive-note
+                    (format "of %s" (cdr pair))))
+            (nreverse out))))
+
 (defun classicist--assign-parse-result-to-lemmata (parse-results)
   "Loop through the result of `classicist--process-parse-result',
 assigning the single results to their respective lemmata. Returns the lemmata as a list,
@@ -1611,8 +1694,17 @@ and the list on ANALYSES."
 (defun classicist--format-parse-results (query lang results)
   "Process and format the results of `classicist--process-parse-result'.
 Besides the fontification, it also checks for duplicate lemma
-entries and orders them accordingly."
-  (let ((lemmata (classicist--assign-parse-result-to-lemmata results)))
+entries and orders them accordingly.
+
+SUPPLETIVE PARTNERS ARE ADDED HERE and nowhere earlier, so that every caller
+of the parse gets Morpheus' analysis unaltered and only the DISPLAY offers
+the partners.  A caller counting analyses, or filtering them by morphology,
+should see what the file said; a reader looking at an entry should see what a
+lexicon would tell them.  See `classicist-suppletive-lemmata'."
+  (let* ((results (append results
+                          (and (string= lang "greek")
+                               (classicist--suppletive-partners results))))
+         (lemmata (classicist--assign-parse-result-to-lemmata results)))
     (cl-loop
      for lemma in lemmata
      for (lemma-word lemma-nr translation entries) = lemma
