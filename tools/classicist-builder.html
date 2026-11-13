@@ -1024,9 +1024,19 @@
       <option value="auto">auto &mdash; pdf-tools if you have it, else doc-view</option>
       <option value="pdf-tools">pdf-tools</option>
       <option value="doc-view">doc-view, which ships with Emacs</option>
-      <option value="emacs-reader">the Emacs Reader (MuPDF)</option>
+      <option value="emacs-reader">EMuReader (MuPDF)</option>
     </select>
   </div>
+  <p class="note" id="c-viewer-emureader" hidden><b>EMuReader 0.4.0 or
+     later.</b> It was called the Emacs Reader until 0.4.0, which renamed
+     every symbol from <code>reader-</code> to <code>emureader-</code> and
+     shipped <b>no obsolete aliases</b> &mdash; so no version answers to both,
+     and the suite names the new ones. On 0.3 each of them is a void
+     function. The repository moved with the name, to
+     <a href="https://codeberg.org/MonadicSheep/emureader"
+        target="_blank">codeberg.org/MonadicSheep/emureader</a>. The
+     option&rsquo;s value stays <code>emacs-reader</code>, a reader who has
+     set it having set that word.</p>
   <div class="row">
     <input type="checkbox" id="c-allentries" checked>
     <label for="c-allentries">Show every matching entry
@@ -3931,8 +3941,20 @@ function configText() {
 
   // Reading, only where it differs from the default.
   const reading = [];
-  if (el('c-viewer').value !== 'auto')
+  if (el('c-viewer').value !== 'auto') {
+    // THE VERSION SAID WHERE IT MATTERS.  EMuReader 0.4.0 renamed every
+    // symbol and shipped no obsolete aliases, so a reader on 0.3 gets a void
+    // function for each -- and nothing in the configuration would have said
+    // which version it was written against.
+    if (el('c-viewer').value === 'emacs-reader') {
+      reading.push('  ;; EMuReader 0.4.0 OR LATER.  It was the Emacs Reader');
+      reading.push('  ;; until 0.4.0, which renamed every symbol from');
+      reading.push('  ;; `reader-\' to `emureader-\' with no obsolete');
+      reading.push('  ;; aliases; on 0.3 the suite calls functions that do');
+      reading.push('  ;; not exist.  codeberg.org/MonadicSheep/emureader');
+    }
     reading.push(`  (setq diogenes-old-pdf-viewer '${el('c-viewer').value})`);
+  }
   if (!el('c-allentries').checked)
     reading.push('  (setq classicist-lookup-show-all-entries nil)');
   if (el('c-alwaysask').checked)
@@ -4523,13 +4545,13 @@ const VIEWERS = {
     [/^C-c C-t$/, 'a conversion command in doc-view'],
   ],
   'emacs-reader': [
-    [/^[np]$/, 'the next or previous page in the Emacs Reader'],
-    [/^[gG]$/, 'the first or last page in the Emacs Reader'],
-    [/^[WPh]$/, 'fitting the page in the Emacs Reader'],
-    [/^[+=-]$/, 'zoom in the Emacs Reader'],
-    [/^o$/, 'the outline in the Emacs Reader'],
-    [/^r$/, 'rotate, in the Emacs Reader'],
-    [/^SPC$/, 'scroll forward in the Emacs Reader'],
+    [/^[np]$/, 'the next or previous page in EMuReader'],
+    [/^[gG]$/, 'the first or last page in EMuReader'],
+    [/^[WPh]$/, 'fitting the page in EMuReader'],
+    [/^[+=-]$/, 'zoom in EMuReader'],
+    [/^o$/, 'the outline in EMuReader'],
+    [/^r$/, 'rotate, in EMuReader'],
+    [/^SPC$/, 'scroll forward in EMuReader'],
   ],
 };
 
@@ -4538,6 +4560,9 @@ const VIEWERS = {
 // will get, and the answer can change when they install a package.
 function viewerTables() {
   const chosen = el('c-viewer') ? el('c-viewer').value : 'auto';
+  // AND THE VERSION NOTE, for the one viewer that has a version to mind.
+  const emunote = el('c-viewer-emureader');
+  if (emunote) emunote.hidden = chosen !== 'emacs-reader';
   if (chosen === 'auto') return [['pdf-tools', VIEWERS['pdf-tools']],
                                  ['doc-view', VIEWERS['doc-view']]];
   return [[chosen, VIEWERS[chosen] || []]];

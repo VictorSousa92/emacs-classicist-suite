@@ -491,9 +491,23 @@ nothing. Set no dictionary paths at all and the suite offers what the base
 does: the LSJ, Lewis & Short, the morphology and the corpora, with no links
 line and no keys leading nowhere.
 
-`diogenes-old-pdf-viewer` chooses between `pdf-tools` and `doc-view`. The scans
+`diogenes-old-pdf-viewer` chooses the viewer: `pdf-tools`, the built-in
+`doc-view`, or [EMuReader][emureader], which renders with MuPDF. The scans
 are OCR'd to varying standards and their bookmarks are not always reliable, so
 a lookup lands on the right page more often than on the right column.
+
+> **EMuReader wants 0.4.0 or later.** It was called the Emacs Reader until that
+> release, which renamed every symbol from `reader-` to `emureader-` and
+> shipped **no obsolete aliases** — so no version answers to both, and the
+> suite names the new ones. On 0.3 each of them is a void function. The
+> repository moved with the name, to
+> [codeberg.org/MonadicSheep/emureader][emureader]. The option's value stays
+> `emacs-reader`, since that is the word a reader who set it will have set.
+>
+> **One thing it cannot do**: the reverse lookup `L`, which reads the word
+> under point out of the PDF's text layer. EMuReader renders pages as images
+> and exposes no text, so `L` wants `pdf-tools`. The forward openers — a
+> lookup landing on the right page — work with every viewer.
 
 ### When an analysis is wrong
 
@@ -1026,6 +1040,7 @@ GPL-3.0-or-later, as `diogenes.el` is.
 [fork]: https://github.com/VictorSousa92/diogenes.el/tree/classicist-base
 [roam]: https://github.com/VictorSousa92/diogenes-roam/tree/classicist-roam
 [nau]: https://classicalstudies.org/publications-and-research/about-new-athena-unicode
+[emureader]: https://codeberg.org/MonadicSheep/emureader
 [orgreadme]: https://github.com/VictorSousa92/diogenes.el/tree/org-integration
 [morpheus]: https://github.com/VictorSousa92/morpheus
 [phi]: https://github.com/brunocbr/phi-notes

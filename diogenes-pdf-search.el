@@ -235,7 +235,7 @@ Single-file dictionaries match by truename against their
 (defun diogenes-pdf-search--goto-page (page)
   "Jump the CURRENT PDF buffer to PAGE.
 Works in `pdf-view-mode' (clamping to the document length),
-`doc-view-mode', and the Emacs Reader's `emureader-mode'.  Signals a
+`doc-view-mode', and EMuReader's `emureader-mode'.  Signals a
 user-error in any other mode."
   (cond
    ((derived-mode-p 'pdf-view-mode)
@@ -246,7 +246,7 @@ user-error in any other mode."
    ((derived-mode-p 'doc-view-mode)
     (doc-view-goto-page (max 1 page)))
    ((and (derived-mode-p 'emureader-mode) (fboundp 'emureader-goto-page))
-    ;; The Emacs Reader renders asynchronously; reuse the robust poll
+    ;; EMuReader renders asynchronously; reuse the robust poll
     ;; from diogenes-old if available, else jump directly.
     (if (progn (require 'diogenes-old nil t)
                (fboundp 'diogenes-old--reader-goto-when-ready))
