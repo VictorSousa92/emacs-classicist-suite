@@ -686,7 +686,7 @@ consulted first."
     (pcase diogenes-old-pdf-fit
       ('width 'emureader-fit-to-width)
       ('height 'emureader-fit-to-height)
-      (_ 'emureader-reset-size)))))
+      (_ 'emureader-fit-to-height)))))
 
 (defun diogenes-old--fit-looks-right-p ()
   "Whether the page is scaled as `diogenes-old-pdf-fit\=' asked.
