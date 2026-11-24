@@ -830,6 +830,75 @@ what a reader chooses by: not the title of the note but the passage it is on."
 
 ;;; Asking org-roam
 
+(defun diogenes-org--references ()
+  "Every (PATH NODE-ID TITLE) org-roam knows that LINKS to a passage.
+
+A REFERENCE AND NOT A SUBJECT.  `diogenes-org--refs\=' asks the `refs\=' table,
+which holds what a note is ABOUT -- its `ROAM_REFS\='.  This asks the `links\='
+table, which holds what a note POINTS AT: a passage discussed in the body
+rather than the one the note was written on.
+
+THE TWO ARE DISJOINT IN PRACTICE, which is the reason for having both.  In the
+collection this was written for, thirty-two notes carried a ref and twenty
+links pointed at passages -- and not one of those twenty had a note of its
+own.  A reader\='s notes point at passages they have never written up, and
+nothing could show them that.
+
+SEVERAL PER NOTE, unlike a ref: one note may discuss a dozen passages, so a
+node appears once for each link rather than once.
+
+THE DICTIONARY LINKS ARE DROPPED, `entry:greek:pe/mpw\=' and its like being a
+reference to a lexicon and not to a text; `diogenes-org--passage-parts\=' says
+which is which, as it does for the refs."
+  (unless (require 'org-roam nil t)
+    (user-error "This wants org-roam"))
+  (let (out)
+    (dolist (row (org-roam-db-query
+                  [:select [links:dest nodes:id nodes:title]
+                   :from links
+                   :join nodes :on (= links:source nodes:id)
+                   :where (= links:type "diogenes")]))
+      (let ((dest (nth 0 row)))
+        (when (and dest (diogenes-org--passage-parts dest))
+          (push (list dest (nth 1 row) (nth 2 row)) out))))
+    (nreverse out)))
+
+(defun diogenes-org--refs-and-references (reference)
+  "Notes on REFERENCE\='s work, as (PATH NODE-ID TITLE KIND).
+
+KIND is `note\=' for a note whose `ROAM_REFS\=' names the passage and
+`reference\=' for one that merely links to it -- which is the distinction the
+index draws, a passage with references and no note being the interesting case
+and the one nothing showed before.
+
+LISTED AS WRITTEN AND NOT GROUPED BY OVERLAP.  A note on 327a-330d and a note
+on 374d are notes on different things, and collapsing them by the span that
+contains both would merge a distinction a reader made on purpose.  So each
+citation stands as it was written, and a passage appears as many times as it
+was cited differently.
+
+IN READING ORDER, by `diogenes-org--before-p\=' on the first level of each --
+which is what makes the index a list of a work from its beginning rather than
+a list of when notes happened to be written."
+  (let* ((wanted (diogenes-org--passage-parts reference))
+         (rows (append
+                (mapcar (lambda (r) (append r (list 'note)))
+                        (diogenes-org--refs))
+                (mapcar (lambda (r) (append r (list 'reference)))
+                        (diogenes-org--references))))
+         (mine (seq-filter
+                (lambda (row)
+                  (diogenes-org--same-work-p
+                   wanted (diogenes-org--passage-parts (nth 0 row))))
+                rows)))
+    (sort mine
+          (lambda (a b)
+            (let ((x (diogenes-org--levels
+                      (nth 3 (diogenes-org--passage-parts (nth 0 a)))))
+                  (y (diogenes-org--levels
+                      (nth 3 (diogenes-org--passage-parts (nth 0 b))))))
+              (and x y (diogenes-org--before-p x y)))))))
+
 (defun diogenes-org--refs ()
   "Every (PATH NODE-ID TITLE) org-roam knows that names a passage.
 
